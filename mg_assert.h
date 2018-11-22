@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include "mg_debugbreak.h"
+#include "mg_macros.h"
 
 #if defined(mg_Slow)
   #define mg_Assert(Cond) \

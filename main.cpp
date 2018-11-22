@@ -18,6 +18,12 @@ void print_clean1() {
 int main() {
   mg_BeginCleanUp(0) { print_clean0(); }; mg_EndCleanUp(0)
   mg_BeginCleanUp(1) { print_clean1(); }; mg_EndCleanUp(1)
+  int N = 1;
+  auto Err2 = mg_ErrorFmt(SizeMismatched, "Hello %d", N);
+  auto Ss = ToString(Err2);
+  printf("%s\n", Ss);
+  auto Err3 = mg_ErrorMsg(UnknownError, "Hahaha");
+  printf("%s\n", ToString(Err3));
   mg::errors Err = mg::errors::error1;
   auto S = ToString(Err);
   printf("%.*s", int(S.Size), S.Ptr);

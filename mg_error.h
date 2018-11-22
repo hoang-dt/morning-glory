@@ -1,8 +1,7 @@
 #pragma once
 
+#include <string.h>
 #include "mg_types.h"
-
-//mg_Enum2(errorcode2, int, NoError1, Error2)
 
 namespace mg {
 
@@ -37,13 +36,27 @@ struct error {
   cstr Message = "";
   int16 Line = 0;
   error_code Code = NoError;
-  inline thread_local static char FullMessage[256];
+  bool StringGenerated = false;
+  inline thread_local static char FullMessage[256]; /* There should be only one error in-flight on each thread */
   explicit operator bool();
 }; // struct error
 
-cstr ToString(error& Err);
+cstr ToString(error& Err, bool Force = false);
 
-#define mg_Error(Code) mg::error{ __FILE__, "", mg::int16(__LINE__), mg::error_code::Code }
-#define mg_ErrorMsg(Code, Message) mg::error{ __FILE__, Message, mg::int16(__LINE__), mg::error_code::Code }
+#define mg_Error(ErrCode)\
+  mg::error{ __FILE__, "", mg::i16(__LINE__), mg::error_code::ErrCode, false }
+#define mg_ErrorMsg(ErrCode, Msg)\
+  mg::error{ __FILE__, Msg, mg::int16(__LINE__), mg::error_code::ErrCode }
+#define mg_ErrorFmt(ErrCode, Fmt, ...)\
+  [&]() {\
+    mg::error Err{ __FILE__, Fmt, mg::i16(__LINE__), mg::error_code::ErrCode, true };\
+    Err.Code = mg::error_code::ErrCode;\
+    auto ErrStr = mg::ErrorStr[Err.Code];\
+    snprintf(Err.FullMessage, sizeof(Err.FullMessage), "%s (file %s, line %d): ",\
+      ErrStr, __FILE__, __LINE__);\
+    auto L = strlen(Err.FullMessage);\
+    snprintf(Err.FullMessage + L, sizeof(Err.FullMessage) - L, Fmt, __VA_ARGS__);\
+    return Err;\
+  }();
 
-}
+} // namespace mg
