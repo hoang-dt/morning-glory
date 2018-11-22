@@ -39,7 +39,7 @@ error ReadFile(cstr Fname, buffer* Buf) {
   if (fread(Buf->Data, Size, 1, Fp) != 1) return mg_ErrorMsg(FileReadFailed, Fname);
   Buf->Size = Size;
 
-  mg_Dismiss(1);
+  mg_DismissCleanUp(1);
   return mg_Error(NoError);
 }
 

@@ -27,7 +27,7 @@ auto GenerateNameMap = []() {\
     tokenizer Tk2(Token, " =");\
     string_ref EnumStr = Next(&Tk2);\
     string_ref EnumVal = Next(&Tk2);\
-    if (!EnumVal) {\
+    if (EnumVal) {\
       char* EndPtr = nullptr;\
       errno = 0;\
       type Val = type(strtol(EnumVal.Ptr, &EndPtr, 10));\

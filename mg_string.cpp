@@ -5,9 +5,9 @@
 
 namespace mg {
 
-string_ref::string_ref(cstr Ptr, size_t Size) : PtrC(Ptr), Size(Size) {}
+string_ref::string_ref(cstr Ptr, int Size) : PtrC(Ptr), Size(Size) {}
 string_ref::string_ref(cstr Ptr) : PtrC(Ptr), Size(strlen(Ptr)) {}
-char& string_ref::operator[](size_t Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
+char& string_ref::operator[](int Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
 string_ref::operator bool() { return Ptr != nullptr; }
 
 char* Begin(string_ref Str) { return Str.Ptr; }
@@ -16,14 +16,14 @@ char* End(string_ref Str) { return Str.Ptr + Str.Size; }
 bool operator==(string_ref Lhs, string_ref Rhs) {
   if (!Lhs || !Rhs || Lhs.Size != Rhs.Size)
     return false;
-  for (size_t I = 0; I < Lhs.Size; ++I) {
+  for (int I = 0; I < Lhs.Size; ++I) {
     if (Lhs[I] != Rhs[I])
       return false;
   }
   return true;
 }
 
-string_ref SubString(string_ref Str, size_t Begin, size_t Size) {
+string_ref SubString(string_ref Str, int Begin, int Size) {
   if (!Str || Begin >= Str.Size)
     return string_ref();
   return string_ref(Str.Ptr + Begin, Min(Size, Str.Size));
@@ -45,7 +45,7 @@ string_ref Next(tokenizer* Tk) {
     ++Tk->Pos;
 
   if (Tk->Pos < Tk->Input.Size) {
-    size_t Length = 0;
+    int Length = 0;
     while (Tk->Pos < Tk->Input.Size && !Contains(Tk->Delims, Tk->Input[Tk->Pos])) {
       ++Tk->Pos;
       ++Length;

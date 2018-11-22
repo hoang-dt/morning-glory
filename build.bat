@@ -47,11 +47,11 @@ set LDLIBS= ^
 
 :: Compiling
 @echo on
-@for %%f in (*.cpp) do (clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%)
+@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
 
 :: Linking
-set "LINK_FILES="
-@for %%f in (*.o) do call set LINK_FILES=%%LINK_FILES%% "%%~f"
+@set "LINK_FILES="
+@for %%f in (*.o) do @call set LINK_FILES=%%LINK_FILES%% "%%~f"
 
 lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
