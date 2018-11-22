@@ -5,7 +5,7 @@
 #include "mg_memory.h"
 #include "mg_scopeguard.h"
 
-// mg_Enum(errors, int, error1=0, error2=1)
+mg_Enum(errors, int, error1=0, error2=1)
 
 void print_clean0() {
   puts("cleaning up 0\n");

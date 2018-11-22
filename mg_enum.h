@@ -11,16 +11,15 @@
 #define mg_Enum(enum_name, type, ...)\
 namespace mg {\
 \
-struct enum_item {\
-  string_ref Name;\
-  type Value;\
-};\
-\
-using name_map = array<enum_item, mg_NumArgs(__VA_ARGS__)>;\
-\
 struct enum_name {\
   enum : type {__VA_ARGS__};\
   type Value;\
+  \
+  struct enum_item {\
+    string_ref Name;\
+    type Value;\
+  };\
+  using name_map = array<enum_item, mg_NumArgs(__VA_ARGS__)>;\
   inline static name_map NameMap = []() {\
     name_map NameMap;\
     tokenizer Tk1(#__VA_ARGS__, ",");\
@@ -49,14 +48,14 @@ struct enum_name {\
   enum_name() : enum_name(NameMap[0].Value) {}\
   enum_name(type Value) : Value(Value) {}\
   enum_name& operator=(type Value) { this->Value = Value; return *this; }\
+  explicit enum_name(string_ref Name) {\
+    auto It = FindIf(Begin(NameMap), End(NameMap),\
+      [Name](auto Elem) { return Elem.Name == Name; });\
+    mg_Assert(It != End(NameMap));\
+    Value = It->Value;\
+  }\
 }; /* struct enum_name */\
 \
-inline enum_name FromString(string_ref Name) {\
-  auto It = FindIf(Begin(enum_name::NameMap), End(enum_name::NameMap),\
-    [Name](auto Elem) { return Elem.Name == Name; });\
-  mg_Assert(It != End(enum_name::NameMap));\
-  return enum_name(It->Value);\
-}\
 inline string_ref ToString(enum_name Enum) {\
   auto It = FindIf(Begin(Enum.NameMap), End(Enum.NameMap),\
     [Enum](auto Elem) { return Elem.Value == Enum.Value; });\
@@ -67,4 +66,4 @@ inline bool operator==(enum_name Lhs, enum_name Rhs) { return Lhs.Value == Rhs.V
 inline bool operator!=(enum_name Lhs, enum_name Rhs) { return Lhs.Value != Rhs.Value; }\
 inline bool operator< (enum_name Lhs, enum_name Rhs) { return Lhs.Value <  Rhs.Value; }\
 \
-}
+} // namespace mg
