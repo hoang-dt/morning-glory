@@ -8,9 +8,11 @@ error::operator bool() {
 }
 
 cstr ToString(error& Err, bool Force) {
-  if (Force || !Err.StringGenerated)
-    snprintf(Err.FullMessage, sizeof(Err.FullMessage), "%s (file: %s, line %d): %s",
-      ErrorStr[Err.Code], Err.File, Err.Line, Err.Message);
+  if (Force || !Err.StringGenerated) {
+    auto ErrStr = ToString(Err.Code);
+    snprintf(Err.FullMessage, sizeof(Err.FullMessage), "%.*s (file: %s, line %d): %s",
+      ErrStr.Size, ErrStr.Ptr, Err.File, Err.Line, Err.Message);
+  }
   return Err.FullMessage;
 }
 

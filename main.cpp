@@ -5,7 +5,7 @@
 #include "mg_memory.h"
 #include "mg_scopeguard.h"
 
-mg_Enum(errors, int, error1=0, error2=1)
+// mg_Enum(errors, int, error1=0, error2=1)
 
 void print_clean0() {
   puts("cleaning up 0\n");
@@ -24,9 +24,6 @@ int main() {
   printf("%s\n", Ss);
   auto Err3 = mg_ErrorMsg(UnknownError, "Hahaha");
   printf("%s\n", ToString(Err3));
-  mg::errors Err = mg::errors::error1;
-  auto S = ToString(Err);
-  printf("%.*s", int(S.Size), S.Ptr);
   // mg_AssertMsg(false, "Size %d", S.Size);
   mg::buffer Buf;
   auto Error = mg::ReadFile("abc.txt", &Buf);
