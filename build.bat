@@ -16,7 +16,11 @@ set "PATH=%LLVMPath%\bin;%VSBasePath%\bin\Hostx64\x64;%PATH%"
 :: Compiler flags
 :: TODO: add different build configurations (release, debug, etc)
 set CFLAGS= ^
-  -Xclang -flto-visibility-public-std -std=c++17 -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -Wall -Wextra -pedantic -fopenmp=libomp -g -gcodeview -gno-column-info
+  -Xclang -flto-visibility-public-std -std=c++17^
+  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp=libomp^
+  -Wall -Wextra -pedantic^
+  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
+  -g -gcodeview -gno-column-info
 
 ::set CFLAGS= ^
   ::/Od /nologo /fp:fast /fp:except- /EHsc /GR- /Zo /Oi /W4 /wd4201 /wd4100 /wd4189 /wd4505 /wd4127 /FC /Zi /arch:AVX2
@@ -47,14 +51,17 @@ set LDLIBS= ^
 
 :: Compiling
 @echo on
-@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
+::@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
+clang++.exe "build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
 
 :: Linking
-@set "LINK_FILES="
-@for %%f in (*.o) do @call set LINK_FILES=%%LINK_FILES%% "%%~f"
+::@set "LINK_FILES="
+::@for %%f in (*.o) do @call set LINK_FILES=%%LINK_FILES%% "%%~f"
 
-lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
+::lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
+lld-link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 
 @echo off
+del "build.o"
 set "PATH=%OLD_PATH%"

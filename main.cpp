@@ -1,9 +1,11 @@
 #include "mg_assert.h"
+#include "mg_dataset.h"
 #include "mg_enum.h"
 #include "mg_error.h"
 #include "mg_io.h"
 #include "mg_memory.h"
 #include "mg_scopeguard.h"
+#include "mg_dataset.h"
 
 mg_Enum(errors, int, error1=0, error2=1)
 
@@ -16,6 +18,16 @@ void print_clean1() {
 }
 
 int main() {
+  using namespace mg;
+  metadata Meta;
+  auto Err = ReadMetadata("abc.meta", &Meta);
+  if (!Err) {
+    puts("No error\n");
+  }
+  else {
+    puts("Error\n");
+  }
+  return 0;
   mg_BeginCleanUp(0) { print_clean0(); }; mg_EndCleanUp(0)
   mg_BeginCleanUp(1) { print_clean1(); }; mg_EndCleanUp(1)
   int N = 1;
@@ -24,6 +36,11 @@ int main() {
   printf("%s\n", Ss);
   auto Err3 = mg_ErrorMsg(UnknownError, "Hahaha");
   printf("%s\n", ToString(Err3));
+  auto Err4 = mg_Error(FileReadFailed);
+  printf("%s\n", ToString(Err4));
+  mg::v3<int> v3;
+  v3[0] = 1;
+  v3.X = 2;
   // mg_AssertMsg(false, "Size %d", S.Size);
   mg::buffer Buf;
   auto Error = mg::ReadFile("abc.txt", &Buf);
@@ -33,5 +50,4 @@ int main() {
     fprintf(stderr, "%s", Buf.Data);
   }
   mg_DismissCleanUp(0)
-  mg_DismissCleanUp(1)
 }

@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "mg_error.h"
 #include "mg_types.h"
 

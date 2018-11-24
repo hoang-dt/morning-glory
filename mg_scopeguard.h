@@ -1,7 +1,5 @@
 #pragma once
 
-#include "mg_error.h"
-
 namespace mg {
 
 template <typename func_t>
@@ -12,8 +10,8 @@ struct scope_guard {
   ~scope_guard() { if (!Dismissed) { Func(); } }
 };
 
+} // namespace mg
+
 #define mg_BeginCleanUp(n) auto __CleanUpFunc__##n = [&]()
 #define mg_EndCleanUp(n) mg::scope_guard __ScopeGuard__##n(__CleanUpFunc__##n);
 #define mg_DismissCleanUp(n) { __ScopeGuard__##n.Dismissed = true; }
-
-} // namespace mg

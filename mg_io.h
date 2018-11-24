@@ -1,47 +1,13 @@
 #pragma once
 
-#include <stdio.h>
 #include "mg_error.h"
-#include "mg_memory.h"
-#include "mg_scopeguard.h"
 #include "mg_types.h"
-
-/* Enable support for reading large files */
-#if defined(_MSC_VER) || defined(__MINGW64__)
-  #define mg_FSeek _fseeki64
-  #define mg_FTell _ftelli64
-#elif defined(__GNUC__) || defined(__APPLE__)
-  #define _FILE_OFFSET_BITS 64
-  #define mg_FSeek fseeko
-  #define mg_FTell ftello
-#endif
-
 namespace mg {
 
-/* Read a text file from disk into a string */
-error ReadFile(cstr Fname, buffer* Buf) {
-  mg_Assert((Buf->Data && Buf->Size) || (!Buf->Data && !Buf->Size));
-
-  FILE* Fp = fopen(Fname, "rb");
-  mg_BeginCleanUp(0) { if (Fp) fclose(Fp); }; mg_EndCleanUp(0)
-  if (!Fp) { return mg_ErrorMsg(FileOpenFailed, Fname); }
-
-  /* Determine the file size */
-  if (mg_FSeek(Fp, 0, SEEK_END)) return mg_ErrorMsg(FileSeekFailed, Fname);
-  size_t Size = 0;
-  if ((Size = mg_FTell(Fp)) == size_t(-1)) return mg_ErrorMsg(FileTellFailed, Fname);
-  if (mg_FSeek(Fp, 0, SEEK_SET)) return mg_ErrorMsg(FileSeekFailed, Fname);
-  if (Buf->Size < Size)
-    if (!mg_Allocate(Buf->Data, Size)) return mg_ErrorMsg(OutOfMemory, Fname);
-
-  /* Read file contents */
-  mg_BeginCleanUp(1) { mg_Deallocate(Buf->Data); }; mg_EndCleanUp(1)
-  if (fread(Buf->Data, Size, 1, Fp) != 1) return mg_ErrorMsg(FileReadFailed, Fname);
-  Buf->Size = Size;
-
-  mg_DismissCleanUp(1);
-  return mg_Error(NoError);
-}
+/* Read a text file from disk into a buffer. The buffer can be nullptr or it can be
+initialized in advance, in which case the existing memory will be reused if the file can fit
+in it. The caller is responsible to deallocate the memory. */
+error ReadFile(cstr Fname, buffer* Buf);
 
 /* Write a binary raw file to disk */
 // Error write_raw(const char* file_name, const byte* buf, int64_t size) {
@@ -82,3 +48,5 @@ error ReadFile(cstr Fname, buffer* Buf) {
 // }
 
 } // namespace mg
+
+#include "mg_io.inl"

@@ -6,6 +6,7 @@
 
 namespace mg {
 
+using uint    = unsigned int;
 using byte    = uint8_t;
 using int8    = int8_t;
 using i8      = int8;
@@ -29,20 +30,22 @@ using float64 = double;
 using f64     = float64;
 using cstr    = const char*;
 
+/* Something to replace std::array */
+template <typename t, int N>
+struct array;
+
+/* Vector in 2D, supports .X, .UV, and [] */
+template <typename t>
+struct v2;
+/* Vector in 3D, supports .X, .XY, .UV, .RGB and [] */
+template <typename t>
+struct v3;
+
 struct buffer {
   byte* Data = nullptr;
   size_t Size = 0;
 };
-/* Something to replace std::array */
-#define TemplateArr template <typename t, int N>
-TemplateArr
-struct array {
-  t Arr[N];
-  t& operator[](int Idx) { mg_Assert(Idx < N); return Arr[Idx]; }
-};
-TemplateArr t* Begin(array<t, N>& A) { return &A.Arr[0]; }
-TemplateArr t* End(array<t, N>& A) { return &A.Arr[0] + N; }
-TemplateArr int Size(array<t, N>&) { return N; }
-#undef TemplateArr
 
-}
+} // namespace mg
+
+#include "mg_types.inl"

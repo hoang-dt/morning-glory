@@ -1,6 +1,8 @@
+#include <ctype.h>
 #include <string.h>
 #include "mg_algorithm.h"
 #include "mg_assert.h"
+#include "mg_math.h"
 #include "mg_string.h"
 
 namespace mg {
@@ -14,7 +16,7 @@ char* Begin(string_ref Str) { return Str.Ptr; }
 char* End(string_ref Str) { return Str.Ptr + Str.Size; }
 
 bool operator==(string_ref Lhs, string_ref Rhs) {
-  if (!Lhs || !Rhs || Lhs.Size != Rhs.Size)
+  if (Lhs.Size != Rhs.Size)
     return false;
   for (int I = 0; I < Lhs.Size; ++I) {
     if (Lhs[I] != Rhs[I])
@@ -23,10 +25,57 @@ bool operator==(string_ref Lhs, string_ref Rhs) {
   return true;
 }
 
+string_ref TrimLeft(string_ref Str) {
+  string_ref StrOut = Str;
+  while (StrOut.Size && isspace(*StrOut.Ptr)) {
+    ++StrOut.Ptr;
+    --StrOut.Size;
+  }
+  return StrOut;
+}
+
+string_ref TrimRight(string_ref Str) {
+  string_ref StrOut = Str;
+  while (StrOut.Size && isspace(StrOut[StrOut.Size - 1])) 
+    --StrOut.Size;
+  return StrOut;
+}
+
+string_ref Trim(string_ref Str) {
+  return TrimLeft(TrimRight(Str));
+}
+
 string_ref SubString(string_ref Str, int Begin, int Size) {
   if (!Str || Begin >= Str.Size)
     return string_ref();
   return string_ref(Str.Ptr + Begin, Min(Size, Str.Size));
+}
+
+void Copy(string_ref Dst, string_ref Src, bool AddNull) {
+  int NumBytes = Min(Dst.Size, Src.Size);
+  memcpy(Dst.Ptr, Src.Ptr, NumBytes);
+  if (AddNull) 
+    Dst.Ptr[NumBytes] = 0;
+}
+
+bool ToInt(string_ref Str, int* Result) {
+  if (!Str || Str.Size <= 0)
+    return false;
+
+  int Mult = 1, Start = 0;
+  if (Str[0] == '-') {
+    Mult = -1;
+    Start = 1;
+  }
+  *Result = 0;
+  for (int I = Start; I < Str.Size; ++I) {
+    int V = Str[Str.Size - I - 1] - '0';
+    if (V >= 0 && V < 10) 
+      *Result += Mult * (V * Pow10[I]);
+    else
+      return false;
+  }
+  return true;
 }
 
 /* tokenizer stuff */
