@@ -13,7 +13,7 @@
 namespace mg {\
 \
 struct enum_name {\
-  enum : type {__VA_ARGS__};\
+  enum : type { __VA_ARGS__, __Invalid__ };\
   type Value;\
   \
   struct enum_item {\
@@ -37,6 +37,8 @@ struct enum_name {\
         type Val = type(strtol(EnumVal.Ptr, &EndPtr, 10));\
         if (errno == ERANGE || (EndPtr == EnumVal.Ptr) || !Contains(string_ref(" ,\0", 3), *EndPtr))\
           mg_Assert(false);\
+        else if (Val < CurrentVal)\
+          mg_Assert(false);\
         else\
           CurrentVal = Val;\
       }\
@@ -46,15 +48,24 @@ struct enum_name {\
     return NameMap;\
   }();\
   \
-  enum_name() : enum_name(NameMap[0].Value) {}\
-  enum_name(type Value) : Value(Value) {}\
-  enum_name& operator=(type Value) { this->Value = Value; return *this; }\
+  enum_name() : enum_name(__Invalid__) {}\
+  enum_name(type Value) {\
+    auto It = FindIf(Begin(NameMap), End(NameMap),\
+      [Value](auto& Elem) { return Elem.Value == Value; });\
+    if (It != End(NameMap)) \
+      this->Value = It->Value;\
+    else\
+      this->Value = __Invalid__;\
+  }\
   explicit enum_name(string_ref Name) {\
     auto It = FindIf(Begin(NameMap), End(NameMap),\
-      [Name](auto Elem) { return Elem.Name == Name; });\
-    if (It != End(NameMap));\
+      [Name](auto& Elem) { return Elem.Name == Name; });\
+    if (It != End(NameMap)) \
       Value = It->Value;\
+    else\
+      Value = __Invalid__;\
   }\
+  explicit operator bool() { return Value != __Invalid__; }\
 }; /* struct enum_name */\
 \
 inline string_ref ToString(enum_name Enum) {\

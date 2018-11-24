@@ -20,12 +20,15 @@ void print_clean1() {
 int main() {
   using namespace mg;
   metadata Meta;
-  auto Err = ReadMetadata("abc.meta", &Meta);
-  if (!Err) {
+  auto Ok = ReadMetadata("abc.meta", &Meta);
+  if (Ok) {
     puts("No error\n");
+    printf("%s\n", ToString(Meta));
   }
   else {
     puts("Error\n");
+    auto ErrStr = ToString(Ok);
+    printf("%d %s", Ok.Code.Value, ErrStr);
   }
   return 0;
   mg_BeginCleanUp(0) { print_clean0(); }; mg_EndCleanUp(0)

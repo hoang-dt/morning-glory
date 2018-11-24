@@ -11,3 +11,21 @@
   #define mg_FSeek fseeko
   #define mg_FTell ftello
 #endif
+
+namespace mg {
+
+printer::printer(char* Buf, int Size) : Buf(Buf), Size(Size) {}
+
+inline void Reset(printer* Pr, char* Buf, int Size) {
+  Pr->Buf = Buf;
+  Pr->Size = Size;
+}
+
+template <typename ... args>
+void Print(printer* Pr, cstr Fmt, args&... Args) {
+  int Written = snprintf(Pr->Buf, Pr->Size, Fmt, Args...);
+  Pr->Buf += Written;
+  Pr->Size -= Written;
+}
+
+} // namespace mg

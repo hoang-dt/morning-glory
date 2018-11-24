@@ -8,7 +8,14 @@
 namespace mg {
 
 cstr ToString(metadata& Meta) {
-  
+  printer Pr(Meta.String, sizeof(Meta.String));
+  Print(&Pr, "file = %s\n", Meta.File);
+  Print(&Pr, "name = %s\n", Meta.Name);
+  Print(&Pr, "field = %s\n", Meta.Field);
+  Print(&Pr, "dimensions = %d %d %d\n", Meta.Dims.X, Meta.Dims.Y, Meta.Dims.Z);
+  string_ref TypeStr = ToString(Meta.DataType);
+  Print(&Pr, "data type = %.*s", TypeStr.Size, TypeStr.Ptr);
+  return Meta.String;
 }
 
 error ReadMetadata(cstr Fname, metadata* Meta) {
@@ -16,14 +23,13 @@ error ReadMetadata(cstr Fname, metadata* Meta) {
   error Err = ReadFile(Fname, &Buf);
   if (!Err) return Err;
   mg_BeginCleanUp(0) { mg_Deallocate(Buf.Data); }; mg_EndCleanUp(0)
-
   string_ref Str((cstr)Buf.Data, (int)Buf.Size);
   tokenizer TkLine(Str, "\r\n");
   for (string_ref Line = Next(&TkLine); Line; Line = Next(&TkLine)) {
     tokenizer TkEq(Line, "=");
-    string_ref Attr = Next(&TkEq);
-    string_ref Value = Next(&TkEq);
-    if (!Attr || !Value) 
+    string_ref Attr = Trim(Next(&TkEq));
+    string_ref Value = Trim(Next(&TkEq));
+    if (!Attr || !Value)
       return mg_ErrorFmt(ParseFailed, "File %s", Fname);
 
     if (Attr == "file") {
@@ -41,6 +47,10 @@ error ReadMetadata(cstr Fname, metadata* Meta) {
       if (D >= 4) return mg_ErrorFmt(DimensionsTooMany, "File %s", Fname);
       if (D <= 2) Meta->Dimensions[2] = 1;
       if (D <= 1) Meta->Dimensions[1] = 1;
+    } else if (Attr == "data type") {
+      if (!(Meta->DataType = data_type(Value))) {
+        return mg_ErrorFmt(TypeNotSupported, "File %s", Fname);
+      }
     } else {
       return mg_ErrorFmt(AttributeNotFound, "File %s", Fname);
     }
