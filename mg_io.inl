@@ -21,11 +21,24 @@ inline void Reset(printer* Pr, char* Buf, int Size) {
   Pr->Size = Size;
 }
 
-template <typename ... args>
-void Print(printer* Pr, cstr Fmt, args&... Args) {
-  int Written = snprintf(Pr->Buf, Pr->Size, Fmt, Args...);
-  Pr->Buf += Written;
-  Pr->Size -= Written;
+#undef mg_PrintFmt
+#define mg_PrintFmt(PrinterPtr, Format, ...) {\
+  int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Format, __VA_ARGS__);\
+  (PrinterPtr)->Buf += Written;\
+  (PrinterPtr)->Size += Written;\
 }
+#undef mg_Print
+#define mg_Print(PrinterPtr, Message) {\
+  int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Message);\
+  (PrinterPtr)->Buf += Written;\
+  (PrinterPtr)->Size += Written;\
+}
+
+// template <typename ... args>
+// void Print(printer* Pr, cstr Fmt, args&... Args) {
+//   int Written = snprintf(Pr->Buf, Pr->Size, Fmt, Args...);
+//   Pr->Buf += Written;
+//   Pr->Size -= Written;
+// }
 
 } // namespace mg

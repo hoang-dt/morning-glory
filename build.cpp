@@ -1,5 +1,6 @@
 #include "mg_dataset.cpp"
 #include "mg_error.cpp"
 #include "mg_io.cpp"
+#include "mg_stacktrace_posix.cpp"
 #include "mg_string.cpp"
 #include "main.cpp"

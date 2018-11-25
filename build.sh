@@ -9,11 +9,12 @@ export CFLAGS="
   -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd
   -Wall -Wextra -Wpedantic 
   -Wno-missing-braces
-  -Og -g -gno-column-info"
+  -g -gno-column-info -rdynamic"
 
 export CDEFS="
   -Dmg_Slow=1"
 
 # Compiling
 g++-8 build.cpp -o ${OUTPUT} ${CFLAGS} ${CDEFS}
+g++-8 test_stacktrace.cpp mg_string.cpp mg_stacktrace_posix.cpp -o "test_trace" ${CFLAGS} ${CDEFS}
 
