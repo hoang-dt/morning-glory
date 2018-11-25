@@ -18,6 +18,8 @@ TemplateArr t* End(array<t, N>& A) { return &A.Arr[0] + N; }
 TemplateArr int Size(array<t, N>&) { return N; }
 #undef TemplateArr
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 template <typename t>
 struct v2 {
   union {
@@ -54,5 +56,6 @@ using v3l  = v3<i64>;
 using v3ul = v3<u64>;
 using v3f  = v3<f32>;
 using v3d  = v3<f64>;
+#pragma GCC diagnostic pop
 
 } // namespace mg

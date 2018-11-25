@@ -17,7 +17,7 @@ set "PATH=%LLVMPath%\bin;%VSBasePath%\bin\Hostx64\x64;%PATH%"
 :: TODO: add different build configurations (release, debug, etc)
 set CFLAGS= ^
   -Xclang -flto-visibility-public-std -std=c++17^
-  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp=libomp^
+  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
   -Wall -Wextra -pedantic^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
   -g -gcodeview -gno-column-info

@@ -36,7 +36,7 @@
       } \
     } while (0)
 #else
-  #define mg_Assert(Cond) ;
-  #define mg_AssertMsg(Cond, Msg) ;
-  #define mg_AssertFmt(Cond, Fmt, ...) ;
+  #define mg_Assert(Cond) do {} while (0)
+  #define mg_AssertMsg(Cond, Msg) do {} while (0)
+  #define mg_AssertFmt(Cond, Fmt, ...) do {} while (0)
 #endif

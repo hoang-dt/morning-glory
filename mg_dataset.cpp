@@ -4,6 +4,7 @@
 #include "mg_scopeguard.h"
 #include "mg_string.h"
 #include "mg_types.h"
+#include "mg_stacktrace.h"
 
 namespace mg {
 
