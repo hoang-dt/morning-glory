@@ -3,6 +3,7 @@
 namespace mg {
 
 struct mutex;
+struct lock; // RAII struct that acquires the mutex on construction and releases it on destruction
 
 /* Block until the lock can be acquired then return true. Return false if something goes wrong.  */
 bool Lock(mutex* Mutex);

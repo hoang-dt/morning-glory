@@ -12,6 +12,12 @@ struct mutex {
   ~mutex() { DeleteCriticalSection(&Crit); }
 };
 
+struct lock {
+  mutex* Mutex;
+  lock(mutex* Mutex) : Mutex(Mutex) { Lock(Mutex); }
+  ~lock() { Unlock(Mutex); }
+};
+
 } // namespace mg
 
 #endif

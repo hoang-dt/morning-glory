@@ -15,6 +15,7 @@
 
 namespace mg {
 
+// TODO: get the line number (add2line)
 bool PrintStacktrace(char* Buf, int Size) {
   printer Pr(Buf, Size);
   mg_Print(&Pr, "Stack trace:\n");
@@ -28,10 +29,10 @@ bool PrintStacktrace(char* Buf, int Size) {
   }
   /* Resolve addresses into strings containing "filename(function+address)", */
   char** SymbolList = backtrace_symbols(AddrList, AddrLen);
-  /* Allocate string which will be filled with the demangled function name */
-  size_t FuncNameSize = 64;
-  char* FuncName = (char*)malloc(FuncNameSize);
-  for (int I = 1; I < AddrLen; I++) { // iterate over the returned symbol lines (skip the first)
+  size_t FuncNameSize = 128;
+  char Buffer[128];
+  char* FuncName = Buffer;
+  for (int I = 1; I < AddrLen; ++I) { // iterate over the returned symbol lines (skip the first)
 	  char* BeginName = 0, *BeginOffset = 0, *EndOffset = 0;
     /* Find parentheses and +address offset surrounding the mangled name:
     e.g., ./module(function+0x15c) [0x8048a6d] */
@@ -62,7 +63,6 @@ bool PrintStacktrace(char* Buf, int Size) {
       mg_PrintFmt(&Pr, "  %s\n", SymbolList[I]);
     }
   }
-  free(FuncName);
   free(SymbolList);
   return true;
 }
