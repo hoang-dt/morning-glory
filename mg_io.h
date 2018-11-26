@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdio.h>
 #include "mg_error.h"
 #include "mg_types.h"
 
@@ -9,11 +10,14 @@ namespace mg {
 struct printer {
   char* Buf = nullptr;
   int Size = 0;
+  FILE* File = nullptr; // either File == nullptr or Buf == nullptr
   printer() = default;
   printer(char* Buf, int Size);
+  printer(FILE* File);
 };
 
 void Reset(printer* Pr, char* Buf, int Size);
+void Reset(printer* Pr, FILE* File);
 // template <typename ... args>
 // void Print(printer* Pr, cstr Fmt, args&... Args);
 #define mg_PrintFmt(PrinterPtr, Format, ...)

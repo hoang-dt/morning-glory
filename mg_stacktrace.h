@@ -2,6 +2,7 @@
 
 namespace mg {
 
-bool PrintStacktrace(char* Buf, int Size);
+struct printer;
+bool PrintStacktrace(printer* Pr);
 
 }

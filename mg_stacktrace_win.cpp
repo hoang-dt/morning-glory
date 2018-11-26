@@ -12,10 +12,9 @@ namespace mg {
 
 static mutex StacktraceMutex;
 
-bool PrintStacktrace(char* Buf, int Size) {
+bool PrintStacktrace(printer* Pr) {
   lock Lck(&StacktraceMutex);
-  printer Pr(Buf, Size);
-  mg_Print(&Pr, "Stack trace:\n");
+  mg_Print(Pr, "Stack trace:\n");
   SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_INCLUDE_32BIT_MODULES | SYMOPT_UNDNAME);
   HANDLE Proc = GetCurrentProcess();
   if (!SymInitialize(Proc, "http://msdl.microsoft.com/download/symbols", true))
@@ -34,11 +33,11 @@ bool PrintStacktrace(char* Buf, int Size) {
       IMAGEHLP_LINE Line;
       Line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
       if (SymGetLineFromAddr(Proc, Info->Address, &Offset, &Line)) {
-        mg_PrintFmt(&Pr, "%s, line %lu: %.*s\n", Line.FileName, Line.LineNumber, (int)Info->NameLen, Info->Name);
+        mg_PrintFmt(Pr, "%s, line %lu: %.*s\n", Line.FileName, Line.LineNumber, (int)Info->NameLen, Info->Name);
       } else if (GetModuleFileNameA((HINSTANCE)Info->ModBase, ModBuf, MAX_PATH)) {
-        mg_PrintFmt(&Pr, "%s: %.*s\n", ModBuf, (int)Info->NameLen, Info->Name);
+        mg_PrintFmt(Pr, "%s: %.*s\n", ModBuf, (int)Info->NameLen, Info->Name);
       } else {
-        mg_PrintFmt(&Pr, "%.*s\n", (int)Info->NameLen, Info->Name);
+        mg_PrintFmt(Pr, "%.*s\n", (int)Info->NameLen, Info->Name);
       }
     }
   }

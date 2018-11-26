@@ -15,5 +15,5 @@ export CDEFS="
   -Dmg_Slow=1"
 
 # Compiling
-g++-8 test_stacktrace.cpp mg_string.cpp mg_stacktrace_posix.cpp -o "test_trace" ${CFLAGS} ${CDEFS}
+g++-8 test_stacktrace.cpp mg_io.cpp mg_string.cpp mg_stacktrace_posix.cpp -o "test_trace" ${CFLAGS} ${CDEFS}
 

@@ -16,15 +16,14 @@
 namespace mg {
 
 // TODO: get the line number (add2line)
-bool PrintStacktrace(char* Buf, int Size) {
-  printer Pr(Buf, Size);
-  mg_Print(&Pr, "Stack trace:\n");
+bool PrintStacktrace(printer* Pr) {
+  mg_Print(Pr, "Stack trace:\n");
   constexpr int MaxFrames = 63;
   void* AddrList[MaxFrames + 1]; // Storage array for stack trace address data
   /* Retrieve current stack addresses */
   int AddrLen = backtrace(AddrList, sizeof(AddrList) / sizeof(void*));
   if (AddrLen == 0) {
-    mg_Print(&Pr, "  <empty, possibly corrupt>\n");
+    mg_Print(Pr, "  <empty, possibly corrupt>\n");
     return false;
   }
   /* Resolve addresses into strings containing "filename(function+address)", */
@@ -55,12 +54,12 @@ bool PrintStacktrace(char* Buf, int Size) {
 	    char* Ret = abi::__cxa_demangle(BeginName, FuncName, &FuncNameSize, &Status);
 	    if (Status == 0) {
 		    FuncName = Ret; // use possibly realloc()-ed string
-		    mg_PrintFmt(&Pr, "  %s : %s+%s\n", SymbolList[I], FuncName, BeginOffset);
+		    mg_PrintFmt(Pr, "  %s : %s+%s\n", SymbolList[I], FuncName, BeginOffset);
 	    } else { // demangling failed
-		    mg_PrintFmt(&Pr, "  %s : %s()+%s\n", SymbolList[I], BeginName, BeginOffset);
+		    mg_PrintFmt(Pr, "  %s : %s()+%s\n", SymbolList[I], BeginName, BeginOffset);
 	    }
     } else { // couldn't parse the line? print the whole line.
-      mg_PrintFmt(&Pr, "  %s\n", SymbolList[I]);
+      mg_PrintFmt(Pr, "  %s\n", SymbolList[I]);
     }
   }
   free(SymbolList);

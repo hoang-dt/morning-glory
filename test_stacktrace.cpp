@@ -1,3 +1,4 @@
+#include "mg_io.h"
 #include "mg_stacktrace.h"
 #include <map>
 
@@ -6,6 +7,7 @@ using namespace mg;
 namespace Nu {
 
 char Buf[1024];
+printer Pr(Buf, sizeof(Buf));
 
 template<typename Type>
 struct Alpha
@@ -13,10 +15,10 @@ struct Alpha
     struct Beta
     {
 	void func() {
-    PrintStacktrace(Buf, sizeof(Buf));
+    PrintStacktrace(&Pr);
 	}
 	void func(Type) {
-    PrintStacktrace(Buf, sizeof(Buf));
+    PrintStacktrace(&Pr);
 	}
     };
 };
@@ -31,7 +33,7 @@ struct Gamma
 
 template<>
 void Gamma::unroll<0>(double) {
-    PrintStacktrace(Buf, sizeof(Buf));
+    PrintStacktrace(&Pr);
 }
 
 } // namespace Nu

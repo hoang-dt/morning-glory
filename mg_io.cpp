@@ -1,3 +1,4 @@
+#include "mg_assert.h"
 #include "mg_error.h"
 #include "mg_io.h"
 #include "mg_memory.h"
@@ -5,6 +6,21 @@
 #include "mg_types.h"
 
 namespace mg {
+
+printer::printer(char* Buf, int Size) : Buf(Buf), Size(Size), File(nullptr) {}
+printer::printer(FILE* File) : Buf(nullptr), Size(0), File(File) {}
+
+void Reset(printer* Pr, char* Buf, int Size) {
+  Pr->Buf = Buf;
+  Pr->Size = Size;
+  Pr->File = nullptr;
+}
+
+void Reset(printer* Pr, FILE* File) {
+  Pr->Buf = nullptr;
+  Pr->Size = 0;
+  Pr->File = File;
+}
 
 error ReadFile(cstr Fname, buffer* Buf) {
   mg_Assert((Buf->Data && Buf->Size) || (!Buf->Data && !Buf->Size));

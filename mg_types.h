@@ -1,8 +1,8 @@
 #pragma once
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "mg_assert.h"
 
 namespace mg {
 

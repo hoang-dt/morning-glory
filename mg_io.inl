@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <stdio.h>
 
 /* Enable support for reading large files */
@@ -14,24 +15,27 @@
 
 namespace mg {
 
-printer::printer(char* Buf, int Size) : Buf(Buf), Size(Size) {}
-
-inline void Reset(printer* Pr, char* Buf, int Size) {
-  Pr->Buf = Buf;
-  Pr->Size = Size;
-}
-
 #undef mg_PrintFmt
 #define mg_PrintFmt(PrinterPtr, Format, ...) {\
-  int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Format, __VA_ARGS__);\
-  (PrinterPtr)->Buf += Written;\
-  (PrinterPtr)->Size += Written;\
+  if ((PrinterPtr)->Buf && !(PrinterPtr)->File) {\
+    int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Format, __VA_ARGS__);\
+    (PrinterPtr)->Buf += Written;\
+    (PrinterPtr)->Size += Written;\
+  } else if (!(PrinterPtr)->Buf && (PrinterPtr)->File) {\
+    fprintf((PrinterPtr)->File, Format, __VA_ARGS__);\
+  }\
 }
 #undef mg_Print
 #define mg_Print(PrinterPtr, Message) {\
-  int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Message);\
-  (PrinterPtr)->Buf += Written;\
-  (PrinterPtr)->Size += Written;\
+  if ((PrinterPtr)->Buf && !(PrinterPtr)->File) {\
+    int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Message);\
+    (PrinterPtr)->Buf += Written;\
+    (PrinterPtr)->Size += Written;\
+  } else if (!(PrinterPtr)->Buf && (PrinterPtr)->File) {\
+    fprintf((PrinterPtr)->File, Message);\
+  } else {\
+    assert(false && "unavailable or ambiguous printer destination");\
+  }\
 }
 
 // template <typename ... args>

@@ -17,7 +17,21 @@ void print_clean1() {
   puts("cleaning up 1\n");
 }
 
+void C() {
+  int a = 10;
+  mg_AssertFmt(false, ": %d", a);
+}
+
+void B() {
+  C();
+}
+
+void A() {
+  B();
+}
+
 int main() {
+  A();
   using namespace mg;
   metadata Meta;
   auto Ok = ReadMetadata("abc.meta", &Meta);

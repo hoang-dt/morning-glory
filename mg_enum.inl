@@ -1,9 +1,9 @@
 #pragma once
 
+#include <assert.h>
 #include <errno.h>
 #include <stdlib.h>
 #include "mg_algorithm.h"
-#include "mg_assert.h"
 #include "mg_macros.h"
 #include "mg_string.h"
 #include "mg_types.h"
@@ -36,13 +36,13 @@ struct enum_name {\
         errno = 0;\
         type Val = type(strtol(EnumVal.Ptr, &EndPtr, 10));\
         if (errno == ERANGE || (EndPtr == EnumVal.Ptr) || !Contains(string_ref(" ,\0", 3), *EndPtr))\
-          mg_Assert(false);\
+          assert(false && " non-integer enum values");\
         else if (Val < CurrentVal)\
-          mg_Assert(false);\
+          assert(false && " non-increasing enum values");\
         else\
           CurrentVal = Val;\
       }\
-      mg_Assert(I < Size(NameMap));\
+      assert(I < Size(NameMap));\
       NameMap[I] = enum_item{ EnumStr, CurrentVal };\
     }\
     return NameMap;\
@@ -71,7 +71,7 @@ struct enum_name {\
 inline string_ref ToString(enum_name Enum) {\
   auto It = FindIf(Begin(Enum.NameMap), End(Enum.NameMap),\
     [Enum](auto Elem) { return Elem.Value == Enum.Value; });\
-  mg_Assert(It != End(Enum.NameMap));\
+  assert(It != End(Enum.NameMap));\
   return It->Name;\
 }\
 inline bool operator==(enum_name Lhs, enum_name Rhs) { return Lhs.Value == Rhs.Value; }\

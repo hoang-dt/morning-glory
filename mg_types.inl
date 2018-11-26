@@ -1,8 +1,8 @@
 #pragma once
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "mg_assert.h"
 
 namespace mg {
 
@@ -11,7 +11,7 @@ namespace mg {
 TemplateArr
 struct array {
   t Arr[N];
-  t& operator[](int Idx) { mg_Assert(Idx < N); return Arr[Idx]; }
+  t& operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
 };
 TemplateArr t* Begin(array<t, N>& A) { return &A.Arr[0]; }
 TemplateArr t* End(array<t, N>& A) { return &A.Arr[0] + N; }
@@ -27,7 +27,7 @@ struct v2 {
     struct { t U, V; };
     t E[2];
   };
-  t& operator[](int Idx) { mg_Assert(Idx < 2); return E[Idx]; }
+  t& operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
 };
 using v2i  = v2<i32>;
 using v2u  = v2<u32>;
@@ -48,7 +48,7 @@ struct v3 {
     struct { t Ignored3_; v2<t> V__; };
     t E[3];
   };
-  t& operator[](int Idx) { mg_Assert(Idx < 3); return E[Idx]; }
+  t& operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
 };
 using v3i  = v3<i32>;
 using v3u  = v3<u32>;
