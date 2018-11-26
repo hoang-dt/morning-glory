@@ -4,7 +4,7 @@
 
 #include "mg_stacktrace.h"
 
-#if defined __linux__ || defined __APPLE__
+#if defined(__linux__) || defined(__APPLE__)
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,7 +15,7 @@
 
 namespace mg {
 
-void PrintStacktrace(char* Buf, int Size) {
+bool PrintStacktrace(char* Buf, int Size) {
   printer Pr(Buf, Size);
   mg_Print(&Pr, "Stack trace:\n");
   constexpr int MaxFrames = 63;
@@ -24,7 +24,7 @@ void PrintStacktrace(char* Buf, int Size) {
   int AddrLen = backtrace(AddrList, sizeof(AddrList) / sizeof(void*));
   if (AddrLen == 0) {
     mg_Print(&Pr, "  <empty, possibly corrupt>\n");
-    return;
+    return false;
   }
   /* Resolve addresses into strings containing "filename(function+address)", */
   char** SymbolList = backtrace_symbols(AddrList, AddrLen);
@@ -64,6 +64,7 @@ void PrintStacktrace(char* Buf, int Size) {
   }
   free(FuncName);
   free(SymbolList);
+  return true;
 }
 
 } // namespace mg

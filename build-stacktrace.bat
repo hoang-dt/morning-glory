@@ -52,7 +52,7 @@ set LDLIBS= ^
 :: Compiling
 @echo on
 ::@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
-clang++.exe "build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
+clang++.exe "mg_string.cpp" "mg_stacktrace_win.cpp" "test_stacktrace.cpp" -c %CFLAGS% %CDEFS%
 
 :: Linking
 ::@set "LINK_FILES="
@@ -60,7 +60,7 @@ clang++.exe "build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
 
 ::lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
-lld-link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
+lld-link.exe "mg_string.o" "mg_stacktrace_win.o"  "test_stacktrace.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 
 @echo off
 del "build.o"

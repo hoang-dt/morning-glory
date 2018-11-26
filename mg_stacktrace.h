@@ -2,6 +2,6 @@
 
 namespace mg {
 
-void PrintStacktrace(char* Buf, int Size);
+bool PrintStacktrace(char* Buf, int Size);
 
 }

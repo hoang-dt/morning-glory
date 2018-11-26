@@ -2,7 +2,7 @@
 
 :: Parameters
 set "LLVMPath=C:\Program Files\LLVM"
-set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
+set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community"
 set "VSVersion=14.16.27023"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
@@ -47,12 +47,12 @@ set LDLIBS= ^
   -libpath:"%LLVMPath%\lib" ^
   libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib kernel32.lib User32.lib ^
   legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
-  libomp.lib dbghelp.lib
+  libomp.lib
 
 :: Compiling
 @echo on
 ::@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
-clang++.exe "build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
+clang++.exe "test_pthread.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
 
 :: Linking
 ::@set "LINK_FILES="
