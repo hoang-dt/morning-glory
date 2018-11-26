@@ -18,22 +18,27 @@ mg_Enum(error_code, int,
 
 namespace mg {
 
+/* There should be only one error in-flight on each thread */
 struct error {
-  cstr File = "";
   cstr Message = "";
   error_code Code = error_code::NoError;
-  int16 Line = 0;
+  i8 StackIndex = 0;
   bool StringGenerated = false;
-  inline thread_local static char FullMessage[256]; /* There should be only one error in-flight on each thread */
-  explicit operator bool();
+  inline thread_local static char FullMessage[256];
+  inline thread_local static cstr Files[64]; // Store file names up the stack
+  inline thread_local static i16 Lines[64]; // Store line numbers up the stack
+  explicit operator bool(); // Return true if no error
 }; // struct error
 
 cstr ToString(error& Err, bool Force = false);
+struct printer;
+void PrintStacktrace(printer* Pr, error& Err);
 
 } // namespace mg
 
 #define mg_Error(ErrCode)
 #define mg_ErrorMsg(ErrCode, Msg)
 #define mg_ErrorFmt(ErrCode, Fmt, ...)
+#define mg_PropagateError(Error) // Used to record stack information in Error
 
 #include "mg_error.inl"

@@ -7,6 +7,8 @@
 #include "mg_scopeguard.h"
 #include "mg_dataset.h"
 
+using namespace mg;
+
 mg_Enum(errors, int, error1=0, error2=1)
 
 void print_clean0() {
@@ -17,24 +19,31 @@ void print_clean1() {
   puts("cleaning up 1\n");
 }
 
-void C() {
+error C() {
   int a = 10;
-  mg_AssertFmt(false, ": %d", a);
+  return mg_ErrorFmt(SizeTooSmall, "(%d)", a);
 }
 
-void B() {
-  C();
+error B() {
+  error Err = C();
+  return mg_PropagateError(Err);
 }
 
-void A() {
-  B();
+error A() {
+  error Err = B();
+  return mg_PropagateError(Err);
 }
 
 int main() {
-  A();
-  using namespace mg;
+  error Ok = A();
+  if (!Ok) {
+    printer Pr(stderr);
+    mg_PrintFmt(&Pr, "%s\n", ToString(Ok));
+    PrintStacktrace(&Pr, Ok);
+  }
+  return 0;
   metadata Meta;
-  auto Ok = ReadMetadata("abc.meta", &Meta);
+  Ok = ReadMetadata("abc.meta", &Meta);
   if (Ok) {
     puts("No error\n");
     printf("%s\n", ToString(Meta));
