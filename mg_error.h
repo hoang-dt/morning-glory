@@ -39,6 +39,6 @@ void PrintStacktrace(printer* Pr, error& Err);
 #define mg_Error(ErrCode)
 #define mg_ErrorMsg(ErrCode, Msg)
 #define mg_ErrorFmt(ErrCode, Fmt, ...)
-#define mg_PropagateError(Error) // Used to record stack information in Error
+#define mg_PropagateError(Error) // Use this to record file and line information in Error when propagating it up the stack
 
 #include "mg_error.inl"

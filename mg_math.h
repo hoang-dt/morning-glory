@@ -6,6 +6,11 @@ namespace mg {
 template <typename t, int N>
 t (&Power(t Base))[N];
 
+template <typename t>
+bool IsEven(t x);
+template <typename t>
+bool IsOdd(t x);
+
 } // namespace mg
 
 #include "mg_math.inl"

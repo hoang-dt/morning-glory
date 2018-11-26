@@ -3,9 +3,11 @@
 #include "mg_enum.h"
 #include "mg_error.h"
 #include "mg_io.h"
+#include "mg_math.h"
 #include "mg_memory.h"
 #include "mg_scopeguard.h"
 #include "mg_dataset.h"
+#include "mg_wavelet.h"
 
 using namespace mg;
 
@@ -35,6 +37,8 @@ error A() {
 }
 
 int main() {
+  printf(IsEven(4) ? "4 is even" : "false");
+  printf(IsOdd(3) ? "3 is odd" : "false");
   error Ok = A();
   if (!Ok) {
     printer Pr(stderr);

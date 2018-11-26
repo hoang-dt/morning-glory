@@ -37,9 +37,22 @@ struct array;
 /* Vector in 2D, supports .X, .UV, and [] */
 template <typename t>
 struct v2;
+// using v2i  = v2<i32>;
+// using v2u  = v2<u32>;
+// using v2l  = v2<i64>;
+// using v2ul = v2<u64>;
+// using v2f  = v2<f32>;
+// using v2d  = v2<f64>;
+
 /* Vector in 3D, supports .X, .XY, .UV, .RGB and [] */
 template <typename t>
 struct v3;
+// using v3i  = v3<i32>;
+// using v3u  = v3<u32>;
+// using v3l  = v3<i64>;
+// using v3ul = v3<u64>;
+// using v3f  = v3<f32>;
+// using v3d  = v3<f64>;
 
 struct buffer {
   byte* Data = nullptr;

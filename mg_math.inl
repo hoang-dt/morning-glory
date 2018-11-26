@@ -2,6 +2,16 @@
 
 namespace mg {
 
+template <typename t>
+bool IsEven(t x) {
+  return (x & 1) == 0;
+}
+
+template <typename t>
+bool IsOdd(t x) {
+  return (x & 1) != 0;
+}
+
 template <typename t, int N>
 t (&Power(t Base))[N] {
   static t Table[N];

@@ -28,6 +28,8 @@ struct v2 {
     t E[2];
   };
   t& operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
+  template <typename u>
+  v2& operator=(v2<u> other) { X = other.X; Y = other.Y; return *this; }
 };
 using v2i  = v2<i32>;
 using v2u  = v2<u32>;
@@ -49,6 +51,8 @@ struct v3 {
     t E[3];
   };
   t& operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
+  template <typename u>
+  v3& operator=(v3<u> other) { X = other.X; Y = other.Y; Z = other.Z; return *this; }
 };
 using v3i  = v3<i32>;
 using v3u  = v3<u32>;

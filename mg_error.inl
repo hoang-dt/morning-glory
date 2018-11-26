@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <string.h>
 
 #undef mg_Error
@@ -38,6 +39,8 @@
 #undef mg_PropagateError
 #define mg_PropagateError(Err)\
   [&Err]() {\
+    if (Err.StackIndex >= 64)\
+      assert(false && "stack too deep");\
     ++Err.StackIndex;\
     Err.Lines[Err.StackIndex] = __LINE__;\
     Err.Files[Err.StackIndex] = __FILE__;\
