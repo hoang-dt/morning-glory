@@ -8,10 +8,11 @@
 
 namespace mg {
 
-string_ref::string_ref(cstr Ptr, int Size) : PtrC(Ptr), Size(Size) {}
-string_ref::string_ref(cstr Ptr) : PtrC(Ptr), Size(strlen(Ptr)) {}
+string_ref::string_ref(cstr Ptr, int Size) : ConstPtr(Ptr), Size(Size) {}
+string_ref::string_ref(cstr Ptr) : ConstPtr(Ptr), Size(strlen(Ptr)) {}
 char& string_ref::operator[](int Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
-string_ref::operator bool() { return Ptr != nullptr; }
+char string_ref::operator[](int Idx) const { mg_Assert(Idx < Size); return Ptr[Idx]; }
+string_ref::operator bool() const { return Ptr != nullptr; }
 
 str ToString(string_ref Str) {
   mg_Assert(Str.Size < (int)sizeof(ScratchBuffer));
@@ -19,10 +20,14 @@ str ToString(string_ref Str) {
     snprintf(ScratchBuffer, sizeof(ScratchBuffer), "%.*s", Str.Size, Str.Ptr);
   return ScratchBuffer;
 }
-char* Begin(string_ref Str) { return Str.Ptr; }
-char* End(string_ref Str) { return Str.Ptr + Str.Size; }
-char* RBegin(string_ref Str) { return Str.Ptr + Str.Size - 1; }
-char* REnd(string_ref Str) { return Str.Ptr - 1; }
+str Begin(string_ref Str) { return Str.Ptr; }
+cstr ConstBegin(string_ref Str) { return Str.ConstPtr; }
+str End(string_ref Str) { return Str.Ptr + Str.Size; }
+cstr ConstEnd(string_ref Str) { return Str.ConstPtr + Str.Size; }
+str ReverseBegin(string_ref Str) { return Str.Ptr + Str.Size - 1; }
+cstr ConstReverseBegin(string_ref Str) { return Str.ConstPtr + Str.Size - 1; }
+str ReverseEnd(string_ref Str) { return Str.Ptr - 1; }
+cstr ConstReverseEnd(string_ref Str) { return Str.ConstPtr - 1; }
 
 bool operator==(string_ref Lhs, string_ref Rhs) {
   if (Lhs.Size != Rhs.Size)

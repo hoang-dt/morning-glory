@@ -17,17 +17,17 @@ i Find(i Begin, i End, const t& Val) {
 }
 
 template <typename i, typename t>
-i FindLast(i RBegin, i REnd, const t& Val) {
-  for (i Pos = RBegin; Pos != REnd; --Pos) {
+i FindLast(i ReverseBegin, i ReverseEnd, const t& Val) {
+  for (i Pos = ReverseBegin; Pos != ReverseEnd; --Pos) {
     if (*Pos == Val)
       return Pos;
   }
-  return REnd;
+  return ReverseEnd;
 }
 
 template <typename t1, typename t2>
 bool Contains(const t1& Big, const t2& Small) {
-  return Find(Begin(Big), End(Big), Small) != End(Big);
+  return Find(ConstBegin(Big), ConstEnd(Big), Small) != ConstEnd(Big);
 }
 
 template <typename i, typename t>

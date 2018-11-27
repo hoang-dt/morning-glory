@@ -4,7 +4,7 @@ namespace mg {
 
 /* Generate a power table for a particular base and type */
 template <typename t, int N>
-t (&Power(t Base))[N];
+const t (&Power(t Base))[N];
 
 template <typename t>
 bool IsEven(t x);

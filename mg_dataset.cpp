@@ -8,7 +8,7 @@
 
 namespace mg {
 
-cstr ToString(metadata& Meta) {
+cstr ToString(const metadata& Meta) {
   printer Pr(Meta.String, sizeof(Meta.String));
   mg_Print(&Pr, "file = %s\n", Meta.File);
   mg_Print(&Pr, "name = %s\n", Meta.Name);

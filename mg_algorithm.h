@@ -10,7 +10,7 @@ template <typename i, typename t>
 i Find(i Begin, i End, const t& Val);
 
 template <typename i, typename t>
-i FindLast(i RBegin, i REnd, const t& Val);
+i FindLast(i ReverseBegin, i ReverseEnd, const t& Val);
 
 template <typename t1, typename t2>
 bool Contains(const t1& Big, const t2& Small);

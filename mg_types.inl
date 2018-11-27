@@ -13,11 +13,16 @@ struct array {
   static_assert(N > 0);
   t Arr[N];
   t& operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
+  const t& operator[](int Idx) const { assert(Idx < N); return Arr[Idx]; }
 };
 TemplateArr t* Begin(array<t, N>& A) { return &A.Arr[0]; }
+TemplateArr const t* ConstBegin(const array<t, N>& A) { return &A.Arr[0]; }
 TemplateArr t* End(array<t, N>& A) { return &A.Arr[0] + N; }
-TemplateArr t* RBegin(array<t, N>& A) { return &A.Arr[0] + (N - 1); }
-TemplateArr t* REnd(array<t, N>& A) { return &A.Arr[0] - 1; }
+TemplateArr const t* ConstEnd(const array<t, N>& A) { return &A.Arr[0] + N; }
+TemplateArr t* ReverseBegin(array<t, N>& A) { return &A.Arr[0] + (N - 1); }
+TemplateArr const t* ConstReverseBegin(const array<t, N>& A) { return &A.Arr[0] + (N - 1); }
+TemplateArr t* ReverseEnd(array<t, N>& A) { return &A.Arr[0] - 1; }
+TemplateArr t* ConstReverseEnd(const array<t, N>& A) { return &A.Arr[0] - 1; }
 TemplateArr int Size(array<t, N>&) { return N; }
 #undef TemplateArr
 
@@ -31,6 +36,7 @@ struct v2 {
     t E[2];
   };
   t& operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
+  t operator[](int Idx) const { assert(Idx < 2); return E[Idx]; }
   template <typename u>
   v2& operator=(v2<u> other) { X = other.X; Y = other.Y; return *this; }
 };
@@ -54,6 +60,7 @@ struct v3 {
     t E[3];
   };
   t& operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
+  t operator[](int Idx) const { assert(Idx < 3); return E[Idx]; }
   template <typename u>
   v3& operator=(v3<u> other) { X = other.X; Y = other.Y; Z = other.Z; return *this; }
 };

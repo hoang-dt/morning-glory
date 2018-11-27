@@ -37,14 +37,13 @@ void Append(path* Path, string_ref Component) {
 }
 
 string_ref RemoveLast(string_ref Path) {
-  char* LastSlash = FindLast(RBegin(Path), REnd(Path), '/');
-  if (LastSlash != REnd(Path)) {
-    return SubString(Path, LastSlash - Begin(Path) + 1, Path.Size - (LastSlash - Begin(Path)));
-  }
+  cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
+  if (LastSlash != ConstReverseEnd(Path))
+    return SubString(Path, LastSlash - ConstBegin(Path) + 1, Path.Size - (LastSlash - ConstBegin(Path)));
   return string_ref();
 }
 
-str ToString(path& Path) {
+str ToString(const path& Path) {
   printer Pr(ScratchBuffer, sizeof(ScratchBuffer));
   for (int I = 0; I < Path.NumComponents; ++I) {
     mg_Print(&Pr, "%.*s", Path.Components[I].Size, Path.Components[I].Ptr);

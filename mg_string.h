@@ -15,23 +15,28 @@ There are two preferred ways to construct a string_ref from a char[] array:
   - Use the string_ref(const char*) constructor to only refer up to the first NULL character */
 struct string_ref {
   union {
-    char* Ptr = nullptr;
-    const char* PtrC;
+    str Ptr = nullptr;
+    cstr ConstPtr ;
   };
   int Size = 0;
 
   string_ref() = default;
   string_ref(cstr Ptr, int Size);
   string_ref(cstr Ptr);
-  char& operator[](int i);
-  operator bool();
+  char& operator[](int Idx);
+  char operator[](int Idx) const;
+  operator bool() const;
 }; // struct string_ref
 
 str ToString(string_ref Str);
-char* Begin(string_ref Str);
-char* End(string_ref Str);
-char* RBegin(string_ref Str);
-char* REnd(string_ref Str);
+str Begin(string_ref Str);
+cstr ConstBegin(string_ref Str);
+str End(string_ref Str);
+cstr ConstEnd(string_ref Str);
+str ReverseBegin(string_ref Str);
+cstr ConstReverseBegin(string_ref Str);
+str ReverseEnd(string_ref Str);
+const char* ConstReverseEnd(string_ref Str);
 bool operator==(string_ref Lhs, string_ref Rhs);
 
 /* Remove spaces at the start of a string */

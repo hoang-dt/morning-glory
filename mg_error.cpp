@@ -5,11 +5,11 @@
 
 namespace mg {
 
-error::operator bool() {
+error::operator bool() const {
   return Code == error_code::NoError;
 }
 
-cstr ToString(error& Err, bool Force) {
+cstr ToString(const error& Err, bool Force) {
   if (Force || !Err.StringGenerated) {
     auto ErrStr = ToString(Err.Code);
     snprintf(Err.FullMessage, sizeof(Err.FullMessage), "%.*s (file: %s, line %d): %s",
@@ -18,7 +18,7 @@ cstr ToString(error& Err, bool Force) {
   return Err.FullMessage;
 }
 
-void PrintStacktrace(printer* Pr, error& Err) {
+void PrintStacktrace(printer* Pr, const error& Err) {
   mg_Print(Pr, "Stack trace:\n");
   for (i8 I = 0; I < Err.StackIndex; ++I) {
     mg_Print(Pr, "File %s, line %d\n", Err.Files[I], Err.Lines[I]);

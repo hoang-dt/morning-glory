@@ -35,9 +35,13 @@ using cstr    = const char*;
 template <typename t, int N>
 struct array;
 template <typename t, int N> t* Begin(array<t, N>& A);
+template <typename t, int N> const t* ConstBegin(const array<t, N>& A);
 template <typename t, int N> t* End(array<t, N>& A);
-template <typename t, int N> t* RBegin(array<t, N>& A);
-template <typename t, int N> t* REnd(array<t, N>& A);
+template <typename t, int N> const t* ConstEnd(const array<t, N>& A);
+template <typename t, int N> t* ReverseBegin(array<t, N>& A);
+template <typename t, int N> const t* ConstReverseBegin(const array<t, N>& A);
+template <typename t, int N> t* ReverseEnd(array<t, N>& A);
+template <typename t, int N> const t* ConstReverseEnd(const array<t, N>& A);
 template <typename t, int N> int Size(array<t, N>&);
 
 /* Vector in 2D, supports .X, .UV, and [] */

@@ -27,7 +27,7 @@ struct metadata {
   inline thread_local static char String[384];
 }; // struct metadata
 
-cstr ToString(metadata& Meta);
+cstr ToString(const metadata& Meta);
 error ReadMetadata(cstr Fname, metadata* Meta);
 
 } // namespace mg
