@@ -13,7 +13,7 @@ template <typename i, typename t>
 i FindLast(i RBegin, i REnd, const t& Val);
 
 template <typename t1, typename t2>
-bool Contains(t1 Big, t2 Small);
+bool Contains(const t1& Big, const t2& Small);
 
 template <typename i, typename t>
 i FindIf(i Begin, i End, const t& Func);

@@ -13,16 +13,7 @@
   }();
 
 #undef mg_ErrorMsg
-#define mg_ErrorMsg(ErrCode, Msg)\
-  [&]() {\
-    mg::error Err{ Msg, mg::error_code::ErrCode, 0, false };\
-    Err.Files[0] = __FILE__;\
-    Err.Lines[0] = __LINE__;\
-    return Err;\
-  }();
-
-#undef mg_ErrorFmt
-#define mg_ErrorFmt(ErrCode, Fmt, ...)\
+#define mg_ErrorMsg(ErrCode, Fmt, ...)\
   [&]() {\
     mg::error Err{ Fmt, mg::error_code::ErrCode, 0, true };\
     Err.Files[0] = __FILE__;\
@@ -32,7 +23,7 @@
     snprintf(Err.FullMessage, sizeof(Err.FullMessage), "%.*s (file %s, line %d): ",\
       ErrStr.Size, ErrStr.Ptr, __FILE__, __LINE__);\
     auto L = strlen(Err.FullMessage);\
-    snprintf(Err.FullMessage + L, sizeof(Err.FullMessage) - L, Fmt, __VA_ARGS__);\
+    snprintf(Err.FullMessage + L, sizeof(Err.FullMessage) - L, Fmt, ##__VA_ARGS__);\
     return Err;\
   }();
 

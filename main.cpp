@@ -24,7 +24,7 @@ void print_clean1() {
 
 error C() {
   int a = 10;
-  return mg_ErrorFmt(SizeTooSmall, "(%d)", a);
+  return mg_ErrorMsg(SizeTooSmall, "(%d)", a);
 }
 
 error B() {
@@ -70,7 +70,7 @@ int main() {
   mg_BeginCleanUp(0) { print_clean0(); }; mg_EndCleanUp(0)
   mg_BeginCleanUp(1) { print_clean1(); }; mg_EndCleanUp(1)
   int N = 1;
-  auto Err2 = mg_ErrorFmt(SizeMismatched, "Hello %d", N);
+  auto Err2 = mg_ErrorMsg(SizeMismatched, "Hello %d", N);
   auto Ss = ToString(Err2);
   printf("%s\n", Ss);
   auto Err3 = mg_ErrorMsg(UnknownError, "Hahaha");

@@ -31,7 +31,7 @@ error ReadMetadata(cstr Fname, metadata* Meta) {
     string_ref Attr = Trim(Next(&TkEq));
     string_ref Value = Trim(Next(&TkEq));
     if (!Attr || !Value)
-      return mg_ErrorFmt(ParseFailed, "File %s", Fname);
+      return mg_ErrorMsg(ParseFailed, "File %s", Fname);
 
     if (Attr == "file") {
       Copy(mg_StringRef(Meta->File), Trim(Value));
@@ -44,16 +44,16 @@ error ReadMetadata(cstr Fname, metadata* Meta) {
       int D = 0;
       for (string_ref Dim = Next(&TkSpace); Dim && D < 4; Dim = Next(&TkSpace), ++D)
         if (!ToInt(Dim, &Meta->Dimensions[D]))
-          return mg_ErrorFmt(ParseFailed, "File %s", Fname);
-      if (D >= 4) return mg_ErrorFmt(DimensionsTooMany, "File %s", Fname);
+          return mg_ErrorMsg(ParseFailed, "File %s", Fname);
+      if (D >= 4) return mg_ErrorMsg(DimensionsTooMany, "File %s", Fname);
       if (D <= 2) Meta->Dimensions[2] = 1;
       if (D <= 1) Meta->Dimensions[1] = 1;
     } else if (Attr == "data type") {
       if (!(Meta->DataType = data_type(Value))) {
-        return mg_ErrorFmt(TypeNotSupported, "File %s", Fname);
+        return mg_ErrorMsg(TypeNotSupported, "File %s", Fname);
       }
     } else {
-      return mg_ErrorFmt(AttributeNotFound, "File %s", Fname);
+      return mg_ErrorMsg(AttributeNotFound, "File %s", Fname);
     }
   }
   return mg_Error(NoError);

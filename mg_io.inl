@@ -3,13 +3,13 @@
 #include <assert.h>
 #include <stdio.h>
 
-// TODO: remove one macro, instead use ## to paste __VA_ARGS__
-
+#undef mg_FSeek
+#undef mg_FTell
 /* Enable support for reading large files */
-#if defined(_MSC_VER) || defined(__MINGW64__)
+#if defined(_WIN32)
   #define mg_FSeek _fseeki64
   #define mg_FTell _ftelli64
-#elif defined(__GNUC__) || defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__)
   #define _FILE_OFFSET_BITS 64
   #define mg_FSeek fseeko
   #define mg_FTell ftello

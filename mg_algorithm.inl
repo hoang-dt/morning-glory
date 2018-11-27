@@ -26,7 +26,7 @@ i FindLast(i RBegin, i REnd, const t& Val) {
 }
 
 template <typename t1, typename t2>
-bool Contains(t1 Big, t2 Small) {
+bool Contains(const t1& Big, const t2& Small) {
   return Find(Begin(Big), End(Big), Small) != End(Big);
 }
 

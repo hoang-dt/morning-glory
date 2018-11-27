@@ -13,7 +13,7 @@ constexpr int mg_CountOccurrences(const char* str, char c) {
     count += (*str++ == c);
   return count;
 }
-}
+} // namespace mg
 
 #undef mg_NumArgs
 #define mg_NumArgs(...) (mg_CountOccurrences(#__VA_ARGS__, ',') + 1)

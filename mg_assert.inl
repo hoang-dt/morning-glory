@@ -11,8 +11,6 @@
 
 #undef mg_Assert
 #undef mg_AssertMsg
-#undef mg_AssertFmt
-
 #if defined(mg_Slow)
   #define mg_Assert(Cond) \
     do { \
@@ -24,24 +22,12 @@
         debug_break(); \
       } \
     } while (0)
-  #define mg_AssertMsg(Cond, Msg) \
+  #define mg_AssertMsg(Cond, Fmt, ...) \
     do { \
       if (!(Cond)) { \
         fprintf(stderr, "Condition \"%s\" failed, ", #Cond); \
         fprintf(stderr, "in file %s, line %d:", __FILE__, __LINE__); \
-        fprintf(stderr, Msg);\
-        fprintf(stderr, "\n");\
-        mg::printer Pr(stderr);\
-        mg::PrintStacktrace(&Pr);\
-        debug_break(); \
-      } \
-    } while (0)
-  #define mg_AssertFmt(Cond, Fmt, ...) \
-    do { \
-      if (!(Cond)) { \
-        fprintf(stderr, "Condition \"%s\" failed, ", #Cond); \
-        fprintf(stderr, "in file %s, line %d:", __FILE__, __LINE__); \
-        fprintf(stderr, Fmt, __VA_ARGS__);\
+        fprintf(stderr, Fmt, ##__VA_ARGS__);\
         fprintf(stderr, "\n");\
         mg::printer Pr(stderr);\
         mg::PrintStacktrace(&Pr);\
@@ -50,6 +36,5 @@
     } while (0)
 #else
   #define mg_Assert(Cond) do {} while (0)
-  #define mg_AssertMsg(Cond, Msg) do {} while (0)
-  #define mg_AssertFmt(Cond, Fmt, ...) do {} while (0)
+  #define mg_AssertMsg(Cond, Fmt, ...) do {} while (0)
 #endif
