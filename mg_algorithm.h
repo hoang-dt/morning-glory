@@ -4,7 +4,7 @@
 namespace mg {
 
 template <typename t>
-t Min(const t& a, const t& b);
+t Min(t a, t b);
 
 template <typename i, typename t>
 i Find(i Begin, i End, const t& Val);

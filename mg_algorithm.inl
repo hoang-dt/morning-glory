@@ -3,7 +3,7 @@
 namespace mg {
 
 template <typename t>
-t Min(const t& a, const t& b) {
+t Min(t a, t b) {
   return a < b ? a : b;
 }
 
