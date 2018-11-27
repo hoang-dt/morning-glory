@@ -5,9 +5,9 @@ export OUTPUT=main
 # Compiler flags
 # TODO: add different build configurations (release, debug, etc)
 export CFLAGS="
-  -std=c++17
+  -std=gnu++17
   -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd
-  -Wall -Wextra -Wpedantic 
+  -Wall -Wextra -Wpedantic
   -Wno-missing-braces
   -g -gno-column-info -rdynamic"
 

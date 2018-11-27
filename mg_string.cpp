@@ -3,6 +3,7 @@
 #include "mg_algorithm.h"
 #include "mg_assert.h"
 #include "mg_math.h"
+#include "mg_memory.h"
 #include "mg_string.h"
 
 namespace mg {
@@ -12,8 +13,16 @@ string_ref::string_ref(cstr Ptr) : PtrC(Ptr), Size(strlen(Ptr)) {}
 char& string_ref::operator[](int Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
 string_ref::operator bool() { return Ptr != nullptr; }
 
+str ToString(string_ref Str) {
+  mg_Assert(Str.Size < (int)sizeof(ScratchBuffer));
+  if (Str.Ptr != ScratchBuffer)
+    snprintf(ScratchBuffer, sizeof(ScratchBuffer), "%.*s", Str.Size, Str.Ptr);
+  return ScratchBuffer;
+}
 char* Begin(string_ref Str) { return Str.Ptr; }
 char* End(string_ref Str) { return Str.Ptr + Str.Size; }
+char* RBegin(string_ref Str) { return Str.Ptr + Str.Size - 1; }
+char* REnd(string_ref Str) { return Str.Ptr - 1; }
 
 bool operator==(string_ref Lhs, string_ref Rhs) {
   if (Lhs.Size != Rhs.Size)
@@ -36,7 +45,7 @@ string_ref TrimLeft(string_ref Str) {
 
 string_ref TrimRight(string_ref Str) {
   string_ref StrOut = Str;
-  while (StrOut.Size && isspace(StrOut[StrOut.Size - 1])) 
+  while (StrOut.Size && isspace(StrOut[StrOut.Size - 1]))
     --StrOut.Size;
   return StrOut;
 }
@@ -54,7 +63,7 @@ string_ref SubString(string_ref Str, int Begin, int Size) {
 void Copy(string_ref Dst, string_ref Src, bool AddNull) {
   int NumBytes = Min(Dst.Size, Src.Size);
   memcpy(Dst.Ptr, Src.Ptr, NumBytes);
-  if (AddNull) 
+  if (AddNull)
     Dst.Ptr[NumBytes] = 0;
 }
 
@@ -70,7 +79,7 @@ bool ToInt(string_ref Str, int* Result) {
   *Result = 0;
   for (int I = Start; I < Str.Size; ++I) {
     int V = Str[Str.Size - I - 1] - '0';
-    if (V >= 0 && V < 10) 
+    if (V >= 0 && V < 10)
       *Result += Mult * (V * Pow10[I]);
     else
       return false;

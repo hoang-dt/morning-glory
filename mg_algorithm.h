@@ -9,6 +9,9 @@ t Min(const t& a, const t& b);
 template <typename i, typename t>
 i Find(i Begin, i End, const t& Val);
 
+template <typename i, typename t>
+i FindLast(i RBegin, i REnd, const t& Val);
+
 template <typename t1, typename t2>
 bool Contains(t1 Big, t2 Small);
 

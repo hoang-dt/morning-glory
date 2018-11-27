@@ -10,12 +10,12 @@ namespace mg {
 
 cstr ToString(metadata& Meta) {
   printer Pr(Meta.String, sizeof(Meta.String));
-  mg_PrintFmt(&Pr, "file = %s\n", Meta.File);
-  mg_PrintFmt(&Pr, "name = %s\n", Meta.Name);
-  mg_PrintFmt(&Pr, "field = %s\n", Meta.Field);
-  mg_PrintFmt(&Pr, "dimensions = %d %d %d\n", Meta.Dims.X, Meta.Dims.Y, Meta.Dims.Z);
+  mg_Print(&Pr, "file = %s\n", Meta.File);
+  mg_Print(&Pr, "name = %s\n", Meta.Name);
+  mg_Print(&Pr, "field = %s\n", Meta.Field);
+  mg_Print(&Pr, "dimensions = %d %d %d\n", Meta.Dims.X, Meta.Dims.Y, Meta.Dims.Z);
   string_ref TypeStr = ToString(Meta.DataType);
-  mg_PrintFmt(&Pr, "data type = %.*s", TypeStr.Size, TypeStr.Ptr);
+  mg_Print(&Pr, "data type = %.*s", TypeStr.Size, TypeStr.Ptr);
   return Meta.String;
 }
 

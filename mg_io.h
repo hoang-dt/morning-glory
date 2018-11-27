@@ -18,10 +18,7 @@ struct printer {
 
 void Reset(printer* Pr, char* Buf, int Size);
 void Reset(printer* Pr, FILE* File);
-// template <typename ... args>
-// void Print(printer* Pr, cstr Fmt, args&... Args);
-#define mg_PrintFmt(PrinterPtr, Format, ...)
-#define mg_Print(PrinterPtr, Message)
+#define mg_Print(PrinterPtr, Format, ...)
 
 /* Read a text file from disk into a buffer. The buffer can be nullptr or it can be
 initialized in advance, in which case the existing memory will be reused if the file can fit

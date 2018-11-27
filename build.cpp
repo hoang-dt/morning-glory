@@ -1,5 +1,6 @@
 #include "mg_dataset.cpp"
 #include "mg_error.cpp"
+#include "mg_filesystem.cpp"
 #include "mg_io.cpp"
 #include "mg_mutex_posix.cpp"
 #include "mg_mutex_win.cpp"

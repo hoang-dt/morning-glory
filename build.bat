@@ -2,7 +2,7 @@
 
 :: Parameters
 set "LLVMPath=C:\Program Files\LLVM"
-set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community"
+set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
 set "VSVersion=14.16.27023"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
@@ -18,7 +18,7 @@ set "PATH=%LLVMPath%\bin;%VSBasePath%\bin\Hostx64\x64;%PATH%"
 set CFLAGS= ^
   -Xclang -flto-visibility-public-std -std=c++17^
   -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
-  -Wall -Wextra -pedantic^
+  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
   -g -gcodeview -gno-column-info
 

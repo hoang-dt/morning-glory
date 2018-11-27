@@ -2,6 +2,7 @@
 #include "mg_dataset.h"
 #include "mg_enum.h"
 #include "mg_error.h"
+#include "mg_filesystem.h"
 #include "mg_io.h"
 #include "mg_math.h"
 #include "mg_memory.h"
@@ -37,12 +38,20 @@ error A() {
 }
 
 int main() {
+  path P("./test3");
+  Append(&P, "cde");
+  Append(&P, "acb");
+  if (CreateFullDir(ToString(P)))
+    puts("yes");
+  else
+    puts("no");
+  return 0;
   printf(IsEven(4) ? "4 is even" : "false");
   printf(IsOdd(3) ? "3 is odd" : "false");
   error Ok = A();
   if (!Ok) {
     printer Pr(stderr);
-    mg_PrintFmt(&Pr, "%s\n", ToString(Ok));
+    mg_Print(&Pr, "%s\n", ToString(Ok));
     PrintStacktrace(&Pr, Ok);
   }
   return 0;

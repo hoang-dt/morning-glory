@@ -54,12 +54,12 @@ bool PrintStacktrace(printer* Pr) {
 	    char* Ret = abi::__cxa_demangle(BeginName, FuncName, &FuncNameSize, &Status);
 	    if (Status == 0) {
 		    FuncName = Ret; // use possibly realloc()-ed string
-		    mg_PrintFmt(Pr, "  %s : %s+%s\n", SymbolList[I], FuncName, BeginOffset);
+		    mg_Print(Pr, "  %s : %s+%s\n", SymbolList[I], FuncName, BeginOffset);
 	    } else { // demangling failed
-		    mg_PrintFmt(Pr, "  %s : %s()+%s\n", SymbolList[I], BeginName, BeginOffset);
+		    mg_Print(Pr, "  %s : %s()+%s\n", SymbolList[I], BeginName, BeginOffset);
 	    }
     } else { // couldn't parse the line? print the whole line.
-      mg_PrintFmt(Pr, "  %s\n", SymbolList[I]);
+      mg_Print(Pr, "  %s\n", SymbolList[I]);
     }
   }
   free(SymbolList);

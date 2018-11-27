@@ -16,6 +16,15 @@ i Find(i Begin, i End, const t& Val) {
   return End;
 }
 
+template <typename i, typename t>
+i FindLast(i RBegin, i REnd, const t& Val) {
+  for (i Pos = RBegin; Pos != REnd; --Pos) {
+    if (*Pos == Val)
+      return Pos;
+  }
+  return REnd;
+}
+
 template <typename t1, typename t2>
 bool Contains(t1 Big, t2 Small) {
   return Find(Begin(Big), End(Big), Small) != End(Big);

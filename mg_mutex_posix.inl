@@ -12,8 +12,8 @@ struct mutex {
 
 struct lock {
   mutex* Mutex;
-  lock(mutex* Mutex) : Mutex(Mutex) { Lock(Mutex); }
-  ~lock() { Unlock(Mutex); }
+  lock(mutex* Mutex);
+  ~lock();
 };
 
 } // namespace mg

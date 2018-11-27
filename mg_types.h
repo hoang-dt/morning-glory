@@ -28,11 +28,17 @@ using float32 = float;
 using f32     = float32;
 using float64 = double;
 using f64     = float64;
+using str     = char*;
 using cstr    = const char*;
 
 /* Something to replace std::array */
 template <typename t, int N>
 struct array;
+template <typename t, int N> t* Begin(array<t, N>& A);
+template <typename t, int N> t* End(array<t, N>& A);
+template <typename t, int N> t* RBegin(array<t, N>& A);
+template <typename t, int N> t* REnd(array<t, N>& A);
+template <typename t, int N> int Size(array<t, N>&);
 
 /* Vector in 2D, supports .X, .UV, and [] */
 template <typename t>

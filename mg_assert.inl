@@ -1,5 +1,8 @@
 #pragma once
 
+// TODO: write these into functions so we can better deal with circular includes
+// TODO: add a mg_Fatal macro or something that always fires regardless of mg_Slow
+
 #include <stdio.h>
 #include "mg_debugbreak.h"
 #include "mg_io.h"

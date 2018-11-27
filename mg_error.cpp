@@ -21,7 +21,7 @@ cstr ToString(error& Err, bool Force) {
 void PrintStacktrace(printer* Pr, error& Err) {
   mg_Print(Pr, "Stack trace:\n");
   for (i8 I = 0; I < Err.StackIndex; ++I) {
-    mg_PrintFmt(Pr, "File %s, line %d\n", Err.Files[I], Err.Lines[I]);
+    mg_Print(Pr, "File %s, line %d\n", Err.Files[I], Err.Lines[I]);
   }
 }
 

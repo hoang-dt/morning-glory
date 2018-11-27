@@ -3,6 +3,7 @@
 // http://blog.aaronballman.com/2011/04/generating-a-stack-crawl/
 #if defined(_WIN32)
 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <DbgHelp.h>
 #include "mg_io.h"
@@ -33,11 +34,11 @@ bool PrintStacktrace(printer* Pr) {
       IMAGEHLP_LINE Line;
       Line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
       if (SymGetLineFromAddr(Proc, Info->Address, &Offset, &Line)) {
-        mg_PrintFmt(Pr, "%s, line %lu: %.*s\n", Line.FileName, Line.LineNumber, (int)Info->NameLen, Info->Name);
+        mg_Print(Pr, "%s, line %lu: %.*s\n", Line.FileName, Line.LineNumber, (int)Info->NameLen, Info->Name);
       } else if (GetModuleFileNameA((HINSTANCE)Info->ModBase, ModBuf, MAX_PATH)) {
-        mg_PrintFmt(Pr, "%s: %.*s\n", ModBuf, (int)Info->NameLen, Info->Name);
+        mg_Print(Pr, "%s: %.*s\n", ModBuf, (int)Info->NameLen, Info->Name);
       } else {
-        mg_PrintFmt(Pr, "%.*s\n", (int)Info->NameLen, Info->Name);
+        mg_Print(Pr, "%.*s\n", (int)Info->NameLen, Info->Name);
       }
     }
   }

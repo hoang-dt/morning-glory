@@ -4,6 +4,9 @@
 
 namespace mg {
 
+lock::lock(mutex* Mutex) : Mutex(Mutex) { Lock(Mutex); }
+lock::~lock() { Unlock(Mutex); }
+
 bool Lock(mutex* Mutex) {
   return pthread_mutex_lock(&Mutex->Mx) == 0;
 }

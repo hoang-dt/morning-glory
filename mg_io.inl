@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdio.h>
 
+// TODO: remove one macro, instead use ## to paste __VA_ARGS__
+
 /* Enable support for reading large files */
 #if defined(_MSC_VER) || defined(__MINGW64__)
   #define mg_FSeek _fseeki64
@@ -15,34 +17,22 @@
 
 namespace mg {
 
-#undef mg_PrintFmt
-#define mg_PrintFmt(PrinterPtr, Format, ...) {\
-  if ((PrinterPtr)->Buf && !(PrinterPtr)->File) {\
-    int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Format, __VA_ARGS__);\
-    (PrinterPtr)->Buf += Written;\
-    (PrinterPtr)->Size += Written;\
-  } else if (!(PrinterPtr)->Buf && (PrinterPtr)->File) {\
-    fprintf((PrinterPtr)->File, Format, __VA_ARGS__);\
-  }\
-}
 #undef mg_Print
-#define mg_Print(PrinterPtr, Message) {\
+#define mg_Print(PrinterPtr, Format, ...) {\
   if ((PrinterPtr)->Buf && !(PrinterPtr)->File) {\
-    int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Message);\
+    if ((PrinterPtr)->Size <= 1)\
+      assert(false && "buffer too small"); /* TODO: always abort */ \
+    int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Format, ##__VA_ARGS__);\
     (PrinterPtr)->Buf += Written;\
-    (PrinterPtr)->Size += Written;\
+    if (Written < (PrinterPtr)->Size)\
+      (PrinterPtr)->Size -= Written;\
+    else\
+      assert(false && "buffer overflow?");\
   } else if (!(PrinterPtr)->Buf && (PrinterPtr)->File) {\
-    fprintf((PrinterPtr)->File, Message);\
+    fprintf((PrinterPtr)->File, Format, ##__VA_ARGS__);\
   } else {\
     assert(false && "unavailable or ambiguous printer destination");\
   }\
 }
-
-// template <typename ... args>
-// void Print(printer* Pr, cstr Fmt, args&... Args) {
-//   int Written = snprintf(Pr->Buf, Pr->Size, Fmt, Args...);
-//   Pr->Buf += Written;
-//   Pr->Size -= Written;
-// }
 
 } // namespace mg

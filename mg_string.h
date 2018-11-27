@@ -27,8 +27,11 @@ struct string_ref {
   operator bool();
 }; // struct string_ref
 
+str ToString(string_ref Str);
 char* Begin(string_ref Str);
 char* End(string_ref Str);
+char* RBegin(string_ref Str);
+char* REnd(string_ref Str);
 bool operator==(string_ref Lhs, string_ref Rhs);
 
 /* Remove spaces at the start of a string */
