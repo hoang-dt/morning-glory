@@ -32,7 +32,7 @@ void Init(path* Path, string_ref Str) {
 }
 
 void Append(path* Path, string_ref Component) {
-  mg_AssertMsg(Path->NumComponents < Path->NumComponentsMax, "too many path components");
+  mg_Assert(Path->NumComponents < Path->NumComponentsMax, "too many path components");
   Path->Components[Path->NumComponents++] = Component;
 }
 

@@ -17,7 +17,7 @@
   } else if (Type == mg::data_type::int8) {\
     Body(i8)\
   } else {\
-    mg_AssertMsg(false, "type not supported");\
+    mg_Assert(false, "type not supported");\
   }
 
 #define TypeChooserInt(Type)\
@@ -30,7 +30,7 @@
   } else if (Type == mg::data_type::int8) {\
     Body(i8)\
   } else {\
-    mg_AssertMsg(false, "type not supported");\
+    mg_Assert(false, "type not supported");\
   }
 
 #define TypeChooserInt32And64(Type)\
@@ -39,7 +39,7 @@
   } else if (Type == mg::data_type::int32) {\
     Body(i32)\
   } else {\
-    mg_AssertMsg(false, "type not supported");\
+    mg_Assert(false, "type not supported");\
   }
 
 #define TypeChooserFloat(Type)\
@@ -48,7 +48,7 @@
   } else if (Type == mg::data_type::float32) {\
     Body(f32)\
   } else {\
-    mg_AssertMsg(false, "type not supported");\
+    mg_Assert(false, "type not supported");\
   }
 
 namespace mg {
@@ -68,6 +68,18 @@ f64 SquaredError(const f64* F, const f64* G, i64 Size, data_type Type) {
   TypeChooser(Type)
   return 0;
 #undef Body
+}
+
+f64 RMSError(const f64* F, const f64* G, i64 Size, data_type Type) {
+  return sqrt(SquaredError(F, G, Size, Type) / Size);
+}
+
+f64 PSNR(const f64* F, const f64* G, i64 Size, data_type Type) {
+  double Err = SquaredError(F, G, Size, Type);
+  auto MinMax = MinMaxElement(F, F + Size);
+  double D = 0.5 * (*(MinMax.Min) -*(MinMax.Max));
+  Err /= Size;
+  return 20.0 * log10(D) - 10.0 * log10(Err);
 }
 
 void ConvertToNegabinary(const i64* FIn, i64 Size, u64* FOut, data_type Type) {

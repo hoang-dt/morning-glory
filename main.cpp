@@ -1,3 +1,4 @@
+#include "mg_args.h"
 #include "mg_assert.h"
 #include "mg_dataset.h"
 #include "mg_enum.h"
@@ -10,9 +11,7 @@
 #include "mg_signal_processing.h"
 #include "mg_dataset.h"
 #include "mg_wavelet.h"
-
 using namespace mg;
-
 #define Before(x)\
   After(x)
 
@@ -47,7 +46,16 @@ error A() {
   return mg_PropagateError(Err);
 }
 
-int main() {
+
+int main(int Argc, const char** Argv) {
+  int T = 0;
+  mg_Assert(2 > 3, "hello%d", T);
+  cstr Value = GetOptionValue(Argc, Argv, "-v");
+  if (Value) {
+    printf("%s", Value);
+  } else {
+    printf("no\n");
+  }
   int a = 1;
   int b = 2;
   double Sq = SquaredError((double*)&a, (double*)&b, 1, data_type::int32);
@@ -95,7 +103,7 @@ int main() {
   mg::v3<int> v3;
   v3[0] = 1;
   v3.X = 2;
-  // mg_AssertMsg(false, "Size %d", S.Size);
+  // mg_Assert(false, "Size %d", S.Size);
   mg::buffer Buf;
   auto Error = mg::ReadFile("abc.txt", &Buf);
   if (!Error) {

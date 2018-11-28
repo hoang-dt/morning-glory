@@ -1,3 +1,4 @@
+#include "mg_args.cpp"
 #include "mg_dataset.cpp"
 #include "mg_error.cpp"
 #include "mg_filesystem.cpp"

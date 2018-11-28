@@ -2,7 +2,8 @@
 
 #pragma once
 
-#define mg_Assert(Cond)
-#define mg_AssertMsg(Cond, Fmt, ...)
+#define mg_Assert(Cond, ...)
+#define mg_AbortIf(Cond, ...)
+#define mg_Abort(...)
 
 #include "mg_assert.inl"
