@@ -6,6 +6,9 @@
 
 namespace mg {
 
+#define mg_NumberTypes\
+  int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64
+
 using uint    = unsigned int;
 using byte    = uint8_t;
 using int8    = int8_t;
@@ -30,6 +33,16 @@ using float64 = double;
 using f64     = float64;
 using str     = char*;
 using cstr    = const char*;
+
+template <typename t>
+struct Traits {
+  // using signed_t =
+  // using unsigned_t =
+  // using integral_t =
+  // static constexpr uint NegabinaryMask =
+  // static constexpr int ExponentBits
+  // static constexpr int ExponentBias
+};
 
 /* Something to replace std::array */
 template <typename t, int N>

@@ -4,7 +4,21 @@ namespace mg {
 
 template <typename t>
 t Min(t a, t b) {
-  return a < b ? a : b;
+  return a <= b ? a : b;
+}
+template <typename t>
+t Max(t a, t b) {
+  return b <= a ? a : b;
+}
+
+template <typename i, typename f>
+i MaxElement(i Begin, i End, const f& CompareFunc) {
+  auto MaxElem = Begin;
+  for (i Pos = Begin; Pos != End; ++Pos) {
+    if (CompareFunc(*MaxElem, *Pos))
+      MaxElem = Pos;
+  }
+  return MaxElem;
 }
 
 template <typename i, typename t>

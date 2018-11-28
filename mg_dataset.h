@@ -1,14 +1,11 @@
 #pragma once
 
-#include "mg_enum.h"
+#include "mg_common_types.h"
 #include "mg_error.h"
 #include "mg_io.h"
 #include "mg_memory.h"
 #include "mg_string.h"
 #include "mg_types.h"
-
-mg_Enum(data_type, int,
-  int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64)
 
 namespace mg {
 

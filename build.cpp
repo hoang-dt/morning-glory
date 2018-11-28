@@ -4,6 +4,7 @@
 #include "mg_io.cpp"
 #include "mg_mutex_posix.cpp"
 #include "mg_mutex_win.cpp"
+#include "mg_signal_processing.cpp"
 #include "mg_stacktrace_posix.cpp"
 #include "mg_stacktrace_win.cpp"
 #include "mg_string.cpp"

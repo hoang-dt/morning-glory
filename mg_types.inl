@@ -6,6 +6,78 @@
 
 namespace mg {
 
+template <>
+struct Traits<i8> {
+  using signed_t   = i8;
+  using unsigned_t = u8;
+  static constexpr u8 NegabinaryMask = 0xaa;
+};
+
+template <>
+struct Traits<u8> {
+  using signed_t   = i8;
+  using unsigned_t = u8;
+  static constexpr u8 NegabinaryMask = 0xaa;
+};
+
+template <>
+struct Traits<i16> {
+  using signed_t   = i16;
+  using unsigned_t = u16;
+  static constexpr u16 NegabinaryMask = 0xaaaa;
+};
+
+template <>
+struct Traits<u16> {
+  using signed_t   = i16;
+  using unsigned_t = u16;
+  static constexpr u16 NegabinaryMask = 0xaaaa;
+};
+
+template <>
+struct Traits<i32> {
+  using signed_t   = i32;
+  using unsigned_t = u32;
+  using floating_t = f32;
+  static constexpr u32 NegabinaryMask = 0xaaaaaaaa;
+};
+
+template <>
+struct Traits<u32> {
+  using signed_t   = i32;
+  using unsigned_t = u32;
+  static constexpr u32 NegabinaryMask = 0xaaaaaaaa;
+};
+
+template <>
+struct Traits<i64> {
+  using signed_t   = i64;
+  using unsigned_t = u64;
+  using floating_t = f64;
+  static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaUL;
+};
+
+template <>
+struct Traits<u64> {
+  using signed_t   = i64;
+  using unsigned_t = u64;
+  static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaUL;
+};
+
+template <>
+struct Traits<f32> {
+  using integral_t = i32;
+  static constexpr int ExponentBits = 8;
+  static constexpr int ExponentBias = (1 << (ExponentBits - 1)) - 1;
+};
+
+template <>
+struct Traits<f64> {
+  using integral_t = i64;
+  static constexpr int ExponentBits = 11;
+  static constexpr int ExponentBias = (1 << (ExponentBits - 1)) - 1;
+};
+
 /* Something to replace std::array */
 #define TemplateArr template <typename t, int N>
 TemplateArr
