@@ -1,14 +1,12 @@
 #pragma once
 
-// TODO: add a mg_Fatal macro or something that always fires regardless of mg_Slow
-
 #include <stdio.h>
 #include "mg_debugbreak.h"
 #include "mg_io.h"
 #include "mg_stacktrace.h"
 #include "mg_macros.h"
 
-#define mg_PrintHelper(...)\
+#define mg_FPrintHelper(...)\
   __VA_OPT__(fprintf(stderr, __VA_ARGS__))
 
 #define mg_AssertHelper(Cond, ...)\
@@ -17,7 +15,7 @@
       fprintf(stderr, "Condition \"%s\" failed, ", #Cond);\
       fprintf(stderr, "in file %s, line %d\n", __FILE__, __LINE__);\
       if (mg_NumArgs(__VA_ARGS__) > 0) {\
-        mg_PrintHelper(__VA_ARGS__);\
+        mg_FPrintHelper(__VA_ARGS__);\
         fprintf(stderr, "\n");\
       }\
       mg::printer Pr(stderr);\

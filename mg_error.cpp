@@ -5,6 +5,9 @@
 
 namespace mg {
 
+error::error(error_code Code, bool StringGenerated, cstr Message)
+  : Message(Message), Code(Code), StackIndex(0), StringGenerated(StringGenerated) {}
+
 error::operator bool() const {
   return Code == error_code::NoError;
 }

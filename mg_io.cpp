@@ -27,19 +27,19 @@ error ReadFile(cstr Fname, buffer* Buf) {
 
   FILE* Fp = fopen(Fname, "rb");
   mg_BeginCleanUp(0) { if (Fp) fclose(Fp); }; mg_EndCleanUp(0)
-  if (!Fp) { return mg_ErrorMsg(FileOpenFailed, "%s", Fname); }
+  if (!Fp) { return mg_Error(FileOpenFailed, "%s", Fname); }
 
   /* Determine the file size */
-  if (mg_FSeek(Fp, 0, SEEK_END)) return mg_ErrorMsg(FileSeekFailed, "%s", Fname);
+  if (mg_FSeek(Fp, 0, SEEK_END)) return mg_Error(FileSeekFailed, "%s", Fname);
   size_t Size = 0;
-  if ((Size = mg_FTell(Fp)) == size_t(-1)) return mg_ErrorMsg(FileTellFailed, "%s", Fname);
-  if (mg_FSeek(Fp, 0, SEEK_SET)) return mg_ErrorMsg(FileSeekFailed, "%s", Fname);
+  if ((Size = mg_FTell(Fp)) == size_t(-1)) return mg_Error(FileTellFailed, "%s", Fname);
+  if (mg_FSeek(Fp, 0, SEEK_SET)) return mg_Error(FileSeekFailed, "%s", Fname);
   if (Buf->Size < Size)
-    if (!mg_Allocate(Buf->Data, Size)) return mg_ErrorMsg(OutOfMemory, "%s", Fname);
+    if (!mg_Allocate(Buf->Data, Size)) return mg_Error(OutOfMemory, "%s", Fname);
 
   /* Read file contents */
   mg_BeginCleanUp(1) { mg_Deallocate(Buf->Data); }; mg_EndCleanUp(1)
-  if (fread(Buf->Data, Size, 1, Fp) != 1) return mg_ErrorMsg(FileReadFailed, "%s", Fname);
+  if (fread(Buf->Data, Size, 1, Fp) != 1) return mg_Error(FileReadFailed, "%s", Fname);
   Buf->Size = Size;
 
   mg_DismissCleanUp(1);

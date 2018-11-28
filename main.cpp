@@ -33,7 +33,7 @@ void print_clean1() {
 
 error C() {
   int a = 10;
-  return mg_ErrorMsg(SizeTooSmall, "(%d)", a);
+  return mg_Error(SizeTooSmall, "(%d)", a);
 }
 
 error B() {
@@ -93,10 +93,10 @@ int main(int Argc, const char** Argv) {
   mg_BeginCleanUp(0) { print_clean0(); }; mg_EndCleanUp(0)
   mg_BeginCleanUp(1) { print_clean1(); }; mg_EndCleanUp(1)
   int N = 1;
-  auto Err2 = mg_ErrorMsg(SizeMismatched, "Hello %d", N);
+  auto Err2 = mg_Error(SizeMismatched, "Hello %d", N);
   auto Ss = ToString(Err2);
   printf("%s\n", Ss);
-  auto Err3 = mg_ErrorMsg(UnknownError, "Hahaha");
+  auto Err3 = mg_Error(UnknownError, "Hahaha");
   printf("%s\n", ToString(Err3));
   auto Err4 = mg_Error(FileReadFailed);
   printf("%s\n", ToString(Err4));

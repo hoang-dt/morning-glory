@@ -24,6 +24,7 @@ struct error {
   error_code Code = error_code::NoError;
   i8 StackIndex = 0;
   bool StringGenerated = false;
+  error(error_code Code, bool StringGenerated = false, cstr Message = "");
   inline thread_local static cstr Files[64]; // Store file names up the stack
   inline thread_local static i16 Lines[64]; // Store line numbers up the stack
   explicit operator bool() const; // Return true if no error
@@ -35,8 +36,7 @@ void PrintStacktrace(printer* Pr, const error& Err);
 
 } // namespace mg
 
-#define mg_Error(ErrCode)
-#define mg_ErrorMsg(ErrCode, Fmt, ...)
+#define mg_Error(ErrCode, ...)
 #define mg_PropagateError(Error) // Use this to record file and line information in Error when propagating it up the stack
 
 #include "mg_error.inl"
