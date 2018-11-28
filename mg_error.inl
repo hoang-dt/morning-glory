@@ -5,8 +5,8 @@
 #include "mg_macros.h"
 #include "mg_memory.h"
 
-#define mg_SPrintHelper(...)\
-  __VA_OPT__(snprintf(ScratchBuffer + L, sizeof(ScratchBuffer) - L, __VA_ARGS__)); L
+#define mg_TempSprintHelper(...)\
+  __VA_OPT__(snprintf(ScratchBuffer + L, sizeof(ScratchBuffer) - L, __VA_ARGS__)); mg_Unused(L)
 
 #define mg_ExtractFirst(X, ...) X
 
@@ -21,7 +21,7 @@
       auto ErrStr = ToString(Err.Code);\
       int L = snprintf(ScratchBuffer, sizeof(ScratchBuffer), "%.*s (file %s, line %d): ",\
         ErrStr.Size, ErrStr.Ptr, __FILE__, __LINE__);\
-      mg_SPrintHelper(__VA_ARGS__);\
+      mg_TempSprintHelper(__VA_ARGS__);\
       return Err;\
     }\
     mg::error Err{ mg::error_code::ErrCode };\

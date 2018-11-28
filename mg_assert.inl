@@ -6,7 +6,7 @@
 #include "mg_stacktrace.h"
 #include "mg_macros.h"
 
-#define mg_FPrintHelper(...)\
+#define mg_TempFprintHelper(...)\
   __VA_OPT__(fprintf(stderr, __VA_ARGS__))
 
 #define mg_AssertHelper(Cond, ...)\
@@ -15,7 +15,7 @@
       fprintf(stderr, "Condition \"%s\" failed, ", #Cond);\
       fprintf(stderr, "in file %s, line %d\n", __FILE__, __LINE__);\
       if (mg_NumArgs(__VA_ARGS__) > 0) {\
-        mg_FPrintHelper(__VA_ARGS__);\
+        mg_TempFprintHelper(__VA_ARGS__);\
         fprintf(stderr, "\n");\
       }\
       mg::printer Pr(stderr);\

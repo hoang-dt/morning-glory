@@ -49,7 +49,7 @@ error A() {
 
 int main(int Argc, const char** Argv) {
   int T = 0;
-  mg_Assert(2 > 3, "hello%d", T);
+  mg_Assert(3 > 2, "hello%d", T);
   cstr Value = GetOptionValue(Argc, Argv, "-v");
   if (Value) {
     printf("%s", Value);
@@ -89,7 +89,6 @@ int main(int Argc, const char** Argv) {
     auto ErrStr = ToString(Ok);
     printf("%d %s", Ok.Code.Value, ErrStr);
   }
-  return 0;
   mg_BeginCleanUp(0) { print_clean0(); }; mg_EndCleanUp(0)
   mg_BeginCleanUp(1) { print_clean1(); }; mg_EndCleanUp(1)
   int N = 1;
