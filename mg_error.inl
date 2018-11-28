@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include "mg_memory.h"
 
 #undef mg_Error
 #define mg_Error(ErrCode)\
@@ -20,10 +21,9 @@
     Err.Lines[0] = __LINE__;\
     Err.Code = mg::error_code::ErrCode;\
     auto ErrStr = ToString(Err.Code);\
-    snprintf(Err.FullMessage, sizeof(Err.FullMessage), "%.*s (file %s, line %d): ",\
+    int L = snprintf(ScratchBuffer, sizeof(ScratchBuffer), "%.*s (file %s, line %d): ",\
       ErrStr.Size, ErrStr.Ptr, __FILE__, __LINE__);\
-    auto L = strlen(Err.FullMessage);\
-    snprintf(Err.FullMessage + L, sizeof(Err.FullMessage) - L, Fmt, ##__VA_ARGS__);\
+    snprintf(ScratchBuffer + L, sizeof(ScratchBuffer) - L, Fmt, ##__VA_ARGS__);\
     return Err;\
   }();
 

@@ -12,10 +12,10 @@ error::operator bool() const {
 cstr ToString(const error& Err, bool Force) {
   if (Force || !Err.StringGenerated) {
     auto ErrStr = ToString(Err.Code);
-    snprintf(Err.FullMessage, sizeof(Err.FullMessage), "%.*s (file: %s, line %d): %s",
+    snprintf(ScratchBuffer, sizeof(ScratchBuffer), "%.*s (file: %s, line %d): %s",
       ErrStr.Size, ErrStr.Ptr, Err.Files[0], Err.Lines[0], Err.Message);
   }
-  return Err.FullMessage;
+  return ScratchBuffer;
 }
 
 void PrintStacktrace(printer* Pr, const error& Err) {
