@@ -36,10 +36,17 @@ void Append(path* Path, string_ref Component) {
   Path->Components[Path->NumComponents++] = Component;
 }
 
-string_ref RemoveLast(string_ref Path) {
+string_ref GetFileName(string_ref Path) {
   cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
   if (LastSlash != ConstReverseEnd(Path))
     return SubString(Path, LastSlash - ConstBegin(Path) + 1, Path.Size - (LastSlash - ConstBegin(Path)));
+  return string_ref();
+}
+
+string_ref GetDirName(string_ref Path) {
+  cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
+  if (LastSlash != ConstReverseEnd(Path))
+    return SubString(Path, 0, LastSlash - ConstBegin(Path));
   return string_ref();
 }
 

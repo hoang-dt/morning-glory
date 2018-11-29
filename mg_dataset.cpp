@@ -1,5 +1,6 @@
 #include "mg_dataset.h"
 #include "mg_error.h"
+#include "mg_filesystem.h"
 #include "mg_io.h"
 #include "mg_scopeguard.h"
 #include "mg_string.h"
@@ -19,9 +20,9 @@ cstr ToString(const metadata& Meta) {
   return Meta.String;
 }
 
-error ReadMetadata(cstr Fname, metadata* Meta) {
+error ReadMetadata(cstr FileName, metadata* Meta) {
   buffer Buf;
-  error Err = ReadFile(Fname, &Buf);
+  error Err = ReadFile(FileName, &Buf);
   if (!Err) return Err;
   mg_BeginCleanUp(0) { mg_Deallocate(Buf.Data); }; mg_EndCleanUp(0)
   string_ref Str((cstr)Buf.Data, (int)Buf.Size);
@@ -31,10 +32,12 @@ error ReadMetadata(cstr Fname, metadata* Meta) {
     string_ref Attr = Trim(Next(&TkEq));
     string_ref Value = Trim(Next(&TkEq));
     if (!Attr || !Value)
-      return mg_Error(ParseFailed, "File %s", Fname);
+      return mg_Error(ParseFailed, "File %s", FileName);
 
-    if (Attr == "file") {
-      Copy(mg_StringRef(Meta->File), Trim(Value));
+    if (Attr == "file") { // add the dir part of the FileName to make Meta->File a absolute path
+      path Path(GetDirName(FileName));
+      Append(&Path, Trim(Value));
+      Copy(mg_StringRef(Meta->File), ToString(Path));
     } else if (Attr == "name") {
       Copy(mg_StringRef(Meta->Name), Trim(Value));
     } else if (Attr == "field") {
@@ -44,16 +47,16 @@ error ReadMetadata(cstr Fname, metadata* Meta) {
       int D = 0;
       for (string_ref Dim = Next(&TkSpace); Dim && D < 4; Dim = Next(&TkSpace), ++D)
         if (!ToInt(Dim, &Meta->Dimensions[D]))
-          return mg_Error(ParseFailed, "File %s", Fname);
-      if (D >= 4) return mg_Error(DimensionsTooMany, "File %s", Fname);
+          return mg_Error(ParseFailed, "File %s", FileName);
+      if (D >= 4) return mg_Error(DimensionsTooMany, "File %s", FileName);
       if (D <= 2) Meta->Dimensions[2] = 1;
       if (D <= 1) Meta->Dimensions[1] = 1;
     } else if (Attr == "data type") {
       if (!(Meta->DataType = data_type(Value))) {
-        return mg_Error(TypeNotSupported, "File %s", Fname);
+        return mg_Error(TypeNotSupported, "File %s", FileName);
       }
     } else {
-      return mg_Error(AttributeNotFound, "File %s", Fname);
+      return mg_Error(AttributeNotFound, "File %s", FileName);
     }
   }
   return mg_Error(NoError);

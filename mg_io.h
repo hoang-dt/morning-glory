@@ -26,7 +26,7 @@ void Reset(printer* Pr, FILE* File);
 /* Read a text file from disk into a buffer. The buffer can be nullptr or it can be
 initialized in advance, in which case the existing memory will be reused if the file can fit
 in it. The caller is responsible to deallocate the memory. */
-error ReadFile(cstr Fname, buffer* Buf);
+error ReadFile(cstr FileName, buffer* Buf);
 
 /* Write a binary raw file to disk */
 // Error write_raw(const char* file_name, const byte* buf, int64_t size) {

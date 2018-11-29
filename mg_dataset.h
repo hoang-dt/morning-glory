@@ -25,6 +25,6 @@ struct metadata {
 }; // struct metadata
 
 cstr ToString(const metadata& Meta);
-error ReadMetadata(cstr Fname, metadata* Meta);
+error ReadMetadata(cstr FileName, metadata* Meta);
 
 } // namespace mg

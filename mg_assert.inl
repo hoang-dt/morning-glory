@@ -32,6 +32,6 @@
 #endif
 
 #undef mg_AbortIf
-#define mg_AbortIf(Cond, ...) mg_AssertHelper(Cond && "Fatal error!", __VA_ARGS__)
+#define mg_AbortIf(Cond, ...) mg_AssertHelper(!(Cond) && "Fatal error!", __VA_ARGS__)
 #undef mg_Abort
 #define mg_Abort(...) mg_AbortIf(!"Fatal error!", __VA_ARGS__)
