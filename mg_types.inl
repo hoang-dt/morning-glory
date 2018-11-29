@@ -107,6 +107,10 @@ struct v2 {
     struct { t U, V; };
     t E[2];
   };
+  v2() = default;
+  v2(t X, t Y): X(X), Y(Y) {}
+  template <typename u>
+  v2(v2<u> Other): X(Other.X), Y(Other.Y) {}
   t& operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
   t operator[](int Idx) const { assert(Idx < 2); return E[Idx]; }
   template <typename u>
@@ -131,6 +135,10 @@ struct v3 {
     struct { t Ignored3_; v2<t> V__; };
     t E[3];
   };
+  v3() = default;
+  v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
+  template <typename u>
+  v3(v3<u> Other): X(Other.X), Y(Other.Y), Z(Other.Z) {}
   t& operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
   t operator[](int Idx) const { assert(Idx < 3); return E[Idx]; }
   template <typename u>

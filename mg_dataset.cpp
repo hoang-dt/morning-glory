@@ -24,7 +24,7 @@ error ReadMetadata(cstr FileName, metadata* Meta) {
   buffer Buf;
   error Err = ReadFile(FileName, &Buf);
   if (!Err) return Err;
-  mg_BeginCleanUp(0) { mg_Deallocate(Buf.Data); }; mg_EndCleanUp(0)
+  mg_CleanUp(0, mg_Deallocate(Buf.Data););
   string_ref Str((cstr)Buf.Data, (int)Buf.Size);
   tokenizer TkLine(Str, "\r\n");
   for (string_ref Line = Next(&TkLine); Line; Line = Next(&TkLine)) {

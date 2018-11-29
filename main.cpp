@@ -11,6 +11,7 @@
 #include "mg_scopeguard.h"
 #include "mg_signal_processing.h"
 #include "mg_dataset.h"
+#include "mg_types.h"
 #include "mg_wavelet.h"
 
 using namespace mg;
@@ -21,21 +22,30 @@ int main(int Argc, const char** Argv) {
   metadata Meta;
   error Ok = ReadMetadata(DataFile, &Meta);
   mg_AbortIf(!Ok, "%s", ToString(Ok));
-  buffer Buf;
-  Ok = ReadFile(Meta.File, &Buf);
-  mg_BeginCleanUp(0) { mg_Deallocate(Buf.Data); }; mg_EndCleanUp(0)
+  buffer BufF;
+  Ok = ReadFile(Meta.File, &BufF);
+  mg_CleanUp(0, mg_Deallocate(BufF.Data););
   mg_AbortIf(!Ok, "%s", ToString(Ok));
-  f64* F = (f64*)Buf.Data;
+  f64* F = (f64*)BufF.Data;
   i64 Size = (i64)Meta.Dimensions.X * Meta.Dimensions.Y * Meta.Dimensions.Z;
-  mg_AbortIf((size_t)Size * SizeOf(Meta.DataType) != Buf.Size, "Size mismatched. Check file: %s", Meta.File);
+  mg_AbortIf((size_t)Size * SizeOf(Meta.DataType) != BufF.Size, "Size mismatched. Check file: %s", Meta.File);
   int NLevels = 0;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &NLevels), "Provide --nlevels");
-  printf("nlevels = %d", NLevels);
-  // for (int I = 0; I < ) {
-  //   flift_cdf53_x(f_in_backup.data(), n, int3(j, j, j), normalize);
-  //   flift_cdf53_y(f_in_backup.data(), n, int3(j, j, j), normalize);
-  //   flift_cdf53_z(f_in_backup.data(), n, int3(j, j, j), normalize);
-  // }
-  f64 Psnr = PSNR(F, F, Size);
+  buffer BufFWav;
+  mg_Allocate(BufFWav.Data, BufF.Size);
+  f64* FWav = (f64*)BufFWav.Data;
+  memcpy(BufFWav.Data, BufF.Data, BufF.Size);
+  mg_CleanUp(1, mg_Deallocate(BufFWav.Data););
+  for (int I = 0; I < NLevels; ++I) {
+    FLiftCdf53X(FWav, Meta.Dimensions, v3l{I, I, I});
+    FLiftCdf53Y(FWav, Meta.Dimensions, v3l{I, I, I});
+    FLiftCdf53Z(FWav, Meta.Dimensions, v3l{I, I, I});
+  }
+  for (int I = NLevels - 1; I >= 0; --I) {
+    ILiftCdf53Z(FWav, Meta.Dimensions, v3l{I, I, I});
+    ILiftCdf53Y(FWav, Meta.Dimensions, v3l{I, I, I});
+    ILiftCdf53X(FWav, Meta.Dimensions, v3l{I, I, I});
+  }
+  f64 Psnr = PSNR(FWav, F, Size);
   printf("Psnr = %f\n", Psnr);
 }
