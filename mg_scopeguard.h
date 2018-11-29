@@ -14,5 +14,5 @@ struct scope_guard {
 
 #define mg_BeginCleanUp(n) auto __CleanUpFunc__##n = [&]()
 #define mg_EndCleanUp(n) mg::scope_guard __ScopeGuard__##n(__CleanUpFunc__##n);
-#define mg_CleanUp(n, ...) mg_BeginCleanUp(n) { __VA_ARGS__ }; mg_EndCleanUp(n)
+#define mg_CleanUp(n, ...) mg_BeginCleanUp(n) { __VA_ARGS__; }; mg_EndCleanUp(n)
 #define mg_DismissCleanUp(n) { __ScopeGuard__##n.Dismissed = true; }

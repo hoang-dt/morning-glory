@@ -10,4 +10,5 @@
 #include "mg_stacktrace_posix.cpp"
 #include "mg_stacktrace_win.cpp"
 #include "mg_string.cpp"
+#include "mg_timer.cpp"
 #include "main.cpp"

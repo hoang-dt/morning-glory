@@ -26,7 +26,7 @@ error ReadFile(cstr FileName, buffer* Buf) {
   mg_Assert((Buf->Data && Buf->Size) || (!Buf->Data && !Buf->Size));
 
   FILE* Fp = fopen(FileName, "rb");
-  mg_CleanUp(0, if (Fp) fclose(Fp););
+  mg_CleanUp(0, if (Fp) fclose(Fp));
   if (!Fp) { return mg_Error(FileOpenFailed, "%s", FileName); }
 
   /* Determine the file size */
@@ -38,7 +38,7 @@ error ReadFile(cstr FileName, buffer* Buf) {
     if (!mg_Allocate(Buf->Data, Size)) return mg_Error(OutOfMemory, "%s", FileName);
 
   /* Read file contents */
-  mg_CleanUp(1, mg_Deallocate(Buf->Data););
+  mg_CleanUp(1, mg_Deallocate(Buf->Data));
   if (fread(Buf->Data, Size, 1, Fp) != 1) return mg_Error(FileReadFailed, "%s", FileName);
   Buf->Size = Size;
 
