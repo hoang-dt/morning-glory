@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mg_types.h"
+
 namespace mg {
 
 /* Generate a power table for a particular base and type */
@@ -13,6 +15,8 @@ bool IsOdd(t x);
 
 template <typename t>
 int Exponent(t Val);
+
+
 
 } // namespace mg
 

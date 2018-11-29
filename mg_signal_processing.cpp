@@ -75,9 +75,9 @@ f64 RMSError(const f64* F, const f64* G, i64 Size, data_type Type) {
 }
 
 f64 PSNR(const f64* F, const f64* G, i64 Size, data_type Type) {
-  double Err = SquaredError(F, G, Size, Type);
+  f64 Err = SquaredError(F, G, Size, Type);
   auto MinMax = MinMaxElement(F, F + Size);
-  double D = 0.5 * (*(MinMax.Min) - *(MinMax.Max));
+  f64 D = 0.5 * (*(MinMax.Max) - *(MinMax.Min));
   Err /= Size;
   return 20.0 * log10(D) - 10.0 * log10(Err);
 }
