@@ -14,5 +14,4 @@ bool Unlock(mutex* Mutex);
 
 }
 
-#include "mg_mutex_posix.inl"
-#include "mg_mutex_win.inl"
+#include "mg_mutex.inl"

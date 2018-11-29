@@ -52,6 +52,6 @@ int main(int Argc, const char** Argv) {
   timer Timer;
   StartTimer(&Timer);
   //sleep(4);
-  printf("%lld\n", ElapsedTime(&Timer));
+  printf("%" PRId64"\n", ElapsedTime(&Timer));
   // printf("Psnr = %f\n", Psnr);
 }
