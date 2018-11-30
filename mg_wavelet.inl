@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mg_assert.h"
 #include "mg_math.h"
 #include "mg_memory.h"
 #include "mg_types.h"
@@ -34,7 +35,7 @@ void ForwardLiftCdf53##x(t* F, v3l N, v3l L) {\
     F[mg_RowMajor##x(x, y, z, N)] += (FLeft + FRight) / 4;\
   }}}\
   t* Temp = nullptr;\
-  mg_Allocate(Temp, M.x / 2);\
+  mg_AbortIf(!Allocate(&Temp, M.x / 2), "Out of memory");\
   i64 S##x = (M.x + 1) / 2;\
   for (i64 z = 0; z < M.z; ++z) {\
   for (i64 y = 0; y < M.y; ++y) {\
@@ -47,14 +48,14 @@ void ForwardLiftCdf53##x(t* F, v3l N, v3l L) {\
     for (i64 x = 0; x < (M.x / 2); ++x)\
       F[mg_RowMajor##x(S##x + x, y, z, N)] = Temp[x];\
   }}\
-  mg_Deallocate(Temp);\
+  Deallocate(&Temp);\
 }\
 } // namespace mg
 
 mg_ForwardLiftCdf53(Z, Y, X) // X forward lifting
 mg_ForwardLiftCdf53(Z, X, Y) // Y forward lifting
 mg_ForwardLiftCdf53(Y, X, Z) // Z forward lifting
-#undef mg_FLiftCdf53
+#undef mg_ForwardLiftCdf53
 
 #define mg_InverseLiftCdf53(z, y, x)\
 namespace mg {\
@@ -65,7 +66,7 @@ void InverseLiftCdf53##x(t* F, v3l N, v3l L) {\
   if (M.x <= 1)\
     return;\
   t* Temp = nullptr;\
-  mg_Allocate(Temp, M.x / 2);\
+  mg_AbortIf(!Allocate(&Temp, M.x / 2), "Out of memory");\
   i64 S##x = (M.x + 1) >> 1;\
   for (i64 z = 0; z < M.z; ++z) {\
   for (i64 y = 0; y < M.y; ++y) {\
@@ -94,11 +95,15 @@ void InverseLiftCdf53##x(t* F, v3l N, v3l L) {\
     t FRight = x < M.x - 1 ? F[mg_RowMajor##x(x + 1, y, z, N)] : FLeft;\
     F[mg_RowMajor##x(x, y, z, N)] += (FLeft + FRight) / 2;\
   }}}\
-  mg_Deallocate(Temp);\
+  Deallocate(&Temp);\
 }\
 } // namespace mg
 
 mg_InverseLiftCdf53(Z, Y, X) // X inverse lifting
 mg_InverseLiftCdf53(Z, X, Y) // Y inverse lifting
 mg_InverseLiftCdf53(Y, X, Z) // Z inverse lifting
-#undef mg_ILiftCdf53
+#undef mg_InverseLiftCdf53
+
+#undef mg_RowMajorX
+#undef mg_RowMajorX
+#undef mg_RowMajorX

@@ -2,7 +2,7 @@
 
 :: Parameters
 set "LLVMPath=C:\Program Files\LLVM"
-set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
+set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community"
 set "VSVersion=14.16.27023"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
@@ -43,9 +43,9 @@ if %1==Debug (set CDEFS= -D_CRT_SECURE_NO_WARNINGS -Dmg_Slow=1)
 if %1==Release (set LDFLAGS= ^
   -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
 if %1==FastDebug (set LDFLAGS= ^
-  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -opt:ref,icf)
+  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
 if %1==Debug (set LDFLAGS= ^
-  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -opt:ref,icf)
+  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
 
 :: Linked libs
 set LDLIBS= ^
@@ -69,6 +69,7 @@ clang++.exe "build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
 ::lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
 lld-link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
+::link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 
 @echo off
 del "build.o"

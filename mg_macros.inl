@@ -18,4 +18,3 @@ constexpr int CountOccurrences(const char* str, char c) {
 #elif defined(_MSC_VER)
 #define mg_Restrict __restrict
 #endif
-

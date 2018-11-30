@@ -16,8 +16,6 @@ bool IsOdd(t x);
 template <typename t>
 int Exponent(t Val);
 
-
-
 } // namespace mg
 
 #include "mg_math.inl"
