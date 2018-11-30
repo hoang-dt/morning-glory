@@ -11,3 +11,11 @@ constexpr int CountOccurrences(const char* str, char c) {
   return count;
 }
 } // namespace mg
+
+#undef mg_Restrict
+#if defined(__clang__) || defined(__GNUC__)
+#define mg_Restrict __restrict__
+#elif defined(_MSC_VER)
+#define mg_Restrict __restrict
+#endif
+

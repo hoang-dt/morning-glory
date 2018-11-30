@@ -15,29 +15,31 @@ set "PATH=%LLVMPath%\bin;%VSBasePath%\bin\Hostx64\x64;%PATH%"
 
 :: Compiler flags
 :: TODO: add different build configurations (release, debug, etc)
-set CFLAGS= ^
+set CFLAGS="Please provide a build config: Debug, FastDebug, Release"
+if %1==Release (set CFLAGS= ^
   -Xclang -flto-visibility-public-std -std=gnu++2a^
   -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
   -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
-  -g -gcodeview -gno-column-info
+  -g -gcodeview -gno-column-info^
+  -O2 -DNDEBUG)
+if %1==Debug (set CFLAGS= ^
+  -Xclang -flto-visibility-public-std -std=gnu++2a^
+  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
+  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
+  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
+  -g -gcodeview -gno-column-info)
 
-::set CFLAGS= ^
-  ::/Od /nologo /fp:fast /fp:except- /EHsc /GR- /Zo /Oi /W4 /wd4201 /wd4100 /wd4189 /wd4505 /wd4127 /FC /Zi /arch:AVX2
-
-set CDEFS= ^
-  -D_CRT_SECURE_NO_WARNINGS -Dmg_Slow=1
-
-:: Include directories
-::set INCLUDE_DIRS= ^
-::   -I "%VSBasePath%\include" ^
-::   -I "%WinSDKPath%\Include\%WinSDKVersion%\shared" ^
-::   -I "%WinSDKPath%\Include\%WinSDKVersion%\ucrt" ^
-::   -I "%WinSDKPath%\Include\%WinSDKVersion%\um"
+if %1==Release (set CDEFS= ^
+  -D_CRT_SECURE_NO_WARNINGS)
+if %1==Debug (set CDEFS= ^
+  -D_CRT_SECURE_NO_WARNINGS -Dmg_Slow=1)
 
 :: Linker flags
-set LDFLAGS= ^
-  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf
+if %1==Release (set LDFLAGS= ^
+  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
+if %1==Debug (set LDFLAGS= ^
+  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:incremental -opt:ref,icf)
 
 :: Linked libs
 set LDLIBS= ^

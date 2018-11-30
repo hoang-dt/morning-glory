@@ -4,9 +4,11 @@
 #define mg_Unused(x) do { (void)sizeof(x); } while(0)
 
 /* Return the number of elements in a static array */
-#define mg_ArraySize(x) sizeof(x) / sizeof(*(x))
+#define mg_ArraySize(x) int(sizeof(x) / sizeof(x[0]))
 
 /* Return the number of comma-separated arguments */
 #define mg_NumArgs(...) (mg::CountOccurrences(#__VA_ARGS__, ',') + 1)
+
+#define mg_Restrict
 
 #include "mg_macros.inl"

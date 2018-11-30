@@ -28,6 +28,9 @@ bool Contains(const t1& Big, const t2& Small);
 template <typename i, typename t>
 i FindIf(i Begin, i End, const t& Func);
 
+template <typename t>
+void Swap(t* A, t* B);
+
 } // namespace mg
 
 #include "mg_algorithm.inl"

@@ -17,6 +17,7 @@ void FLiftCdf53##x(t* F, v3l N, v3l L) {\
   v3l M((N.X + P.X - 1) / P.X, (N.Y + P.Y - 1) / P.Y, (N.Z + P.Z - 1) / P.Z);\
   if (M.x <= 1)\
     return;\
+  _Pragma("omp parallel for collapse(2)")\
   for (i64 z = 0; z < M.z; ++z   ) {\
   for (i64 y = 0; y < M.y; ++y   ) {\
   for (i64 x = 1; x < M.x; x += 2) {\
@@ -24,6 +25,7 @@ void FLiftCdf53##x(t* F, v3l N, v3l L) {\
     t FRight = x < M.x - 1 ? F[mg_RowMajor##x(x + 1, y, z, N)] : FLeft;\
     F[mg_RowMajor##x(x, y, z, N)] -= (FLeft + FRight) / 2;\
   }}}\
+  _Pragma("omp parallel for collapse(2)")\
   for (i64 z = 0; z < M.z; ++z   ) {\
   for (i64 y = 0; y < M.y; ++y   ) {\
   for (i64 x = 0; x < M.x; x += 2) {\
@@ -37,11 +39,11 @@ void FLiftCdf53##x(t* F, v3l N, v3l L) {\
   for (i64 z = 0; z < M.z; ++z) {\
   for (i64 y = 0; y < M.y; ++y) {\
     for (i64 x = 1; x < M.x; x += 2) {\
-      Temp[x / 2]                       = t(F[mg_RowMajor##x(x    , y, z, N)]);\
-      F[mg_RowMajor##x(x / 2, y, z, N)] = t(F[mg_RowMajor##x(x - 1, y, z, N)]);\
+      Temp[x / 2]                       = F[mg_RowMajor##x(x    , y, z, N)];\
+      F[mg_RowMajor##x(x / 2, y, z, N)] = F[mg_RowMajor##x(x - 1, y, z, N)];\
     }\
     if (IsOdd(M.x))\
-      F[mg_RowMajor##x(M.x / 2, y, z, N)] = t(F[mg_RowMajor##x(M.x - 1, y, z, N)]);\
+      F[mg_RowMajor##x(M.x / 2, y, z, N)] = F[mg_RowMajor##x(M.x - 1, y, z, N)];\
     for (i64 x = 0; x < (M.x / 2); ++x)\
       F[mg_RowMajor##x(S##x + x, y, z, N)] = Temp[x];\
   }}\
@@ -70,12 +72,13 @@ void ILiftCdf53##x(t* F, v3l N, v3l L) {\
     for (i64 x = 0; x < (M.x / 2); ++x)\
       Temp[x] = F[mg_RowMajor##x(S##x + x, y, z, N)];\
     if (IsOdd(M.x))\
-      F[mg_RowMajor##x(M.x - 1, y, z, N)] = t(F[mg_RowMajor##x(M.x >> 1, y, z, N)]);\
+      F[mg_RowMajor##x(M.x - 1, y, z, N)] = F[mg_RowMajor##x(M.x >> 1, y, z, N)];\
     for (i64 x = (M.x / 2) * 2 - 1; x >= 1; x -= 2) {\
-      F[mg_RowMajor##x(x - 1, y, z, N)] = t(F[mg_RowMajor##x(x>>1, y, z, N)]);\
-      F[mg_RowMajor##x(x    , y, z, N)] = t(Temp[x / 2]);\
+      F[mg_RowMajor##x(x - 1, y, z, N)] = F[mg_RowMajor##x(x>>1, y, z, N)];\
+      F[mg_RowMajor##x(x    , y, z, N)] = Temp[x / 2];\
     }\
   }}\
+  _Pragma("omp parallel for collapse(2)")\
   for (int z = 0; z < M.z; ++z   ) {\
   for (int y = 0; y < M.y; ++y   ) {\
   for (int x = 0; x < M.x; x += 2) {\
@@ -83,6 +86,7 @@ void ILiftCdf53##x(t* F, v3l N, v3l L) {\
     t FRight = x < M.x - 1 ? F[mg_RowMajor##x(x + 1, y, z, N)] : FLeft;\
     F[mg_RowMajor##x(x, y, z, N)] -= (FLeft + FRight) / 4;\
   }}}\
+  _Pragma("omp parallel for collapse(2)")\
   for (int z = 0; z < M.z; ++z   ) {\
   for (int y = 0; y < M.y; ++y   ) {\
   for (int x = 1; x < M.x; x += 2) {\

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "mg_macros.h"
+#include "mg_math.h"
+
 namespace mg {
 
 template <typename t>
@@ -64,6 +67,13 @@ i FindIf(i Begin, i End, const t& Func) {
       return Pos;
   }
   return End;
+}
+
+template <typename t>
+void Swap(t* A, t* mg_Restrict B) {
+  t T = *A;
+  *A = *B;
+  *B = T;
 }
 
 } // namespace mg
