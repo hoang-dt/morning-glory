@@ -46,16 +46,8 @@ int main(int Argc, const char** Argv) {
   f64* FWav = (f64*)BufFWav.Data;
   memcpy(BufFWav.Data, BufF.Data, BufF.Size);
   mg_CleanUp(1, mg_Deallocate(BufFWav.Data));
-  for (int I = 0; I < NLevels; ++I) {
-    FLiftCdf53X(FWav, Meta.Dimensions, v3l{I, I, I});
-    FLiftCdf53Y(FWav, Meta.Dimensions, v3l{I, I, I});
-    FLiftCdf53Z(FWav, Meta.Dimensions, v3l{I, I, I});
-  }
-  for (int I = NLevels - 1; I >= 0; --I) {
-    ILiftCdf53Z(FWav, Meta.Dimensions, v3l{I, I, I});
-    ILiftCdf53Y(FWav, Meta.Dimensions, v3l{I, I, I});
-    ILiftCdf53X(FWav, Meta.Dimensions, v3l{I, I, I});
-  }
+  Cdf53Forward(FWav, Meta.Dimensions, NLevels, Meta.DataType);
+  Cdf53Inverse(FWav, Meta.Dimensions, NLevels, Meta.DataType);
   f64 Rmse = RMSError(FWav, F, Size);
   f64 Psnr = PSNR(FWav, F, Size);
   printf("Psnr = %f, Rmse = %f\n", Psnr, Rmse);

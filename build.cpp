@@ -9,4 +9,5 @@
 #include "mg_stacktrace.cpp"
 #include "mg_string.cpp"
 #include "mg_timer.cpp"
+#include "mg_wavelet.cpp"
 #include "main.cpp"

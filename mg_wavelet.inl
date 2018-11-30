@@ -9,10 +9,10 @@
 #define mg_RowMajorZ(z, x, y, N) (z) * N.X * N.Y + (y) * N.X + (x)
 
 /* Forward x lifting */
-#define mg_FLiftCdf53(z, y, x)\
+#define mg_ForwardLiftCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-void FLiftCdf53##x(t* F, v3l N, v3l L) {\
+void ForwardLiftCdf53##x(t* F, v3l N, v3l L) {\
   v3l P(1 << L.X, 1 << L.Y, 1 << L.Z);\
   v3l M((N.X + P.X - 1) / P.X, (N.Y + P.Y - 1) / P.Y, (N.Z + P.Z - 1) / P.Z);\
   if (M.x <= 1)\
@@ -51,15 +51,15 @@ void FLiftCdf53##x(t* F, v3l N, v3l L) {\
 }\
 } // namespace mg
 
-mg_FLiftCdf53(Z, Y, X) // X forward lifting
-mg_FLiftCdf53(Z, X, Y) // Y forward lifting
-mg_FLiftCdf53(Y, X, Z) // Z forward lifting
+mg_ForwardLiftCdf53(Z, Y, X) // X forward lifting
+mg_ForwardLiftCdf53(Z, X, Y) // Y forward lifting
+mg_ForwardLiftCdf53(Y, X, Z) // Z forward lifting
 #undef mg_FLiftCdf53
 
-#define mg_ILiftCdf53(z, y, x)\
+#define mg_InverseLiftCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-void ILiftCdf53##x(t* F, v3l N, v3l L) {\
+void InverseLiftCdf53##x(t* F, v3l N, v3l L) {\
   v3l P(1 << L.X, 1 << L.Y, 1 << L.Z);\
   v3l M((N.X + P.X - 1) / P.X, (N.Y + P.Y - 1) / P.Y, (N.Z + P.Z - 1) / P.Z);\
   if (M.x <= 1)\
@@ -98,7 +98,7 @@ void ILiftCdf53##x(t* F, v3l N, v3l L) {\
 }\
 } // namespace mg
 
-mg_ILiftCdf53(Z, Y, X) // X inverse lifting
-mg_ILiftCdf53(Z, X, Y) // Y inverse lifting
-mg_ILiftCdf53(Y, X, Z) // Z inverse lifting
+mg_InverseLiftCdf53(Z, Y, X) // X inverse lifting
+mg_InverseLiftCdf53(Z, X, Y) // Y inverse lifting
+mg_InverseLiftCdf53(Y, X, Z) // Z inverse lifting
 #undef mg_ILiftCdf53

@@ -1,22 +1,26 @@
 #pragma once
 
+#include "mg_common_types.h"
 #include "mg_types.h"
 
 namespace mg {
 
 template <typename t>
-void FLiftCdf53X(t* F, v3l N, v3l L);
+void ForwardLiftCdf53X(t* F, v3l N, v3l L);
 template <typename t>
-void FLiftCdf53Y(t* F, v3l N, v3l L);
+void ForwardLiftCdf53Y(t* F, v3l N, v3l L);
 template <typename t>
-void FLiftCdf53Z(t* F, v3l N, v3l L);
+void ForwardLiftCdf53Z(t* F, v3l N, v3l L);
 
 template <typename t>
-void ILiftCdf53X(t* F, v3l N, v3l L);
+void InverseLiftCdf53X(t* F, v3l N, v3l L);
 template <typename t>
-void ILiftCdf53Y(t* F, v3l N, v3l L);
+void InverseLiftCdf53Y(t* F, v3l N, v3l L);
 template <typename t>
-void ILiftCdf53Z(t* F, v3l N, v3l L);
+void InverseLiftCdf53Z(t* F, v3l N, v3l L);
+
+void Cdf53Forward(f64* F, v3l Dimensions, int NLevels, data_type Type = data_type::float64);
+void Cdf53Inverse(f64* F, v3l Dimensions, int NLevels, data_type Type = data_type::float64);
 
 }
 

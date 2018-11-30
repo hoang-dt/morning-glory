@@ -3,16 +3,38 @@ export COMPILER=clang++-7
 export OUTPUT=main
 
 # Compiler flags
-# TODO: add different build configurations (release, debug, etc)
-export CFLAGS="
-  -std=gnu++2a
-  -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd
-  -Wall -Wextra -Wpedantic
-  -Wno-missing-braces
-  -g -gno-column-info -rdynamic"
+export CFLAGS="Please-provide-a-build-configuration:-Debug/FastDebug/Release"
 
-export CDEFS="
-  -Dmg_Slow=1"
+if [ "$1" == "Debug" ]
+  then
+    export CFLAGS="
+      -std=gnu++2a
+      -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd
+      -Wall -Wextra -Wpedantic
+      -Wno-missing-braces
+      -g -gno-column-info -rdynamic -O0"
+    export CDEFS="-Dmg_Slow=1"
+fi
+
+if [ "$1" == "FastDebug" ]
+  then
+    export CFLAGS="
+      -std=gnu++2a
+      -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd
+      -Wall -Wextra -Wpedantic
+      -Wno-missing-braces
+      -g -gno-column-info -rdynamic -Og -DNDEBUG -ftree-vectorize -march=native"
+fi
+
+if [ "$1" == "Release" ]
+  then
+    export CFLAGS="
+      -std=gnu++2a
+      -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd
+      -Wall -Wextra -Wpedantic
+      -Wno-missing-braces
+      -g -gno-column-info -rdynamic -O2 -DNDEBUG -ftree-vectorize -march=native"
+fi
 
 # Compiling
 g++-8 build.cpp -o ${OUTPUT} ${CFLAGS} ${CDEFS}

@@ -21,25 +21,31 @@ if %1==Release (set CFLAGS= ^
   -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
   -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
-  -g -gcodeview -gno-column-info^
-  -O2 -DNDEBUG)
+  -g -gcodeview -gno-column-info -O2 -DNDEBUG -ftree-vectorize -march=native)
+if %1==FastDebug (set CFLAGS= ^
+  -Xclang -flto-visibility-public-std -std=gnu++2a^
+  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
+  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
+  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
+  -g -gcodeview -gno-column-info -Og -DNDEBUG -ftree-vectorize -march=native)
 if %1==Debug (set CFLAGS= ^
   -Xclang -flto-visibility-public-std -std=gnu++2a^
   -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
   -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
-  -g -gcodeview -gno-column-info)
+  -g -gcodeview -gno-column-info -O0)
 
-if %1==Release (set CDEFS= ^
-  -D_CRT_SECURE_NO_WARNINGS)
-if %1==Debug (set CDEFS= ^
-  -D_CRT_SECURE_NO_WARNINGS -Dmg_Slow=1)
+if %1==Release (set CDEFS= -D_CRT_SECURE_NO_WARNINGS)
+if %1==FastDebug (set CDEFS= -D_CRT_SECURE_NO_WARNINGS)
+if %1==Debug (set CDEFS= -D_CRT_SECURE_NO_WARNINGS -Dmg_Slow=1)
 
 :: Linker flags
 if %1==Release (set LDFLAGS= ^
   -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
+if %1==FastDebug (set LDFLAGS= ^
+  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -opt:ref,icf)
 if %1==Debug (set LDFLAGS= ^
-  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:incremental -opt:ref,icf)
+  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -opt:ref,icf)
 
 :: Linked libs
 set LDLIBS= ^
