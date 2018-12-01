@@ -81,6 +81,7 @@ bool PrintStacktrace(printer* Pr) {
   char Buffer[128];
   char* FuncName = Buffer;
   for (int I = 1; I < AddrLen; ++I) { // iterate over the returned symbol lines (skip the first)
+    // fprintf(stderr, "%s\n", SymbolList[I]);
 	  char* BeginName = 0, *BeginOffset = 0, *EndOffset = 0;
     /* Find parentheses and +address offset surrounding the mangled name:
     e.g., ./module(function+0x15c) [0x8048a6d] */
@@ -103,13 +104,25 @@ bool PrintStacktrace(printer* Pr) {
 	    char* Ret = abi::__cxa_demangle(BeginName, FuncName, &FuncNameSize, &Status);
 	    if (Status == 0) {
 		    FuncName = Ret; // use possibly realloc()-ed string
-		    mg_Print(Pr, "  %s : %s+%s\n", SymbolList[I], FuncName, BeginOffset);
+		    mg_Print(Pr, "  %s: %s +%s [%p]\n", SymbolList[I], FuncName, BeginOffset, AddrList[I]);
 	    } else { // demangling failed
-		    mg_Print(Pr, "  %s : %s()+%s\n", SymbolList[I], BeginName, BeginOffset);
+		    mg_Print(Pr, "  %s: %s() +%s [%p]\n", SymbolList[I], BeginName, BeginOffset, AddrList[I]);
 	    }
+      /* get file names and line numbers using addr2line */
+      const int BufLen = 1024;
+      char Syscom[BufLen];
+      snprintf(Syscom, BufLen,"addr2line %p -e %s", AddrList[I], "main"); //last parameter is the name of this app
+      FILE* F = popen(Syscom, "r");
+      if (F) {
+        char Buffer[BufLen] = { 0 };
+        while (fgets(Buffer, sizeof(Buffer), F))
+          mg_Print(Pr, "    %s", Buffer);
+        pclose(F);
+      }
     } else { // couldn't parse the line? print the whole line.
       mg_Print(Pr, "  %s\n", SymbolList[I]);
     }
+
   }
   free(SymbolList);
   return true;

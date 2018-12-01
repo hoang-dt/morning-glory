@@ -17,27 +17,62 @@
 
 using namespace mg;
 
-void B() {
-  printer Pr(stderr);
-  PrintStacktrace(&Pr);
+void __attribute__ ((noinline)) B() {
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  mg_AbortIf(true);
 }
 
-void A() {
-  printf("a\n");
+int __attribute__ ((noinline)) A() {
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
+  for (int i = 0; i < 100; ++i) {
+    if (i%50 == 0)
+      printf("hohoho\n");
+  }
   B();
 }
 
-
 int main(int Argc, const char** Argv) {
-  // double A[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-  // SwapInPlace(A, 0, mg_ArraySize(A), 1);
-  // for (int I = 0; I < mg_ArraySize(A); ++I) {
-  //   printf("%f ", A[I]);
-  // }
-  // return 0;
-  A();
-  return 0;
   SetHandleAbortSignals();
+  A();
   timer Timer;
   StartTimer(&Timer);
   cstr DataFile = nullptr;
@@ -56,7 +91,7 @@ int main(int Argc, const char** Argv) {
   int NLevels = 0;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &NLevels), "Provide --nlevels");
   buffer BufFWav;
-  //mg_AbortIf(!AllocateBuffer(&BufFWav, BufF.Size), "Out of memory");
+  mg_AbortIf(!AllocateBuffer(&BufFWav, BufF.Size), "Out of memory");
   f64* FWav = (f64*)BufFWav.Data;
   MemCopy(&BufFWav, BufF);
   mg_CleanUp(1, DeallocateBuffer(&BufFWav));

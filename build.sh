@@ -12,7 +12,7 @@ if [ "$1" == "Debug" ]
       -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd
       -Wall -Wextra -Wpedantic
       -Wno-missing-braces
-      -g -gno-column-info -rdynamic -O0"
+      -g -rdynamic -O0"
     export CDEFS="-Dmg_Slow=1"
 fi
 
@@ -23,7 +23,7 @@ if [ "$1" == "FastDebug" ]
       -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd
       -Wall -Wextra -Wpedantic
       -Wno-missing-braces
-      -g -gno-column-info -rdynamic -Og -DNDEBUG -ftree-vectorize -march=native"
+      -g -rdynamic -Og -DNDEBUG -ftree-vectorize -march=native"
 fi
 
 if [ "$1" == "Release" ]
