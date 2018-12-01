@@ -1,4 +1,5 @@
 #include "mg_args.cpp"
+#include "mg_assert.cpp"
 #include "mg_common_types.cpp"
 #include "mg_dataset.cpp"
 #include "mg_error.cpp"

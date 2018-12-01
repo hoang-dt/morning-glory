@@ -17,6 +17,17 @@
 
 using namespace mg;
 
+void B() {
+  printer Pr(stderr);
+  PrintStacktrace(&Pr);
+}
+
+void A() {
+  printf("a\n");
+  B();
+}
+
+
 int main(int Argc, const char** Argv) {
   // double A[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
   // SwapInPlace(A, 0, mg_ArraySize(A), 1);
@@ -24,6 +35,9 @@ int main(int Argc, const char** Argv) {
   //   printf("%f ", A[I]);
   // }
   // return 0;
+  A();
+  return 0;
+  SetHandleAbortSignals();
   timer Timer;
   StartTimer(&Timer);
   cstr DataFile = nullptr;
@@ -42,7 +56,7 @@ int main(int Argc, const char** Argv) {
   int NLevels = 0;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &NLevels), "Provide --nlevels");
   buffer BufFWav;
-  mg_AbortIf(!AllocateBuffer(&BufFWav, BufF.Size), "Out of memory");
+  //mg_AbortIf(!AllocateBuffer(&BufFWav, BufF.Size), "Out of memory");
   f64* FWav = (f64*)BufFWav.Data;
   MemCopy(&BufFWav, BufF);
   mg_CleanUp(1, DeallocateBuffer(&BufFWav));

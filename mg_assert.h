@@ -1,11 +1,15 @@
 /* Assert macros that carry file and line information, as well as a custom message */
 
-// TODO: hook into abort signal
-
 #pragma once
 
 #define mg_Assert(Cond, ...)
 #define mg_AbortIf(Cond, ...)
 #define mg_Abort(...)
+
+namespace mg {
+using handler = void (int);
+void AbortHandler(int Signum);
+void SetHandleAbortSignals(handler& Handler = AbortHandler);
+} // namespace mg
 
 #include "mg_assert.inl"

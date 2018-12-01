@@ -1,7 +1,8 @@
 #if defined(_WIN32)
 // Adapted from
 // http://www.rioki.org/2017/01/09/windows_stacktrace.html and
-// http://blog.aaronballman.com/2011/04/generating-a-stack-crawl/
+// https://stackoverflow.com/questions/22467604/how-can-you-use-capturestackbacktrace-to-capture-the-exception-stack-not-the-ca
+#include <process.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <DbgHelp.h>
@@ -13,32 +14,43 @@ bool PrintStacktrace(printer* Pr) {
   lock Lck(&StacktraceMutex);
   mg_Print(Pr, "Stack trace:\n");
   SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_INCLUDE_32BIT_MODULES | SYMOPT_UNDNAME);
-  HANDLE Proc = GetCurrentProcess();
-  if (!SymInitialize(Proc, "http://msdl.microsoft.com/download/symbols", true))
+  HANDLE Process = GetCurrentProcess();
+  HANDLE Thread = GetCurrentThread();
+  CONTEXT Context = {};
+  Context.ContextFlags = CONTEXT_FULL;
+  RtlCaptureContext(&Context);
+  char Buffer[sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR)];
+  PSYMBOL_INFO PSymbol = (PSYMBOL_INFO)Buffer;
+  STACKFRAME64 Stack;
+  memset(&Stack, 0, sizeof(STACKFRAME64));
+  if (!SymInitialize(Process, "http://msdl.microsoft.com/download/symbols", true))
     return false;
-  PVOID Addrs[64] = { 0 }; // Capture 64 stack frames at maximum
-  USHORT NumFrames = CaptureStackBackTrace(1, 64, Addrs, nullptr);
-  for (USHORT I = 0; I < NumFrames; ++I) {
-    ULONG64 Buffer[(sizeof(SYMBOL_INFO) + 512 + sizeof(ULONG64) - 1) / sizeof(ULONG64)] = { 0 };
-    SYMBOL_INFO* Info = (SYMBOL_INFO*)Buffer;
-    Info->SizeOfStruct = sizeof(SYMBOL_INFO);
-    Info->MaxNameLen = 512;
+
+  for (ULONG Frame = 0; ; ++Frame) {
+    bool Result = StackWalk64(IMAGE_FILE_MACHINE_AMD64, Process, Thread, &Stack, &Context, nullptr,
+      SymFunctionTableAccess64, SymGetModuleBase64, nullptr);
+    if (!Result)
+      return false;
+    PSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+    PSymbol->MaxNameLen = MAX_SYM_NAME;
     DWORD64 Displacement = 0;
-    if (SymFromAddr(Proc, (DWORD64)Addrs[I], &Displacement, Info)) {
-      char ModBuf[MAX_PATH];
-      DWORD Offset = 0;
-      IMAGEHLP_LINE Line;
-      Line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
-      if (SymGetLineFromAddr(Proc, Info->Address, &Offset, &Line)) {
-        mg_Print(Pr, "%s, line %lu: %.*s\n", Line.FileName, Line.LineNumber, (int)Info->NameLen, Info->Name);
-      } else if (GetModuleFileNameA((HINSTANCE)Info->ModBase, ModBuf, MAX_PATH)) {
-        mg_Print(Pr, "%s: %.*s\n", ModBuf, (int)Info->NameLen, Info->Name);
-      } else {
-        mg_Print(Pr, "%.*s\n", (int)Info->NameLen, Info->Name);
-      }
+    SymFromAddr(Process, (ULONG64)Stack.AddrPC.Offset, &Displacement, PSymbol);
+    IMAGEHLP_LINE64 Line;
+    Line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
+    DWORD Offset = 0;
+    if (SymGetLineFromAddr64(Process, Stack.AddrPC.Offset, &Offset, &Line)) {
+      mg_Print(Pr, "Function %s, file %s, line %lu: \n", PSymbol->Name, Line.FileName, Line.LineNumber);
+    } else { // failed to get the line number
+      HMODULE HModule = nullptr;
+      char Module[256] = "";
+      GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+        (LPCTSTR)(Stack.AddrPC.Offset), &HModule);
+      if (HModule)
+        GetModuleFileNameA(HModule, Module, 256);
+      mg_Print(Pr, "Function %s, file %s, address 0x%0llX\n", PSymbol->Name, Module, PSymbol->Address);
     }
   }
-  return SymCleanup(Proc);
+  return SymCleanup(Process);
 }
 } // namespace mg
 #elif defined(__linux__) || defined(__APPLE__)
