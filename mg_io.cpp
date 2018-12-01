@@ -35,12 +35,11 @@ error ReadFile(cstr FileName, buffer* Buf) {
   if ((Size = mg_FTell(Fp)) == size_t(-1)) return mg_Error(FileTellFailed, "%s", FileName);
   if (mg_FSeek(Fp, 0, SEEK_SET)) return mg_Error(FileSeekFailed, "%s", FileName);
   if (Buf->Size < Size)
-    if (!Allocate(&Buf->Data, Size)) return mg_Error(OutOfMemory, "%s", FileName);
+    if (!AllocateBuffer(Buf, Size)) return mg_Error(OutOfMemory, "%s", FileName);
 
   /* Read file contents */
-  mg_CleanUp(1, Deallocate(&Buf->Data));
+  mg_CleanUp(1, DeallocateBuffer(Buf));
   if (fread(Buf->Data, Size, 1, Fp) != 1) return mg_Error(FileReadFailed, "%s", FileName);
-  Buf->Size = Size;
 
   mg_DismissCleanUp(1);
   return mg_Error(NoError);

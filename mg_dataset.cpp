@@ -22,9 +22,9 @@ cstr ToString(const metadata& Meta) {
 
 error ReadMetadata(cstr FileName, metadata* Meta) {
   buffer Buf;
-  error Err = ReadFile(FileName, &Buf);
-  if (!Err) return Err;
-  mg_CleanUp(0, Deallocate(&Buf.Data));
+  error Ok = ReadFile(FileName, &Buf);
+  if (!Ok) return Ok;
+  mg_CleanUp(0, DeallocateBuffer(&Buf));
   string_ref Str((cstr)Buf.Data, (int)Buf.Size);
   tokenizer TkLine(Str, "\r\n");
   for (string_ref Line = Next(&TkLine); Line; Line = Next(&TkLine)) {
