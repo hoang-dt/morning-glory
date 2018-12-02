@@ -132,15 +132,15 @@ int Quantize(const f64* FIn, i64 Size, int Bits, i64* FOut, data_type Type) {
 
 void Dequantize(const i64* FIn, i64 Size, int EMax, int Bits, f64* FOut, data_type Type) {
 #define Body(type)\
-  using ftype = typename Traits<type>::floating_t;\
-  const type* FInPtr = (const type*)FIn;\
-  ftype* FOutPtr = (ftype*)FOut;\
+  using itype = typename Traits<type>::integral_t;\
+  const itype* FInPtr = (const itype*)FIn;\
+  type* FOutPtr = (type*)FOut;\
   \
   double Scale = 1.0 / ldexp(1, Bits - EMax);\
   for (i64 I = 0; I < Size; ++I)\
-    FOutPtr[I] = ftype(Scale * FInPtr[I]);
+    FOutPtr[I] = type(Scale * FInPtr[I]);
 
-  TypeChooserInt32And64(Type)
+  TypeChooserFloat(Type)
 #undef Body
 }
 

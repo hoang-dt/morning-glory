@@ -17,62 +17,8 @@
 
 using namespace mg;
 
-void __attribute__ ((noinline)) B() {
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  mg_AbortIf(true);
-}
-
-int __attribute__ ((noinline)) A() {
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  for (int i = 0; i < 100; ++i) {
-    if (i%50 == 0)
-      printf("hohoho\n");
-  }
-  B();
-}
-
 int main(int Argc, const char** Argv) {
   SetHandleAbortSignals();
-  A();
   timer Timer;
   StartTimer(&Timer);
   cstr DataFile = nullptr;
@@ -85,6 +31,7 @@ int main(int Argc, const char** Argv) {
   mg_CleanUp(0, Deallocate(&BufF.Data));
   mg_AbortIf(!Ok, "%s", ToString(Ok));
   puts("Done reading file\n");
+
   f64* F = (f64*)BufF.Data;
   i64 Size = (i64)Meta.Dimensions.X * Meta.Dimensions.Y * Meta.Dimensions.Z;
   mg_AbortIf((size_t)Size * SizeOf(Meta.DataType) != BufF.Size, "Size mismatched. Check file: %s", Meta.File);
@@ -95,11 +42,18 @@ int main(int Argc, const char** Argv) {
   f64* FWav = (f64*)BufFWav.Data;
   MemCopy(&BufFWav, BufF);
   mg_CleanUp(1, DeallocateBuffer(&BufFWav));
-  Cdf53Forward(FWav, Meta.Dimensions, NLevels, Meta.DataType);
-  Cdf53Inverse(FWav, Meta.Dimensions, NLevels, Meta.DataType);
+  // Cdf53Forward(FWav, Meta.Dimensions, NLevels, Meta.DataType);
+  // Cdf53Inverse(FWav, Meta.Dimensions, NLevels, Meta.DataType);
   f64 Rmse = RMSError(FWav, F, Size);
   f64 Psnr = PSNR(FWav, F, Size);
   printf("Psnr = %f, Rmse = %f\n", Psnr, Rmse);
   printf("%" PRId64"\n", ElapsedTime(&Timer));
+
+  i64* FQuant = (i64*)BufF.Data;
+  int EMax = Quantize(F, Size, 8, FQuant, Meta.DataType);
+  Dequantize(FQuant, Size, EMax, 8, F, Meta.DataType);
+  Rmse = RMSError(FWav, F, Size);
+  Psnr = PSNR(FWav, F, Size);
+  printf("Psnr = %f, Rmse = %f\n", Psnr, Rmse);
   // printf("Psnr = %f\n", Psnr);
 }
