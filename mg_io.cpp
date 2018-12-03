@@ -34,7 +34,7 @@ error ReadFile(cstr FileName, buffer* Buf) {
   size_t Size = 0;
   if ((Size = mg_FTell(Fp)) == size_t(-1)) return mg_Error(FileTellFailed, "%s", FileName);
   if (mg_FSeek(Fp, 0, SEEK_SET)) return mg_Error(FileSeekFailed, "%s", FileName);
-  if (Buf->Size < Size)
+  if ((size_t)Buf->Size < Size)
     if (!AllocateBuffer(Buf, Size)) return mg_Error(OutOfMemory, "%s", FileName);
 
   /* Read file contents */

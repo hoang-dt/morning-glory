@@ -80,7 +80,7 @@ struct v3;
 
 struct buffer {
   byte* Data = nullptr;
-  size_t Size = 0;
+  i64 Size = 0;
 };
 
 } // namespace mg
