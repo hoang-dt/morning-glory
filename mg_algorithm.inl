@@ -78,8 +78,19 @@ void Swap(t* A, t* mg_Restrict B) {
 
 template <typename i, typename t>
 void Fill(i Begin, i End, const t& Val) {
-  for (i Iter = Begin; Iter != End; ++Iter)
-    *Iter = Val;
+for (i Iter = Begin; Iter != End; ++Iter)
+  *Iter = Val;
+}
+
+template <typename i>
+void Reverse(i Begin, i End) {
+  auto Iter1 = Begin;
+  auto Iter2 = End - 1;
+  while (Iter1 < Iter2) {
+    Swap(Iter1, Iter2);
+    ++Iter1;
+    --Iter2;
+  }
 }
 
 } // namespace mg

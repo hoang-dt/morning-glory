@@ -34,6 +34,10 @@ void Swap(t* A, t* B);
 template <typename i, typename t>
 void Fill(i Begin, i End, const t& Val);
 
+/* Only work with random access iterator */
+template <typename i>
+void Reverse(i Begin, i End);
+
 } // namespace mg
 
 #include "mg_algorithm.inl"

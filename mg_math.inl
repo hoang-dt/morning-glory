@@ -36,4 +36,25 @@ int Exponent(t Val) {
   return -Traits<t>::ExponentBias;
 }
 
+inline i64 XyzToI(v3l N, v3l P) {
+  return P.Z * N.X * N.Y + P.Y * N.X + P.X;
+}
+
+inline v3l IToXyz(i64 I, v3l N) {
+  i64 Z = I / (N.X * N.Y);
+  i64 X = I % N.X;
+  i64 Y = (I - Z * (N.X * N.Y)) / N.X;
+  return v3l(X, Y, Z);
+}
+
+template <typename t>
+t Prod(v3<t> Vec) {
+  return Vec.X * Vec.Y * Vec.Z;
+}
+
+template <typename t>
+v3<t> operator*(v3<t> Lhs, v3<t> Rhs) {
+  return v3<t>{ Lhs.X * Rhs.X, Lhs.Y * Rhs.Y, Lhs.Z * Rhs.Z };
+}
+
 } // namespace mg

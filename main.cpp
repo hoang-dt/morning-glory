@@ -21,19 +21,19 @@ using namespace mg;
 void TestArray() {
   stack_linear_allocator<1024> StackAlloc;
   fallback_allocator Alloc(&StackAlloc, &Mallocator());
-  dynamic_array<int> Array(&Alloc);
-  Reserve(&Array, 50);
-  for (int I = 0; I < 100; ++I)
-    PushBack(&Array, I);
-  for (int I = 0; I < Size(Array); ++I) {
-    printf("%d ", Array[I]);
+  dynamic_array<Block> Subbands(&Alloc);
+  BuildSubbands(3, v3l(8, 8, 8), 3, &Subbands);
+  for (int I = 0; I < Size(Subbands); ++I) {
+    v3i Pos = IToXyz(Subbands[I].Pos, v3l(8, 8, 8));
+    printf("%d %d %d ", Pos.X, Pos.Y, Pos.Z);
+    v3i Size = IToXyz(Subbands[I].Size, v3l(8, 8, 8));
+    printf("%d %d %d\n", Size.X, Size.Y, Size.Z);
   }
-  printf("%d ", Front(Array));
-  printf("%d ", Back(Array));
-  Clear(&Array);
 }
 
 int main(int Argc, const char** Argv) {
+  TestArray();
+  return 0;
   SetHandleAbortSignals();
   timer Timer;
   StartTimer(&Timer);

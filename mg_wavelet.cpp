@@ -1,5 +1,8 @@
+#include "mg_algorithm.h"
+#include "mg_array.h"
 #include "mg_assert.h"
 #include "mg_common_types.h"
+#include "mg_math.h"
 #include "mg_types.h"
 #include "mg_wavelet.h"
 
@@ -55,33 +58,28 @@ array<u8, 8> Orders[4] = {
   { 0, 1, 2, 4, 3, 5, 6, 7 } // for 3D
 };
 
-struct Block {
-  i64 Pos;
-  i64 Size;
-};
-
-// void BuildSubbands(int NDims, v3i N, int NLevels, Block* I) {
-//   mg_Assert(NDims <= 3);
-//   mg_Assert(N.Z == 1 || NDims == 3);
-//   mg_Assert(N.Y == 1 || NDims >= 2);
-//   const array<u8, 8>& Order = Orders[NDims];
-//   I->reserve(((1<<D)-1)*nlevels+1);
-//   int3 m = n;
-//   for (int i = 0; i < nlevels; ++i) {
-//     int3 p((m.x+1)>>1, (m.y+1)>>1, (m.z+1)>>1);
-//     for (int j = (1<<D)-1; j > 0; --j) {
-//       uint8_t x = order[j]&1u, y = (order[j]>>1)&1u, z = (order[j]>>2)&1u;
-//       int3 sm((x==0)?p.x:m.x-p.x, (y==0)?p.y:m.y-p.y, (z==0)?p.z:m.z-p.z);
-//       Set sb ={ xyz2i<int64_t>(n, x*p.x, y*p.y, z*p.z), xyz2i<int64_t>(n, sm.x, sm.y, sm.z) };
-//       if (sm.x*sm.y*sm.z != 0) { // child exists
-//         I->emplace_back(sb);
-//       }
-//     }
-//     m = p;
-//   }
-//   I->emplace_back(Set{ 0, xyz2i<int64_t>(n, m.x, m.y, m.z) });
-//   std::reverse(I->begin(), I->end());
-// }
+void BuildSubbands(int NDims, v3l N, int NLevels, dynamic_array<Block>* Subbands) {
+  mg_Assert(NDims <= 3);
+  mg_Assert(N.Z == 1 || NDims == 3);
+  mg_Assert(N.Y == 1 || NDims >= 2);
+  const array<u8, 8>& Order = Orders[NDims];
+  Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
+  v3l M = N;
+  for (int I = 0; I < NLevels; ++I) {
+    v3l P((M.X + 1) >> 1, (M.Y + 1) >> 1, (M.Z + 1) >> 1);
+    for (int J = (1 << NDims) - 1; J > 0; --J) {
+      u8 X = Order[J] & 1u, Y = (Order[J] >> 1) & 1u, Z = (Order[J] >> 2) & 1u;
+      v3l Sm((X == 0) ? P.X : M.X - P.X,
+             (Y == 0) ? P.Y : M.Y - P.Y,
+             (Z == 0) ? P.Z : M.Z - P.Z);
+      if (Prod(Sm) != 0) // child exists
+        PushBack(Subbands, Block{ XyzToI(N, v3l(X, Y, Z) * P), XyzToI(N, Sm) });
+    }
+    M = P;
+  }
+  PushBack(Subbands, Block{ 0, XyzToI(N, M) });
+  Reverse(Begin(*Subbands), End(*Subbands));
+}
 
 } // namespace mg
 
