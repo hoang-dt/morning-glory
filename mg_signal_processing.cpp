@@ -99,13 +99,13 @@ void ConvertToNegabinary(const i64* FIn, i64 Size, u64* FOut, data_type Type) {
 
 void ConvertFromNegabinary(const u64* FIn, i64 Size, i64* FOut, data_type Type) {
 #define Body(type)\
-  using stype = typename Traits<type>::signed_t;\
-  const type* FInPtr  = (const type*)FIn;\
+  using utype = typename Traits<type>::unsigned_t;\
+  const utype* FInPtr  = (const utype*)FIn;\
+  type* FOutPtr = (type*)FOut;\
   \
-  stype* FOutPtr = (stype*)FOut;\
   for (i64 I = 0; I < Size; ++I) {\
     auto Mask = Traits<type>::NegabinaryMask;\
-    FOutPtr[I] = stype((FInPtr[I] ^ Mask) - Mask);\
+    FOutPtr[I] = type((FInPtr[I] ^ Mask) - Mask);\
   }
 
   TypeChooserInt(Type)

@@ -8,5 +8,6 @@ mg_Enum(data_type, int,
 namespace mg {
 
 int SizeOf(data_type Type);
+data_type IntType(data_type InputType);
 
 } // namespace mg

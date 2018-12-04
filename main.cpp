@@ -32,8 +32,6 @@ void TestArray() {
 }
 
 int main(int Argc, const char** Argv) {
-  TestArray();
-  return 0;
   SetHandleAbortSignals();
   timer Timer;
   StartTimer(&Timer);
@@ -62,12 +60,17 @@ int main(int Argc, const char** Argv) {
   // Cdf53Inverse(FWav, Meta.Dimensions, NLevels, Meta.DataType);
   f64 Rmse = RMSError(FWav, F, Size);
   f64 Psnr = PSNR(FWav, F, Size);
+
   printf("Psnr = %f, Rmse = %f\n", Psnr, Rmse);
   printf("%" PRId64"\n", ElapsedTime(&Timer));
 
   i64* FQuant = (i64*)BufF.Data;
-  int EMax = Quantize(F, Size, 8, FQuant, Meta.DataType);
-  Dequantize(FQuant, Size, EMax, 8, F, Meta.DataType);
+  int EMax = Quantize(F, Size, 32, FQuant, Meta.DataType);
+  u64* FNega = (u64*)FQuant;
+  data_type IntT = IntType(Meta.DataType);
+  ConvertToNegabinary(FQuant, Size, FNega, IntT);
+  ConvertFromNegabinary(FNega, Size, FQuant, IntT);
+  Dequantize(FQuant, Size, EMax, 32, F, Meta.DataType);
   Rmse = RMSError(FWav, F, Size);
   Psnr = PSNR(FWav, F, Size);
   printf("Psnr = %f, Rmse = %f\n", Psnr, Rmse);
