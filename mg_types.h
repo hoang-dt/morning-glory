@@ -1,6 +1,5 @@
 #pragma once
 
-#include <assert.h>
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -47,7 +46,12 @@ struct Traits {
 
 /* Something to replace std::array */
 template <typename t, int N>
-struct array;
+struct array {
+  static_assert(N > 0);
+  t Arr[N];
+  t& operator[](int Idx);
+  const t& operator[](int Idx) const;
+};
 template <typename t, int N> t* Begin(array<t, N>& A);
 template <typename t, int N> const t* ConstBegin(const array<t, N>& A);
 template <typename t, int N> t* End(array<t, N>& A);
@@ -80,7 +84,7 @@ struct v3;
 
 struct buffer {
   byte* Data = nullptr;
-  i64 Size = 0;
+  i64 Bytes = 0;
 };
 
 } // namespace mg

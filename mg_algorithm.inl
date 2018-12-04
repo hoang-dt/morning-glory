@@ -76,4 +76,10 @@ void Swap(t* A, t* mg_Restrict B) {
   *B = T;
 }
 
+template <typename i, typename t>
+void Fill(i Begin, i End, const t& Val) {
+  for (i Iter = Begin; Iter != End; ++Iter)
+    *Iter = Val;
+}
+
 } // namespace mg

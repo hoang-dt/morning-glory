@@ -4,7 +4,10 @@
 // TODO: (double-ended) StackAllocator
 // TODO: aligned allocation
 // TODO: pool allocator
+// TODO: add asserts
 
+#include <stdlib.h>
+#include "mg_assert.h"
 #include "mg_types.h"
 
 namespace mg {
@@ -12,21 +15,17 @@ namespace mg {
 thread_local char ScratchBuffer[1024]; // General purpose buffer for string-related operations
 
 /* Abstract away memory allocations/deallocations */
-template <typename t>
-bool Allocate(t** Ptr, i64 Size);
-
-template <typename t>
-void Deallocate(t** Ptr);
-
-bool AllocateBuffer(buffer* Buf, i64 Size);
+void Allocate(byte** Ptr, i64 Bytes);
+void Deallocate(byte** Ptr);
+void AllocateBuffer(buffer* Buf, i64 Bytes);
 void DeallocateBuffer(buffer* Buf);
 
 void MemCopy(buffer* Dst, const buffer& Src);
 
 struct allocator {
-  virtual bool Allocate(buffer* Buf, i64 Size) = 0;
-  virtual bool Deallocate(buffer* Buf) = 0;
-  virtual bool DeallocateAll() = 0;
+  virtual bool Allocate(buffer* Buf, i64 Bytes) = 0;
+  virtual void Deallocate(buffer* Buf) = 0;
+  virtual void DeallocateAll() = 0;
 };
 
 /* Allocators that know if they own an address/buffer */
@@ -47,6 +46,55 @@ struct free_list_allocator;
 allocator (the Secondary). */
 struct fallback_allocator;
 
-} // namespace mg
+struct mallocator : public allocator {
+  bool Allocate(buffer* Buf, i64 Bytes) override;
+  void Deallocate(buffer* Buf) override;
+  void DeallocateAll() override;
+};
 
-#include "mg_memory.inl"
+struct linear_allocator : public owning_allocator {
+  buffer Block;
+  i64 CurrentBytes = 0;
+  linear_allocator();
+  linear_allocator(buffer Buf);
+  bool Allocate(buffer* Buf, i64 Bytes) override;
+  void Deallocate(buffer* Buf) override;
+  void DeallocateAll() override;
+  bool Own(buffer Buf) override;
+};
+
+template <int Capacity>
+struct stack_linear_allocator : public linear_allocator {
+  array<byte, Capacity> Storage;
+  stack_linear_allocator() : linear_allocator(buffer{ Storage.Arr, Capacity }) {}
+};
+
+struct free_list_allocator : public allocator {
+  struct node { node* Next = nullptr; };
+  node* Head = nullptr;
+  i64 MinBytes = 0;
+  i64 MaxBytes = 0;
+  allocator* Parent = nullptr;
+  free_list_allocator();
+  free_list_allocator(i64 MinBytes, i64 MaxBytes, allocator* Parent = nullptr);
+  bool Allocate(buffer* Buf, i64 Bytes) override;
+  void Deallocate(buffer* Buf) override;
+  void DeallocateAll() override;
+};
+
+struct fallback_allocator : public allocator {
+  owning_allocator* Primary = nullptr;
+  allocator* Secondary = nullptr;
+  fallback_allocator();
+  fallback_allocator(owning_allocator* Primary, allocator* Secondary);
+  bool Allocate(buffer* Buf, i64 Bytes) override;
+  void Deallocate(buffer* Buf) override;
+  void DeallocateAll() override;
+};
+
+static mallocator& Mallocator() {
+  static mallocator Instance;
+  return Instance;
+}
+
+} // namespace mg

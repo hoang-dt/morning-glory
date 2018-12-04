@@ -8,6 +8,7 @@
 
 namespace mg {
 
+string_ref::string_ref() = default;
 string_ref::string_ref(cstr Ptr, int Size) : ConstPtr(Ptr), Size(Size) {}
 string_ref::string_ref(cstr Ptr) : ConstPtr(Ptr), Size(strlen(Ptr)) {}
 char& string_ref::operator[](int Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
@@ -94,6 +95,7 @@ bool ToInt(string_ref Str, int* Result) {
 
 /* tokenizer stuff */
 
+tokenizer::tokenizer() = default;
 tokenizer::tokenizer(string_ref Input, string_ref Delims)
   : Input(Input), Delims(Delims), Pos(0) {}
 

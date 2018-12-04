@@ -10,7 +10,7 @@ struct path {
   constexpr static int NumComponentsMax = 64;
   string_ref Components[NumComponentsMax] = {}; /* e.g. home, dir, file.txt */
   int NumComponents = 0;
-  path() = default;
+  path();
   path(string_ref Str);
 };
 

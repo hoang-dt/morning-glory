@@ -80,13 +80,8 @@ struct Traits<f64> {
 
 /* Something to replace std::array */
 #define TemplateArr template <typename t, int N>
-TemplateArr
-struct array {
-  static_assert(N > 0);
-  t Arr[N];
-  t& operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
-  const t& operator[](int Idx) const { assert(Idx < N); return Arr[Idx]; }
-};
+TemplateArr t& array<t, N>::operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
+TemplateArr const t& array<t, N>::operator[](int Idx) const { assert(Idx < N); return Arr[Idx]; }
 TemplateArr t* Begin(array<t, N>& A) { return &A.Arr[0]; }
 TemplateArr const t* ConstBegin(const array<t, N>& A) { return &A.Arr[0]; }
 TemplateArr t* End(array<t, N>& A) { return &A.Arr[0] + N; }

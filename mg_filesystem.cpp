@@ -22,6 +22,8 @@
 
 namespace mg {
 
+path::path() = default;
+
 path::path(string_ref Str) {
   Init(this, Str);
 }

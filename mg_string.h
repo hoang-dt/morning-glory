@@ -20,7 +20,7 @@ struct string_ref {
   };
   int Size = 0;
 
-  string_ref() = default;
+  string_ref();
   string_ref(cstr Ptr, int Size);
   string_ref(cstr Ptr);
   char& operator[](int Idx);
@@ -60,7 +60,7 @@ struct tokenizer {
   string_ref Delims;
   int Pos = 0;
 
-  tokenizer() = default;
+  tokenizer();
   tokenizer(string_ref Input, string_ref Delims = " \n\t");
 }; // struct tokenizer
 

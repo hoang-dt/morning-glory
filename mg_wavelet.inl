@@ -35,7 +35,7 @@ void ForwardLiftCdf53##x(t* F, v3l N, v3l L) {\
     F[mg_RowMajor##x(x, y, z, N)] += (FLeft + FRight) / 4;\
   }}}\
   t* Temp = nullptr;\
-  mg_AbortIf(!Allocate(&Temp, M.x / 2), "Out of memory");\
+  Allocate((byte**)&Temp, sizeof(t) * M.x / 2);\
   i64 S##x = (M.x + 1) / 2;\
   for (i64 z = 0; z < M.z; ++z) {\
   for (i64 y = 0; y < M.y; ++y) {\
@@ -48,7 +48,7 @@ void ForwardLiftCdf53##x(t* F, v3l N, v3l L) {\
     for (i64 x = 0; x < (M.x / 2); ++x)\
       F[mg_RowMajor##x(S##x + x, y, z, N)] = Temp[x];\
   }}\
-  Deallocate(&Temp);\
+  Deallocate((byte**)&Temp);\
 }\
 } // namespace mg
 
@@ -66,7 +66,7 @@ void InverseLiftCdf53##x(t* F, v3l N, v3l L) {\
   if (M.x <= 1)\
     return;\
   t* Temp = nullptr;\
-  mg_AbortIf(!Allocate(&Temp, M.x / 2), "Out of memory");\
+  Allocate((byte**)&Temp, sizeof(t) * M.x / 2);\
   i64 S##x = (M.x + 1) >> 1;\
   for (i64 z = 0; z < M.z; ++z) {\
   for (i64 y = 0; y < M.y; ++y) {\
@@ -95,7 +95,7 @@ void InverseLiftCdf53##x(t* F, v3l N, v3l L) {\
     t FRight = x < M.x - 1 ? F[mg_RowMajor##x(x + 1, y, z, N)] : FLeft;\
     F[mg_RowMajor##x(x, y, z, N)] += (FLeft + FRight) / 2;\
   }}}\
-  Deallocate(&Temp);\
+  Deallocate((byte**)&Temp);\
 }\
 } // namespace mg
 

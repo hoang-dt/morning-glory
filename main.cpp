@@ -1,3 +1,4 @@
+#include "mg_array.h"
 #include "mg_args.h"
 #include "mg_assert.h"
 #include "mg_common_types.h"
@@ -17,6 +18,21 @@
 
 using namespace mg;
 
+void TestArray() {
+  stack_linear_allocator<1024> StackAlloc;
+  fallback_allocator Alloc(&StackAlloc, &Mallocator());
+  dynamic_array<int> Array(&Alloc);
+  Reserve(&Array, 50);
+  for (int I = 0; I < 100; ++I)
+    PushBack(&Array, I);
+  for (int I = 0; I < Size(Array); ++I) {
+    printf("%d ", Array[I]);
+  }
+  printf("%d ", Front(Array));
+  printf("%d ", Back(Array));
+  Clear(&Array);
+}
+
 int main(int Argc, const char** Argv) {
   SetHandleAbortSignals();
   timer Timer;
@@ -34,11 +50,11 @@ int main(int Argc, const char** Argv) {
 
   f64* F = (f64*)BufF.Data;
   i64 Size = (i64)Meta.Dimensions.X * Meta.Dimensions.Y * Meta.Dimensions.Z;
-  mg_AbortIf(Size * SizeOf(Meta.DataType) != BufF.Size, "Size mismatched. Check file: %s", Meta.File);
+  mg_AbortIf(Size * SizeOf(Meta.DataType) != BufF.Bytes, "Size mismatched. Check file: %s", Meta.File);
   int NLevels = 0;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &NLevels), "Provide --nlevels");
   buffer BufFWav;
-  mg_AbortIf(!AllocateBuffer(&BufFWav, BufF.Size), "Out of memory");
+  AllocateBuffer(&BufFWav, BufF.Bytes);
   f64* FWav = (f64*)BufFWav.Data;
   MemCopy(&BufFWav, BufF);
   mg_CleanUp(1, DeallocateBuffer(&BufFWav));
