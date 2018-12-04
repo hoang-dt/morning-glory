@@ -1,0 +1,7 @@
+_gsdata_
+.vscode
+.vs
+*.o
+*.exe
+*.pdb
+*.dll
