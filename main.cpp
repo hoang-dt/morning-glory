@@ -1,6 +1,7 @@
 #include "mg_array.h"
 #include "mg_args.h"
 #include "mg_assert.h"
+#include "mg_bitstream.h"
 #include "mg_common_types.h"
 #include "mg_dataset.h"
 #include "mg_enum.h"
@@ -19,19 +20,27 @@
 using namespace mg;
 
 void TestArray() {
-  stack_linear_allocator<1024> StackAlloc;
-  fallback_allocator Alloc(&StackAlloc, &Mallocator());
-  dynamic_array<Block> Subbands(&Alloc);
-  BuildSubbands(3, v3l(8, 8, 8), 3, &Subbands);
-  for (int I = 0; I < Size(Subbands); ++I) {
-    v3i Pos = IToXyz(Subbands[I].Pos, v3l(8, 8, 8));
-    printf("%d %d %d ", Pos.X, Pos.Y, Pos.Z);
-    v3i Size = IToXyz(Subbands[I].Size, v3l(8, 8, 8));
-    printf("%d %d %d\n", Size.X, Size.Y, Size.Z);
-  }
+  bit_stream Bs;
+  InitWrite(&Bs, 8);
+  Write(&Bs, 1);
+  Write(&Bs, 0);
+  Write(&Bs, 1);
+  Write(&Bs, 0);
+  Flush(&Bs);
+  InitRead(&Bs);
+  u64 V = Read(&Bs);
+  printf("%llu", V);
+  V = Read(&Bs);
+  printf("%llu", V);
+  V = Read(&Bs);
+  printf("%llu", V);
+  V = Read(&Bs);
+  printf("%llu", V);
 }
 
 int main(int Argc, const char** Argv) {
+  TestArray();
+  return 0;
   SetHandleAbortSignals();
   timer Timer;
   StartTimer(&Timer);
