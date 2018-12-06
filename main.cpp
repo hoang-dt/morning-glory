@@ -15,6 +15,7 @@
 #include "mg_dataset.h"
 #include "mg_timer.h"
 #include "mg_types.h"
+#include "mg_zfp.h"
 #include "mg_wavelet.h"
 
 using namespace mg;

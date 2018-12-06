@@ -40,7 +40,7 @@ void Flush(bit_stream* Bs);
 /* Put "count" bits into the buffer, count must be at most 64 - BitPos */
 void Put(bit_stream* Bs, u64 N, int Count);
 /* Write "count" bits into the stream, count must be at most 64 - 7 */
-void Write(bit_stream* Bs, u64 N, int Count = 1);
+u64 Write(bit_stream* Bs, u64 N, int Count = 1);
 /* Write "count" bits into the stream, count has no restriction */
 void RepeatedWrite(bit_stream* Bs, bool B, int Count);
 
