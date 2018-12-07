@@ -120,7 +120,7 @@ int Quantize(const f64* FIn, i64 Size, int Bits, i64* FOut, data_type Type) {
   \
   type Max = *(MaxElement(FIn, FIn + Size, [](auto A, auto B) { return fabs(A) < fabs(B); }));\
   int EMax = Exponent(fabs(Max));\
-  double Scale = ldexp(1, Bits - EMax);\
+  double Scale = ldexp(1, Bits - 1 - EMax);\
   for (i64 I = 0; I < Size; ++I)\
     FOutPtr[I] = itype(Scale * FInPtr[I]);\
   return EMax;

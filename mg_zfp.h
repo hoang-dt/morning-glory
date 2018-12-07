@@ -4,6 +4,9 @@
 
 #include "mg_assert.h"
 #include "mg_bitstream.h"
+#include "mg_common_types.h"
+#include "mg_math.h"
+#include "mg_memory.h"
 #include "mg_signal_processing.h"
 
 namespace mg {
@@ -176,7 +179,7 @@ template <typename t, typename u>
 void ForwardShuffle(const t* IBlock, u* UBlock) {
   for (int I = 0; I < 64; ++I) {
     auto Mask = Traits<u>::NegabinaryMask;
-    UBlock[I] = (u*)((IBlock[Perm3[I]] + Mask) ^ Mask);
+    UBlock[I] = (u)((IBlock[Perm3[I]] + Mask) ^ Mask);
   }
 }
 
@@ -185,7 +188,7 @@ template <typename t>
 void InverseShuffle(const t* UBlock, t* IBlock) {
   for (int I = 0; I < 64; ++I) {
     auto Mask = Traits<u>::NegabinaryMask;
-    IBlock[Perm3[I]] = (t*)((UBlock[I] ^ Mask) - Mask);
+    IBlock[Perm3[I]] = (t)((UBlock[I] ^ Mask) - Mask);
   }
 }
 
@@ -233,6 +236,48 @@ void DecodeBlock(u64* Block, int Bitplane, int& N, bit_stream* Bs) {
   /* deposit bit plane from x */
   for (int I = 0; X; ++I, X >>= 1)
     Block[I] += (u64)(X & 1u) << Bitplane;
+}
+
+/* Encode a region of data */
+inline // TODO: turn this function into a template ?
+void EncodeRegion(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
+  // TODO: use many different bit streams
+  // TODO: initialize bit stream?
+  InitWrite(Bs, sizeof(f64) * Prod(Dims));
+  for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
+  for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
+  for (int TX = 0; TX < Dims.X; TX += TileDims.X) {
+    // TODO: use the freelist allocator
+    // TODO: use aligned memory allocation
+    // TODO: try reusing the memory buffer
+    f64* FloatTile; Allocate((byte**)&FloatTile, sizeof(f64) * Prod(TileDims));
+    i64* IntTile; Allocate((byte**)&IntTile, sizeof(i64) * Prod(TileDims));
+    u64* UIntTile; Allocate((byte**)&UIntTile, sizeof(u64) * Prod(TileDims));
+    for (int BZ = 0; BZ < TileDims.Z; BZ += 4) { /* loop through zfp blocks */
+    for (int BY = 0; BY < TileDims.Y; BY += 4) {
+    for (int BX = 0; BX < TileDims.X; BX += 4) {
+      i64 K = XyzToI(TileDims, v3l{ BX, BY, BZ });
+      for (int Z = 0; Z < 4; ++Z) { /* loop through each block */
+      for (int Y = 0; Y < 4; ++Y) {
+      for (int X = 0; X < 4; ++X) {
+        i64 I = XyzToI(Dims, v3l{ TX + BX + X, TY + BY + Y, TZ + BZ + Z });
+        i64 J = K + XyzToI(v3l{ 4, 4, 4 }, v3l{ X, Y, Z });
+        FloatTile[J] = Data[I]; // copy data to the local tile buffer
+      }}} /* end loop through each block */
+      int EMax = Quantize(&FloatTile[K], 4 * 4 * 4, 64, &IntTile[K], data_type::float64); // TODO: 64 bit planes?
+      Write(Bs, EMax * 2 + 1, Traits<f64>::ExponentBits + 1);
+      ForwardBlockTransform(&IntTile[K]);
+      ForwardShuffle(&IntTile[K], &UIntTile[K]);
+      int N = 0;
+      for (int Bitplane = 0; Bitplane < 64; ++Bitplane) // TODO: move this loop outside
+        EncodeBlock(&UIntTile[K], Bitplane, N, Bs);
+    }}} /* end loop through the zfp blocks */
+    // TODO: padding?
+    Deallocate((byte**)&FloatTile);
+    Deallocate((byte**)&IntTile);
+    Deallocate((byte**)&UIntTile);
+  }}} /* end loop through the tiles */
+  Flush(Bs);
 }
 
 } // namespace mg
