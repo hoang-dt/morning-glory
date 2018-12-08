@@ -20,28 +20,17 @@
 
 using namespace mg;
 
-void TestArray() {
+void TestZfp(f64* F, v3i Dims) {
+  v3i TileDims{ 64, 64, 64 };
   bit_stream Bs;
-  InitWrite(&Bs, 8);
-  Write(&Bs, 1);
-  Write(&Bs, 0);
-  Write(&Bs, 1);
-  Write(&Bs, 0);
-  Flush(&Bs);
-  InitRead(&Bs);
-  u64 V = Read(&Bs);
-  printf("%llu", V);
-  V = Read(&Bs);
-  printf("%llu", V);
-  V = Read(&Bs);
-  printf("%llu", V);
-  V = Read(&Bs);
-  printf("%llu", V);
+  EncodeData(F, Dims, TileDims, &Bs);
+  f64* FRecovered; Allocate((byte**)&FRecovered, sizeof(f64) * Prod(Dims));
+  DecodeData(FRecovered, Dims, TileDims, &Bs);
+  f64 Psnr = PSNR(FRecovered, F, Prod(Dims));
+  printf("Psnr = %f\n", Psnr);
 }
 
 int main(int Argc, const char** Argv) {
-  TestArray();
-  return 0;
   SetHandleAbortSignals();
   timer Timer;
   StartTimer(&Timer);
@@ -59,6 +48,8 @@ int main(int Argc, const char** Argv) {
   f64* F = (f64*)BufF.Data;
   i64 Size = (i64)Meta.Dimensions.X * Meta.Dimensions.Y * Meta.Dimensions.Z;
   mg_AbortIf(Size * SizeOf(Meta.DataType) != BufF.Bytes, "Size mismatched. Check file: %s", Meta.File);
+  TestZfp(F, Meta.Dimensions);
+  return 0;
   int NLevels = 0;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &NLevels), "Provide --nlevels");
   buffer BufFWav;

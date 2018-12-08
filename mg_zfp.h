@@ -54,16 +54,16 @@ template <typename t>
 void ForwardBlockTransform(t* P) {
   mg_Assert(P);
   /* transform along X */
-  for (int Z = 0; Z < 4; Z++)
-    for (int Y = 0; Y < 4; Y++)
+  for (int Z = 0; Z < 4; ++Z)
+    for (int Y = 0; Y < 4; ++Y)
       ForwardLift(P + 4 * Y + 16 * Z, 1);
   /* transform along Y */
-  for (int X = 0; X < 4; X++)
-    for (int Z = 0; Z < 4; Z++)
+  for (int X = 0; X < 4; ++X)
+    for (int Z = 0; Z < 4; ++Z)
       ForwardLift(P + 16 * Z + 1 * X, 4);
   /* transform along Z */
-  for (int Y = 0; Y < 4; Y++)
-    for (int X = 0; X < 4; X++)
+  for (int Y = 0; Y < 4; ++Y)
+    for (int X = 0; X < 4; ++X)
       ForwardLift(P + 1 * X + 4 * Y, 16);
 }
 
@@ -72,17 +72,17 @@ template <typename t>
 void InverseBlockTransform(t* P) {
   mg_Assert(P);
   /* transform along Z */
-  for (int Y = 0; y < 4; y++)
-    for (int X = 0; X < 4; X++)
-      InverseLift(P + 1 * X + 4 * y, 16);
+  for (int Y = 0; Y < 4; ++Y)
+    for (int X = 0; X < 4; ++X)
+      InverseLift(P + 1 * X + 4 * Y, 16);
   /* transform along y */
-  for (int X = 0; X < 4; X++)
-    for (int Z = 0; Z < 4; Z++)
+  for (int X = 0; X < 4; ++X)
+    for (int Z = 0; Z < 4; ++Z)
       InverseLift(P + 16 * Z + 1 * X, 4);
   /* transform along X */
-  for (int Z = 0; Z < 4; Z++)
-    for (int y = 0; y < 4; y++)
-      InverseLift(P + 4 * y + 16 * Z, 1);
+  for (int Z = 0; Z < 4; ++Z)
+    for (int Y = 0; Y < 4; ++Y)
+      InverseLift(P + 4 * Y + 16 * Z, 1);
 }
 
 /* Use the following array to reorder transformed coefficients in a zfp block
@@ -184,8 +184,8 @@ void ForwardShuffle(const t* IBlock, u* UBlock) {
 }
 
 /* Reorder unsigned coefficients within a block, and convert them to two's complement */
-template <typename t>
-void InverseShuffle(const t* UBlock, t* IBlock) {
+template <typename t, typename u>
+void InverseShuffle(const u* UBlock, t* IBlock) {
   for (int I = 0; I < 64; ++I) {
     auto Mask = Traits<u>::NegabinaryMask;
     IBlock[Perm3[I]] = (t)((UBlock[I] ^ Mask) - Mask);
@@ -240,7 +240,8 @@ void DecodeBlock(u64* Block, int Bitplane, int& N, bit_stream* Bs) {
 
 /* Encode a region of data */
 inline // TODO: turn this function into a template ?
-void EncodeRegion(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
+void EncodeData(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
+  // TODO: loop through the subbands
   // TODO: use many different bit streams
   // TODO: initialize bit stream?
   InitWrite(Bs, sizeof(f64) * Prod(Dims));
@@ -271,6 +272,49 @@ void EncodeRegion(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
       int N = 0;
       for (int Bitplane = 0; Bitplane < 64; ++Bitplane) // TODO: move this loop outside
         EncodeBlock(&UIntTile[K], Bitplane, N, Bs);
+    }}} /* end loop through the zfp blocks */
+    // TODO: padding?
+    Deallocate((byte**)&FloatTile);
+    Deallocate((byte**)&IntTile);
+    Deallocate((byte**)&UIntTile);
+  }}} /* end loop through the tiles */
+  Flush(Bs);
+}
+
+inline // TODO: turn this function into a template ?
+void DecodeData(f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
+  // TODO: use many different bit streams
+  // TODO: initialize bit stream?
+  InitRead(Bs);
+  for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
+  for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
+  for (int TX = 0; TX < Dims.X; TX += TileDims.X) {
+    // TODO: use the freelist allocator
+    // TODO: use aligned memory allocation
+    // TODO: try reusing the memory buffer
+    f64* FloatTile; Allocate((byte**)&FloatTile, sizeof(f64) * Prod(TileDims));
+    i64* IntTile; Allocate((byte**)&IntTile, sizeof(i64) * Prod(TileDims));
+    u64* UIntTile; Allocate((byte**)&UIntTile, sizeof(u64) * Prod(TileDims));
+    memset(UIntTile, 0, sizeof(u64) * Prod(TileDims));
+    for (int BZ = 0; BZ < TileDims.Z; BZ += 4) { /* loop through zfp blocks */
+    for (int BY = 0; BY < TileDims.Y; BY += 4) {
+    for (int BX = 0; BX < TileDims.X; BX += 4) {
+      i64 K = XyzToI(TileDims, v3l{ BX, BY, BZ });
+      int EMax = Read(Bs, Traits<f64>::ExponentBits + 1);
+      EMax = (EMax - 1) / 2;
+      int N = 0;
+      for (int Bitplane = 0; Bitplane < 64; ++Bitplane) // TODO: move this loop outside
+        DecodeBlock(&UIntTile[K], Bitplane, N, Bs);
+      InverseShuffle(&UIntTile[K], &IntTile[K]);
+      InverseBlockTransform(&IntTile[K]);
+      Dequantize(&IntTile[K], 4 * 4 * 4, EMax, 64, &FloatTile[K], data_type::float64); // TODO: 64 bit planes?
+      for (int Z = 0; Z < 4; ++Z) { /* loop through each block */
+      for (int Y = 0; Y < 4; ++Y) {
+      for (int X = 0; X < 4; ++X) {
+        i64 I = XyzToI(Dims, v3l{ TX + BX + X, TY + BY + Y, TZ + BZ + Z });
+        i64 J = K + XyzToI(v3l{ 4, 4, 4 }, v3l{ X, Y, Z });
+        Data[I] = FloatTile[J]; // copy data to the local tile buffer
+      }}} /* end loop through each block */
     }}} /* end loop through the zfp blocks */
     // TODO: padding?
     Deallocate((byte**)&FloatTile);
