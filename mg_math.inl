@@ -36,20 +36,20 @@ int Exponent(t Val) {
   return -Traits<t>::ExponentBias;
 }
 
-inline i64 XyzToI(v3l N, v3l P) {
-  return P.Z * N.X * N.Y + P.Y * N.X + P.X;
+inline i64 XyzToI(v3i N, v3i P) {
+  return i64(P.Z) * N.X * N.Y + i64(P.Y) * N.X + P.X;
 }
 
-inline v3l IToXyz(i64 I, v3l N) {
-  i64 Z = I / (N.X * N.Y);
-  i64 X = I % N.X;
-  i64 Y = (I - Z * (N.X * N.Y)) / N.X;
-  return v3l(X, Y, Z);
+inline v3i IToXyz(i64 I, v3i N) {
+  i32 Z = I / (N.X * N.Y);
+  i32 X = I % N.X;
+  i32 Y = (I - i64(Z) * (N.X * N.Y)) / N.X;
+  return v3i(X, Y, Z);
 }
 
-template <typename t>
-t Prod(v3<t> Vec) {
-  return Vec.X * Vec.Y * Vec.Z;
+template <typename t, typename u>
+t Prod(v3<u> Vec) {
+  return t(Vec.X) * t(Vec.Y) * t(Vec.Z);
 }
 
 template <typename t>

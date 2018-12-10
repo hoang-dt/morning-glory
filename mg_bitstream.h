@@ -47,6 +47,8 @@ u64 ReadLong(bit_stream* Bs, int Count);
 void InitWrite(bit_stream* Bs, buffer Buf);
 /* Flush the written BYTES in our buffer to memory */
 void Flush(bit_stream* Bs);
+/* Flush and move the pointer to the next byte in memory */
+void FlushAndMoveToNextByte(bit_stream* Bs);
 /* Put "Count" bits into the buffer (Count <= 64 - BitPos) */
 void Put(bit_stream* Bs, u64 N, int Count = 1);
 /* Write "Count" bits into the stream (Count <= 64 - 7) */

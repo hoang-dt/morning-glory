@@ -11,7 +11,7 @@ inline void Rewind(bit_stream* Bs) {
 }
 
 inline size_t Size(bit_stream* Bs) {
-  return Bs->BitPtr - Bs->Stream.Data;
+  return (Bs->BitPtr - Bs->Stream.Data) + (Bs->BitPos + 7) / 8;
 }
 
 inline void InitRead(bit_stream* Bs, buffer* Stream) {
@@ -78,8 +78,13 @@ inline void Flush(bit_stream* Bs) {
   int BytePos = Bs->BitPos >> 3; // number of bytes in the buffer we have used
   /* shift the buffer to the right (the convoluted logic is to avoid shifting by 64 bits) */
   Bs->BitBuf = (Bs->BitBuf >> 1) >> ((BytePos << 3) - 1);
-  Bs->BitPtr += BytePos; // advance the pointer to memory
+  Bs->BitPtr += BytePos; // advance the pointer
   Bs->BitPos &= 7; // % 8
+}
+
+inline void FlushAndMoveToNextByte(bit_stream* Bs) {
+  Flush(Bs);
+  ++Bs->BitPtr;
 }
 
 inline void Put(bit_stream* Bs, u64 N, int Count) {

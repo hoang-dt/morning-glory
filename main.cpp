@@ -34,8 +34,6 @@ void TestBitStream() {
   u64 R;
   R = ReadLong(&Bs, 4);
   printf("%llu ", R);
-  R = ReadLong(&Bs, 8);
-  printf("%llu ", R);
   R = ReadLong(&Bs, 24);
   printf("%llu ", R);
   R = ReadLong(&Bs, 49);
@@ -47,12 +45,12 @@ void TestBitStream() {
 void TestZfp(f64* F, v3i Dims) {
   v3i TileDims{ 64, 64, 64 };
   bit_stream Bs;
-  buffer CompressedBuf; AllocateBuffer(&CompressedBuf, Prod(Dims) * sizeof(f64));
+  buffer CompressedBuf; AllocateBuffer(&CompressedBuf, Prod<i64>(Dims) * sizeof(f64));
   InitWrite(&Bs, CompressedBuf);
   EncodeData(F, Dims, TileDims, &Bs);
-  f64* FRecovered = nullptr; Allocate((byte**)&FRecovered, sizeof(f64) * Prod(Dims));
+  f64* FRecovered = nullptr; Allocate((byte**)&FRecovered, sizeof(f64) * Prod<i64>(Dims));
   DecodeData(FRecovered, Dims, TileDims, &Bs);
-  f64 Psnr = PSNR(FRecovered, F, Prod(Dims));
+  f64 Psnr = PSNR(FRecovered, F, Prod<i64>(Dims));
   printf("Psnr = %f\n", Psnr);
 }
 
