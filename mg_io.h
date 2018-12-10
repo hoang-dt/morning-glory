@@ -7,6 +7,8 @@
 #define mg_FSeek
 #define mg_FTell
 
+// TODO: write a logger
+
 namespace mg {
 
 /* Print formatted strings into a buffer */

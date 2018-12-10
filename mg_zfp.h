@@ -219,7 +219,8 @@ void EncodeBlock(const u64* Block, int Bitplane, int& N, bit_stream* Bs) {
   for (int I = 0; I < 64; ++I)
     X += u64((Block[I] >> Bitplane) & 1u) << I;
   /* code the last N bits of bit plane b */
-  Write(Bs, X, N);
+  WriteLong(Bs, X, N);
+  X >>= N;
   for (; N < 64 && Write(Bs, !!X); X >>= 1, ++N)
     for (; N < 64 - 1 && !Write(Bs, X & 1u); X >>= 1, ++N) ;
 }
@@ -228,10 +229,9 @@ void EncodeBlock(const u64* Block, int Bitplane, int& N, bit_stream* Bs) {
 // TODO: pointer aliasing?
 void DecodeBlock(u64* Block, int Bitplane, int& N, bit_stream* Bs) {
   /* decode first N bits of bit plane #Bitplane */
-  u64 X = 0;
-  Read(Bs, N);
+  u64 X = ReadLong(Bs, N);
   /* unary run-length decode remainder of bit plane */
-  for (; N < 64 && Read(Bs); X += (u64)1 << N++)
+  for (; N < 64 && Read(Bs); X += u64(1) << N++)
     for (; N < 64 - 1 && !Read(Bs); ++N) ;
   /* deposit bit plane from x */
   for (int I = 0; X; ++I, X >>= 1)
@@ -244,20 +244,20 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
   // TODO: loop through the subbands
   // TODO: use many different bit streams
   // TODO: initialize bit stream?
-  InitWrite(Bs, sizeof(f64) * Prod(Dims));
+  v3i NumBlocks = ((TileDims + 4) - 1) / 4;
   for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
   for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
   for (int TX = 0; TX < Dims.X; TX += TileDims.X) {
     // TODO: use the freelist allocator
     // TODO: use aligned memory allocation
     // TODO: try reusing the memory buffer
-    f64* FloatTile; Allocate((byte**)&FloatTile, sizeof(f64) * Prod(TileDims));
-    i64* IntTile; Allocate((byte**)&IntTile, sizeof(i64) * Prod(TileDims));
-    u64* UIntTile; Allocate((byte**)&UIntTile, sizeof(u64) * Prod(TileDims));
+    f64* FloatTile = nullptr; Allocate((byte**)&FloatTile, sizeof(f64) * Prod(TileDims));
+    i64* IntTile = nullptr; Allocate((byte**)&IntTile, sizeof(i64) * Prod(TileDims));
+    u64* UIntTile = nullptr; Allocate((byte**)&UIntTile, sizeof(u64) * Prod(TileDims));
     for (int BZ = 0; BZ < TileDims.Z; BZ += 4) { /* loop through zfp blocks */
     for (int BY = 0; BY < TileDims.Y; BY += 4) {
     for (int BX = 0; BX < TileDims.X; BX += 4) {
-      i64 K = XyzToI(TileDims, v3l{ BX, BY, BZ });
+      i64 K = XyzToI(NumBlocks, v3l{ BX / 4, BY / 4, BZ / 4 }) * 64; // TODO: handle partial blocks
       for (int Z = 0; Z < 4; ++Z) { /* loop through each block */
       for (int Y = 0; Y < 4; ++Y) {
       for (int X = 0; X < 4; ++X) {
@@ -265,12 +265,13 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
         i64 J = K + XyzToI(v3l{ 4, 4, 4 }, v3l{ X, Y, Z });
         FloatTile[J] = Data[I]; // copy data to the local tile buffer
       }}} /* end loop through each block */
-      int EMax = Quantize(&FloatTile[K], 4 * 4 * 4, 64, &IntTile[K], data_type::float64); // TODO: 64 bit planes?
-      Write(Bs, EMax * 2 + 1, Traits<f64>::ExponentBits + 1);
+      int EMax = Quantize(&FloatTile[K], 4 * 4 * 4, 52, &IntTile[K], data_type::float64); // TODO: 64 bit planes?
+      // TODO: for now we don't care if the exponent is 2047 which represents Inf or NaN
+      Write(Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
       ForwardBlockTransform(&IntTile[K]);
       ForwardShuffle(&IntTile[K], &UIntTile[K]);
       int N = 0;
-      for (int Bitplane = 0; Bitplane < 64; ++Bitplane) // TODO: move this loop outside
+      for (int Bitplane = 63; Bitplane >= 0; --Bitplane) // TODO: move this loop outside
         EncodeBlock(&UIntTile[K], Bitplane, N, Bs);
     }}} /* end loop through the zfp blocks */
     // TODO: padding?
@@ -284,30 +285,29 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
 inline // TODO: turn this function into a template ?
 void DecodeData(f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
   // TODO: use many different bit streams
-  // TODO: initialize bit stream?
   InitRead(Bs);
+  v3i NumBlocks = ((TileDims + 4) - 1) / 4;
   for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
   for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
   for (int TX = 0; TX < Dims.X; TX += TileDims.X) {
     // TODO: use the freelist allocator
     // TODO: use aligned memory allocation
     // TODO: try reusing the memory buffer
-    f64* FloatTile; Allocate((byte**)&FloatTile, sizeof(f64) * Prod(TileDims));
-    i64* IntTile; Allocate((byte**)&IntTile, sizeof(i64) * Prod(TileDims));
-    u64* UIntTile; Allocate((byte**)&UIntTile, sizeof(u64) * Prod(TileDims));
+    f64* FloatTile = nullptr; Allocate((byte**)&FloatTile, sizeof(f64) * Prod(TileDims));
+    i64* IntTile = nullptr; Allocate((byte**)&IntTile, sizeof(i64) * Prod(TileDims));
+    u64* UIntTile = nullptr; Allocate((byte**)&UIntTile, sizeof(u64) * Prod(TileDims));
     memset(UIntTile, 0, sizeof(u64) * Prod(TileDims));
     for (int BZ = 0; BZ < TileDims.Z; BZ += 4) { /* loop through zfp blocks */
     for (int BY = 0; BY < TileDims.Y; BY += 4) {
     for (int BX = 0; BX < TileDims.X; BX += 4) {
-      i64 K = XyzToI(TileDims, v3l{ BX, BY, BZ });
-      int EMax = Read(Bs, Traits<f64>::ExponentBits + 1);
-      EMax = (EMax - 1) / 2;
+      i64 K = XyzToI(NumBlocks, v3l{ BX / 4, BY / 4, BZ / 4 }) * 64;
+      int EMax = Read(Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
       int N = 0;
-      for (int Bitplane = 0; Bitplane < 64; ++Bitplane) // TODO: move this loop outside
+      for (int Bitplane = 63; Bitplane >= 0; --Bitplane) // TODO: move this loop outside
         DecodeBlock(&UIntTile[K], Bitplane, N, Bs);
       InverseShuffle(&UIntTile[K], &IntTile[K]);
       InverseBlockTransform(&IntTile[K]);
-      Dequantize(&IntTile[K], 4 * 4 * 4, EMax, 64, &FloatTile[K], data_type::float64); // TODO: 64 bit planes?
+      Dequantize(&IntTile[K], 4 * 4 * 4, EMax, 52, &FloatTile[K], data_type::float64); // TODO: 64 bit planes?
       for (int Z = 0; Z < 4; ++Z) { /* loop through each block */
       for (int Y = 0; Y < 4; ++Y) {
       for (int X = 0; X < 4; ++X) {
@@ -321,7 +321,6 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
     Deallocate((byte**)&IntTile);
     Deallocate((byte**)&UIntTile);
   }}} /* end loop through the tiles */
-  Flush(Bs);
 }
 
 } // namespace mg

@@ -136,7 +136,7 @@ void Dequantize(const i64* FIn, i64 Size, int EMax, int Bits, f64* FOut, data_ty
   const itype* FInPtr = (const itype*)FIn;\
   type* FOutPtr = (type*)FOut;\
   \
-  double Scale = 1.0 / ldexp(1, Bits - EMax);\
+  double Scale = 1.0 / ldexp(1, Bits - 1 - EMax);\
   for (i64 I = 0; I < Size; ++I)\
     FOutPtr[I] = type(Scale * FInPtr[I]);
 

@@ -30,7 +30,7 @@ int Exponent(t Val) {
   if (Val > 0) {
     int E;
     frexp(Val, &E);
-    /* clamp exponent in case x is denormal */
+    /* clamp exponent in case Val is denormal */
     return Max(E, 1 - Traits<t>::ExponentBias);
   }
   return -Traits<t>::ExponentBias;
@@ -53,8 +53,43 @@ t Prod(v3<t> Vec) {
 }
 
 template <typename t>
+v3<t> operator+(v3<t> Lhs, v3<t> Rhs) {
+  return v3<t>{ Lhs.X + Rhs.X, Lhs.Y + Rhs.Y, Lhs.Z + Rhs.Z };
+}
+
+template <typename t>
+v3<t> operator+(v3<t> Lhs, t Val) {
+  return v3<t>{ Lhs.X + Val, Lhs.Y + Val, Lhs.Z + Val };
+}
+
+template <typename t>
+v3<t> operator-(v3<t> Lhs, v3<t> Rhs) {
+  return v3<t>{ Lhs.X - Rhs.X, Lhs.Y - Rhs.Y, Lhs.Z - Rhs.Z };
+}
+
+template <typename t>
+v3<t> operator-(v3<t> Lhs, t Val) {
+  return v3<t>{ Lhs.X - Val, Lhs.Y - Val, Lhs.Z - Val };
+}
+
+template <typename t>
 v3<t> operator*(v3<t> Lhs, v3<t> Rhs) {
   return v3<t>{ Lhs.X * Rhs.X, Lhs.Y * Rhs.Y, Lhs.Z * Rhs.Z };
+}
+
+template <typename t>
+v3<t> operator*(v3<t> Lhs, t Val) {
+  return v3<t>{ Lhs.X * Val, Lhs.Y * Val, Lhs.Z * Val };
+}
+
+template <typename t>
+v3<t> operator/(v3<t> Lhs, v3<t> Rhs) {
+  return v3<t>{ Lhs.X / Rhs.X, Lhs.Y / Rhs.Y, Lhs.Z / Rhs.Z };
+}
+
+template <typename t>
+v3<t> operator/(v3<t> Lhs, t Val) {
+  return v3<t>{ Lhs.X / Val, Lhs.Y / Val, Lhs.Z / Val };
 }
 
 } // namespace mg

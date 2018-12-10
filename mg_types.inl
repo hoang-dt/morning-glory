@@ -54,14 +54,14 @@ struct Traits<i64> {
   using signed_t   = i64;
   using unsigned_t = u64;
   using floating_t = f64;
-  static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaUL;
+  static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaULL;
 };
 
 template <>
 struct Traits<u64> {
   using signed_t   = i64;
   using unsigned_t = u64;
-  static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaUL;
+  static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaULL;
 };
 
 template <>
