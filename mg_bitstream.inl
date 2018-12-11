@@ -14,11 +14,9 @@ inline size_t Size(bit_stream* Bs) {
   return (Bs->BitPtr - Bs->Stream.Data) + (Bs->BitPos + 7) / 8;
 }
 
-inline void InitRead(bit_stream* Bs, buffer* Stream) {
-  if (Stream) {
-    mg_Assert(!Stream->Data || Stream->Bytes > 0);
-    Bs->Stream = *Stream;
-  }
+inline void InitRead(bit_stream* Bs, buffer Stream) {
+  mg_Assert(!Stream.Data || Stream.Bytes > 0);
+  Bs->Stream = Stream;
   Rewind(Bs);
   Refill(Bs);
 }

@@ -27,7 +27,7 @@ struct bit_stream {
 void Rewind(bit_stream* Bs);
 size_t Size(bit_stream* Bs);
 /* ---------------- Read functions ---------------- */
-void InitRead(bit_stream* Bs, buffer* Stream = nullptr);
+void InitRead(bit_stream* Bs, buffer Stream);
 /* Refill our buffer (replace the consumed bytes with new bytes from memory) */
 void Refill(bit_stream* Bs);
 /* Peek the next "Count" bits from the buffer without consuming them (Count <= 64 - BitPos).

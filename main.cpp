@@ -20,38 +20,19 @@
 
 using namespace mg;
 
-void TestBitStream() {
-  buffer Buf; AllocateBuffer(&Buf, 1024);
-  bit_stream Bs;
-  InitWrite(&Bs, Buf);
-  WriteLong(&Bs, 11, 4);
-  WriteLong(&Bs, 162, 8);
-  WriteLong(&Bs, 561283, 24);
-  WriteLong(&Bs, 4130, 49);
-  WriteLong(&Bs, 1207964390, 64);
-  Flush(&Bs);
-  InitRead(&Bs);
-  u64 R;
-  R = ReadLong(&Bs, 4);
-  printf("%llu ", R);
-  R = ReadLong(&Bs, 24);
-  printf("%llu ", R);
-  R = ReadLong(&Bs, 49);
-  printf("%llu ", R);
-  R = ReadLong(&Bs, 64);
-  printf("%llu ", R);
-}
-
 void TestZfp(f64* F, v3i Dims) {
-  v3i TileDims{ 64, 64, 64 };
+  v3i TileDims{ 32, 32, 32 };
   bit_stream Bs;
   buffer CompressedBuf; AllocateBuffer(&CompressedBuf, Prod<i64>(Dims) * sizeof(f64));
   InitWrite(&Bs, CompressedBuf);
   EncodeData(F, Dims, TileDims, &Bs);
+  fprintf(stderr, "\n------------------------\n");
   f64* FRecovered = nullptr; Allocate((byte**)&FRecovered, sizeof(f64) * Prod<i64>(Dims));
-  DecodeData(FRecovered, Dims, TileDims, &Bs);
+  DecodeData(FRecovered, Dims, TileDims);
   f64 Psnr = PSNR(FRecovered, F, Prod<i64>(Dims));
   printf("Psnr = %f\n", Psnr);
+  DeallocateBuffer(&CompressedBuf);
+  Deallocate((byte**)&FRecovered);
 }
 
 int main(int Argc, const char** Argv) {

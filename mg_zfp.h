@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "mg_array.h"
 #include "mg_assert.h"
 #include "mg_bitstream.h"
 #include "mg_common_types.h"
@@ -248,11 +249,12 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
   FILE* Fp = fopen("compressed.raw", "wb");
   v3i BlockDims{ 4, 4, 4 };
   v3i NumTiles = (Dims + TileDims - 1) / TileDims;
-  fseek(Fp, sizeof(void*) * Prod<i64>(NumTiles), SEEK_SET); // reserve space for the tile pointers
+  fseek(Fp, sizeof(size_t) * Prod<i64>(NumTiles), SEEK_SET); // reserve space for the tile pointers
   v3i NumBlocks = ((TileDims + BlockDims) - 1) / BlockDims;
   for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
   for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
   for (int TX = 0; TX < Dims.X; TX += TileDims.X) {
+    i64 TileId = XyzToI(NumTiles, v3i{ TX, TY, TZ } / TileDims);
     // TODO: use the freelist allocator
     // TODO: use aligned memory allocation
     // TODO: try reusing the memory buffer
@@ -261,6 +263,8 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
     u64* UIntTile = nullptr; Allocate((byte**)&UIntTile, sizeof(u64) * Prod<i64>(TileDims));
     int* Ns = nullptr; Allocate((byte**)&Ns, sizeof(int) * Prod<i64>(NumBlocks));
     memset(Ns, 0, sizeof(int) * Prod<i64>(NumBlocks));
+    short ChunkBytes[64] = { 0 }; // store the size of the chunks in bytes (at mots we have 64 chunks)
+    int ChunkId = 0;
     for (int Bitplane = 63; Bitplane >= 0; --Bitplane) {
       for (int BZ = 0; BZ < TileDims.Z; BZ += BlockDims.Z) { /* loop through zfp blocks */
       for (int BY = 0; BY < TileDims.Y; BY += BlockDims.Y) {
@@ -286,12 +290,30 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
         int& N = Ns[BlockId];
         EncodeBlock(&UIntTile[K], Bitplane, N, Bs);
         size_t Bytes = Size(Bs);
-        if (Bytes >= 4096) {
-          // FlushAndMoveToNextByte(Bs);
-          // fwrite(Bs->Stream.Data, Bytes, 1, Fp);
+        if (BlockId + 1 == Prod<i32>(NumBlocks)) { // last block in the tile
+          if (Bytes >= 4096 || Bitplane == 0) {
+            Flush(Bs);
+            mg_Assert(Size(Bs) == Bytes);
+            fprintf(stderr, "%d ", ChunkId);
+            ChunkBytes[ChunkId++] = Bytes;
+            fprintf(stderr, "(%ld)", ftell(Fp));
+            fwrite(Bs->Stream.Data, Bytes, 1, Fp);
+            InitWrite(Bs, Bs->Stream);
+            //printf("%llu ", Bytes);
+          }
         }
       }}} /* end loop through the zfp blocks */
     } // end loop through the bit planes
+    fprintf(stderr, "\n");
+    mg_Assert(ChunkId <= 64);
+    size_t BeginChunkHeaders = ftell(Fp);
+    fwrite(&ChunkId, sizeof(ChunkId), 1, Fp); // number of chunks
+    fwrite(ChunkBytes, sizeof(ChunkBytes[0]) * ChunkId, 1, Fp); // write the chunk sizes
+    size_t EndChunkHeaders = ftell(Fp);
+    fseek(Fp, sizeof(size_t) * TileId, SEEK_SET); // back to tile headers
+    fwrite(&BeginChunkHeaders, sizeof(BeginChunkHeaders), 1, Fp); // write the pointer to the current chunk
+    fseek(Fp, EndChunkHeaders, SEEK_SET); // continue where we left off
+
     Deallocate((byte**)&FloatTile);
     Deallocate((byte**)&IntTile);
     Deallocate((byte**)&UIntTile);
@@ -302,16 +324,19 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
 }
 
 inline // TODO: turn this function into a template ?
-void DecodeData(f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
+void DecodeData(f64* Data, v3i Dims, v3i TileDims) {
   // TODO: use many different bit streams
-  InitRead(Bs);
+  FILE* Fp = fopen("compressed.raw", "rb");
   v3i BlockDims{ 4, 4, 4 };
   v3i NumTiles = (Dims + TileDims - 1) / TileDims;
   // fseek(Fp, sizeof(void*) * Prod<i64>(NumTiles), SEEK_SET); // reserve space for the tile pointers
+  size_t* TilePointers = nullptr; Allocate((byte**)&TilePointers, sizeof(size_t) * Prod<i64>(NumTiles));
+  fread(TilePointers, sizeof(size_t) * Prod<i64>(NumTiles), 1, Fp);
   v3i NumBlocks = ((TileDims + BlockDims) - 1) / BlockDims;
   for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
   for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
   for (int TX = 0; TX < Dims.X; TX += TileDims.X) {
+    i64 TileId = XyzToI(NumTiles, v3i{ TX, TY, TZ } / TileDims);
     // TODO: use the freelist allocator
     // TODO: use aligned memory allocation
     // TODO: try reusing the memory buffer
@@ -323,18 +348,36 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
     memset(Ns, 0, sizeof(int) * Prod<i64>(NumBlocks));
     int* EMaxes = nullptr; Allocate((byte**)&EMaxes, sizeof(int) * Prod<i64>(NumBlocks));
     memset(Ns, 0, sizeof(int) * Prod<i64>(NumBlocks));
-    for (int Bitplane = 63; Bitplane >= 0; --Bitplane) { // TODO: move this loop outside
+    fseek(Fp, TilePointers[TileId], SEEK_SET);
+    int NumChunks = 0;
+    fread(&NumChunks, sizeof(NumChunks), 1, Fp);
+    short ChunkBytes[64] = { 0 };
+    fread(ChunkBytes, sizeof(ChunkBytes[0]) * NumChunks, 1, Fp);
+    /* compute the total size of the chunks */
+    size_t TotalChunkSize = 0;
+    for (int I = 0; I < NumChunks; ++I) {
+      TotalChunkSize += ChunkBytes[I];
+    }
+    fseek(Fp, TilePointers[TileId] - TotalChunkSize, SEEK_SET);
+    dynamic_array<byte> Buf;
+    Resize(&Buf, ChunkBytes[0]);
+    fprintf(stderr, "0 (%ld)", ftell(Fp));
+    fread(Buf.Buffer.Data, ChunkBytes[0], 1, Fp);
+    bit_stream Bs;
+    InitRead(&Bs, Buf.Buffer);
+    int ChunkId = 0;
+    for (int Bitplane = 63; Bitplane >= 0; --Bitplane) {
       for (int BZ = 0; BZ < TileDims.Z; BZ += BlockDims.Z) { /* loop through zfp blocks */
       for (int BY = 0; BY < TileDims.Y; BY += BlockDims.Y) {
       for (int BX = 0; BX < TileDims.X; BX += BlockDims.X) {
         i64 BlockId = XyzToI(NumBlocks, v3i{ BX, BY, BZ } / BlockDims);
         if (Bitplane == 63) {
-          int EMax = Read(Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
+          int EMax = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
           EMaxes[BlockId] = EMax; // save EMax here
         }
         int& N = Ns[BlockId];
         i64 K = XyzToI(NumBlocks, v3i{ BX, BY, BZ } / BlockDims) * Prod<i32>(BlockDims);
-        DecodeBlock(&UIntTile[K], Bitplane, N, Bs);
+        DecodeBlock(&UIntTile[K], Bitplane, N, &Bs);
         if (Bitplane == 0) { // copy data back in the last loop iteratoin
           InverseShuffle(&UIntTile[K], &IntTile[K]);
           InverseBlockTransform(&IntTile[K]);
@@ -347,8 +390,21 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
             Data[I] = FloatTile[J]; // copy data to the local tile buffer
           }}}
         }
+        /* read the next chunk if necessary */
+        if (BlockId + 1 == Prod<i32>(NumBlocks)) {
+          if (Size(&Bs) >= 4096 || Bitplane == 0) {
+            if (ChunkId < NumChunks - 1) {
+              fprintf(stderr, "%d ", ChunkId + 1);
+              Resize(&Buf, ChunkBytes[++ChunkId]);
+              fprintf(stderr, "(%ld)", ftell(Fp));
+              fread(Buf.Buffer.Data, ChunkBytes[ChunkId], 1, Fp);
+              InitRead(&Bs, Buf.Buffer);
+            }
+          }
+        }
       }}} /* end loop through each block */
     } // end loop through the bit planes
+    fprintf(stderr, "\n");
     // TODO: padding?
     Deallocate((byte**)&FloatTile);
     Deallocate((byte**)&IntTile);
@@ -356,6 +412,8 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims, bit_stream* Bs) {
     Deallocate((byte**)&Ns);
     Deallocate((byte**)&EMaxes);
   }}} /* end loop through the tiles */
+  Deallocate((byte**)&TilePointers);
+  fclose(Fp);
 }
 
 } // namespace mg

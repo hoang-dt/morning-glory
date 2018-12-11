@@ -103,7 +103,7 @@ void Resize(dynamic_array<t>* Array, i64 NewSize) {
   if (NewSize > Array->Capacity)
     IncreaseCapacity(Array, NewSize);
   if (Array->Size < NewSize)
-    Fill(Begin(*Array) + Size, Begin(*Array) + NewSize, t{});
+    Fill(Begin(*Array) + Array->Size, Begin(*Array) + NewSize, t{});
   Array->Size = NewSize;
 }
 
