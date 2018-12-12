@@ -9,6 +9,9 @@ namespace mg {
 
 /* Only works for POD types. For other types, use std::vector. */
 // NOTE: elements must be explicitly initialized (they are not initialized to zero or anything)
+// NOTE: do not make copies of a dynamic_array using operator=, then work on them as if they were
+// independent from the original object (i.e., a dynamic_array does not assume ownership of its
+// memory buffer)
 template <typename t>
 struct dynamic_array {
   buffer Buffer;

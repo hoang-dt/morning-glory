@@ -20,21 +20,6 @@
 
 using namespace mg;
 
-void TestZfp(f64* F, v3i Dims) {
-  v3i TileDims{ 32, 32, 32 };
-  bit_stream Bs;
-  buffer CompressedBuf; AllocateBuffer(&CompressedBuf, Prod<i64>(Dims) * sizeof(f64));
-  InitWrite(&Bs, CompressedBuf);
-  EncodeData(F, Dims, TileDims, &Bs);
-  fprintf(stderr, "\n------------------------\n");
-  f64* FRecovered = nullptr; Allocate((byte**)&FRecovered, sizeof(f64) * Prod<i64>(Dims));
-  DecodeData(FRecovered, Dims, TileDims);
-  f64 Psnr = PSNR(FRecovered, F, Prod<i64>(Dims));
-  printf("Psnr = %f\n", Psnr);
-  DeallocateBuffer(&CompressedBuf);
-  Deallocate((byte**)&FRecovered);
-}
-
 int main(int Argc, const char** Argv) {
   // TestBitStream(); return 0;
   SetHandleAbortSignals();
@@ -45,7 +30,7 @@ int main(int Argc, const char** Argv) {
   metadata Meta;
   error Ok = ReadMetadata(DataFile, &Meta);
   mg_AbortIf(!Ok, "%s", ToString(Ok));
-  buffer BufF;
+  buffer BufF; // this stores the original function
   Ok = ReadFile(Meta.File, &BufF);
   mg_CleanUp(0, Deallocate(&BufF.Data));
   mg_AbortIf(!Ok, "%s", ToString(Ok));
@@ -54,32 +39,27 @@ int main(int Argc, const char** Argv) {
   f64* F = (f64*)BufF.Data;
   i64 Size = (i64)Meta.Dimensions.X * Meta.Dimensions.Y * Meta.Dimensions.Z;
   mg_AbortIf(Size * SizeOf(Meta.DataType) != BufF.Bytes, "Size mismatched. Check file: %s", Meta.File);
-  TestZfp(F, Meta.Dimensions);
-  return 0;
   int NLevels = 0;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &NLevels), "Provide --nlevels");
-  buffer BufFWav;
-  AllocateBuffer(&BufFWav, BufF.Bytes);
-  f64* FWav = (f64*)BufFWav.Data;
-  MemCopy(&BufFWav, BufF);
-  mg_CleanUp(1, DeallocateBuffer(&BufFWav));
-  // Cdf53Forward(FWav, Meta.Dimensions, NLevels, Meta.DataType);
-  // Cdf53Inverse(FWav, Meta.Dimensions, NLevels, Meta.DataType);
-  f64 Rmse = RMSError(FWav, F, Size);
-  f64 Psnr = PSNR(FWav, F, Size);
-
-  printf("Psnr = %f, Rmse = %f\n", Psnr, Rmse);
-  printf("%" PRId64"\n", ElapsedTime(&Timer));
-
-  i64* FQuant = (i64*)BufF.Data;
-  int EMax = Quantize(F, Size, 32, FQuant, Meta.DataType);
-  u64* FNega = (u64*)FQuant;
-  data_type IntT = IntType(Meta.DataType);
-  ConvertToNegabinary(FQuant, Size, FNega, IntT);
-  ConvertFromNegabinary(FNega, Size, FQuant, IntT);
-  Dequantize(FQuant, Size, EMax, 32, F, Meta.DataType);
-  Rmse = RMSError(FWav, F, Size);
-  Psnr = PSNR(FWav, F, Size);
-  printf("Psnr = %f, Rmse = %f\n", Psnr, Rmse);
+  /* Compute wavelet transform */
+  cstr OutFile = nullptr;
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &OutFile), "Provide --output");
+  //Cdf53Forward(F, Meta.Dimensions, NLevels, Meta.DataType);
+  dynamic_array<Block> Subbands;
+  int NDims = (Meta.Dimensions.X > 1) + (Meta.Dimensions.Y > 1) + (Meta.Dimensions.Z > 1);
+  BuildSubbands(NDims, Meta.Dimensions, NLevels, &Subbands);
+  v3i TileDims{ 32, 32, 32 }; // TODO: get from the command line
+  bit_stream Bs;
+  // TODO: figure out the maximum size for the bit stream
+  buffer CompressedBuf; AllocateBuffer(&CompressedBuf, Prod<i64>(Meta.Dimensions) * sizeof(f64));
+  mg_CleanUp(1, DeallocateBuffer(&CompressedBuf))
+  InitWrite(&Bs, CompressedBuf);
+  EncodeData(F, Meta.Dims, TileDims, Subbands, OutFile, &Bs);
+  fprintf(stderr, "\nFinished encoding ------------------------\n");
+  f64* FRecovered = nullptr; Allocate((byte**)&FRecovered, sizeof(f64) * Prod<i64>(Meta.Dims));
+  mg_CleanUp(2, Deallocate((byte**)&FRecovered))
+  // DecodeData(FRecovered, Dims, TileDims);
+  // f64 Psnr = PSNR(FRecovered, F, Prod<i64>(Dims));
   // printf("Psnr = %f\n", Psnr);
+  return 0;
 }

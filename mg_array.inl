@@ -10,7 +10,7 @@ dynamic_array<t>::dynamic_array(allocator* Alloc) : Buffer(), Size(0), Capacity(
 template <typename t>
 const t& dynamic_array<t>::operator[](i64 Idx) const {
   mg_Assert(Idx < Size);
-  return (t*)Buffer[Idx];
+  return ((t*)Buffer.Data)[Idx];
 }
 
 template <typename t>

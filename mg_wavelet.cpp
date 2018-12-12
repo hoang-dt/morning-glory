@@ -51,7 +51,7 @@ void Cdf53Inverse(f64* F, v3l Dimensions, int NLevels, data_type Type) {
 #undef Body
 }
 
-array<u8, 8> Orders[4] = {
+array<u8, 8> SubbandOrders[4] = {
   { 127, 127, 127, 127, 127, 127, 127, 127 }, // not used
   { 0, 1, 127, 127, 127, 127, 127, 127 }, // for 1D
   { 0, 1, 2, 3, 127, 127, 127, 127 }, // for 2D
@@ -62,7 +62,7 @@ void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<Block>* Subbands
   mg_Assert(NDims <= 3);
   mg_Assert(N.Z == 1 || NDims == 3);
   mg_Assert(N.Y == 1 || NDims >= 2);
-  const array<u8, 8>& Order = Orders[NDims];
+  const array<u8, 8>& Order = SubbandOrders[NDims];
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
   v3i M = N;
   for (int I = 0; I < NLevels; ++I) {
