@@ -13,7 +13,7 @@
 
 namespace mg {
 
-void EncodeBlock(const u64* Block, int Bitplane, int& N, bit_stream* Bs) {
+void EncodeBlock(const u64* Block, int Bitplane, int& N, bitstream* Bs) {
   /* extract bit plane Bitplane to X */
   u64 X = 0;
   for (int I = 0; I < 64; ++I)
@@ -25,7 +25,7 @@ void EncodeBlock(const u64* Block, int Bitplane, int& N, bit_stream* Bs) {
     for (; N < 64 - 1 && !Write(Bs, X & 1u); X >>= 1, ++N) ;
 }
 
-void DecodeBlock(u64* Block, int Bitplane, int& N, bit_stream* Bs) {
+void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs) {
   /* decode first N bits of bit plane #Bitplane */
   u64 X = ReadLong(Bs, N);
   /* unary run-length decode remainder of bit plane */
@@ -37,7 +37,7 @@ void DecodeBlock(u64* Block, int Bitplane, int& N, bit_stream* Bs) {
 }
 
 void EncodeData(const f64* Data, v3i Dims, v3i TileDims, const dynamic_array<Block>& Subbands,
-  cstr FileName, bit_stream* Bs) {
+  cstr FileName, bitstream* Bs) {
   // TODO: loop through the subbands
   // TODO: error handling
   v3i BlockDims{ 4, 4, 4 }; // zfp block
@@ -162,7 +162,7 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims) {
     Resize(&Buf, ChunkBytes[0]);
     // fprintf(stderr, "0 (%ld)", ftell(Fp));
     fread(Buf.Buffer.Data, ChunkBytes[0], 1, Fp);
-    bit_stream Bs;
+    bitstream Bs;
     InitRead(&Bs, Buf.Buffer);
     int ChunkId = 0;
     for (int Bitplane = 63; Bitplane >= 0; --Bitplane) {

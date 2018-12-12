@@ -18,3 +18,10 @@ constexpr int CountOccurrences(const char* str, char c) {
 #elif defined(_MSC_VER)
 #define mg_Restrict __restrict
 #endif
+
+#undef mg_ForceInline
+#if defined(_MSC_VER)
+#define mg_ForceInline __forceinline
+#elif defined(__clang__) || defined(__GNUC__)
+#define mg_ForceInline inline __attribute__((__always_inline__))
+#endif

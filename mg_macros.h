@@ -11,4 +11,6 @@
 
 #define mg_Restrict
 
+#define mg_ForceInline
+
 #include "mg_macros.inl"

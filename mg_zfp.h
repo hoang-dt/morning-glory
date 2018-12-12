@@ -30,15 +30,15 @@ void PadBlock(t* P, int N, int S);
 
 /* Encode a single bit plane of a single zfp block */
 // TODO: turn this into a template?
-struct bit_stream;
-void EncodeBlock(const u64* Block, int Bitplane, int& N, bit_stream* Bs);
+struct bitstream;
+void EncodeBlock(const u64* Block, int Bitplane, int& N, bitstream* Bs);
 /* Decode a single bit plane of a single zfp block */
 // TODO: pointer aliasing?
-void DecodeBlock(u64* Block, int Bitplane, int& N, bit_stream* Bs);
+void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs);
 
 struct block;
 template <typename t> struct dynamic_array;
-void EncodeData(const f64* Data, v3i Dims, v3i TileDims, const dynamic_array<Block>& Subbands, cstr FileName, bit_stream* Bs);
+void EncodeData(const f64* Data, v3i Dims, v3i TileDims, const dynamic_array<Block>& Subbands, cstr FileName, bitstream* Bs);
 void DecodeData(f64* Data, v3i Dims, v3i TileDims);
 
 } // namespace mg

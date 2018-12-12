@@ -1,6 +1,7 @@
 #include "mg_array.h"
 #include "mg_args.h"
 #include "mg_assert.h"
+#include "mg_bitops.h"
 #include "mg_bitstream.h"
 #include "mg_common_types.h"
 #include "mg_dataset.h"
@@ -49,7 +50,7 @@ int main(int Argc, const char** Argv) {
   int NDims = (Meta.Dimensions.X > 1) + (Meta.Dimensions.Y > 1) + (Meta.Dimensions.Z > 1);
   BuildSubbands(NDims, Meta.Dimensions, NLevels, &Subbands);
   v3i TileDims{ 32, 32, 32 }; // TODO: get from the command line
-  bit_stream Bs;
+  bitstream Bs;
   // TODO: figure out the maximum size for the bit stream
   buffer CompressedBuf; AllocateBuffer(&CompressedBuf, Prod<i64>(Meta.Dimensions) * sizeof(f64));
   mg_CleanUp(1, DeallocateBuffer(&CompressedBuf))
