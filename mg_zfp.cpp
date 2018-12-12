@@ -184,7 +184,7 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims) {
           for (int Z = 0; Z < BlockDims.Z; ++Z) { /* loop through each block */
           for (int Y = 0; Y < BlockDims.Y; ++Y) {
           for (int X = 0; X < BlockDims.X; ++X) {
-            i64 I = XyzToI(Dims, v3l{ TX + BX + X, TY + BY + Y, TZ + BZ + Z });
+            i64 I = XyzToI(Dims, v3i{ TX + BX + X, TY + BY + Y, TZ + BZ + Z });
             i64 J = K + XyzToI(BlockDims, v3i{ X, Y, Z });
             Data[I] = FloatTile[J]; // copy data to the local tile buffer
           }}}

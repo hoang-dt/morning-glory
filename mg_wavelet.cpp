@@ -25,26 +25,26 @@
 
 namespace mg {
 
-void Cdf53Forward(f64* F, v3l Dimensions, int NLevels, data_type Type) {
+void Cdf53Forward(f64* F, v3i Dimensions, int NLevels, data_type Type) {
 #define Body(type)\
   type* FPtr = (type*)F;\
   for (int I = 0; I < NLevels; ++I) {\
-    ForwardLiftCdf53X(FPtr, Dimensions, v3l{I, I, I});\
-    ForwardLiftCdf53Y(FPtr, Dimensions, v3l{I, I, I});\
-    ForwardLiftCdf53Z(FPtr, Dimensions, v3l{I, I, I});\
+    ForwardLiftCdf53X(FPtr, Dimensions, v3i{I, I, I});\
+    ForwardLiftCdf53Y(FPtr, Dimensions, v3i{I, I, I});\
+    ForwardLiftCdf53Z(FPtr, Dimensions, v3i{I, I, I});\
   }\
 
   TypeChooser(Type)
 #undef Body
 }
 
-void Cdf53Inverse(f64* F, v3l Dimensions, int NLevels, data_type Type) {
+void Cdf53Inverse(f64* F, v3i Dimensions, int NLevels, data_type Type) {
 #define Body(type)\
   type* FPtr = (type*)F;\
   for (int I = NLevels - 1; I >= 0; --I) {\
-    InverseLiftCdf53Z(FPtr, Dimensions, v3l{I, I, I});\
-    InverseLiftCdf53Y(FPtr, Dimensions, v3l{I, I, I});\
-    InverseLiftCdf53X(FPtr, Dimensions, v3l{I, I, I});\
+    InverseLiftCdf53Z(FPtr, Dimensions, v3i{I, I, I});\
+    InverseLiftCdf53Y(FPtr, Dimensions, v3i{I, I, I});\
+    InverseLiftCdf53X(FPtr, Dimensions, v3i{I, I, I});\
   }\
 
   TypeChooser(Type)
