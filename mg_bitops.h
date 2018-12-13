@@ -22,10 +22,11 @@ bit plane. Examples: Bsr(0) = -1, Bsr(2) = 1, Bsr(5) = 2, Bsr(8) = 3 */
 i8 BitScanReverse(u32 v);
 i8 BitScanReverse(u64 V);
 
-/* Morton decoding */
+/* Morton encoding/decoding */
 u32 DecodeMorton3X(u32 Code);
 u32 DecodeMorton3Y(u32 Code);
 u32 DecodeMorton3Z(u32 Code);
+u32 EncodeMorton3(u32 X, u32 Y, u32 Z);
 
 } // namespace mg
 

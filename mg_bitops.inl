@@ -64,24 +64,37 @@ mg_ForceInline i8 BitScanReverse(u64 V) {
 #endif
 
 /* Reverse the operation that inserts two 0 bits after every bit of x */
-mg_ForceInline u32 Compact1By2(u32 X) {
+mg_ForceInline u32 CompactBy2(u32 X) {
   X &= 0x09249249;                  // X = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
   X = (X ^ (X >>  2)) & 0x030c30c3; // X = ---- --98 ---- 76-- --54 ---- 32-- --10
   X = (X ^ (X >>  4)) & 0x0300f00f; // X = ---- --98 ---- ---- 7654 ---- ---- 3210
-  X = (X ^ (X >>  8)) & 0xff0000ff; // X = ---- --98 ---- ---- ---- ---- 7654 3210
+  X = (X ^ (X >>  8)) & 0x030000ff; // X = ---- --98 ---- ---- ---- ---- 7654 3210
   X = (X ^ (X >> 16)) & 0x000003ff; // X = ---- ---- ---- ---- ---- --98 7654 3210
   return X;
 }
 
 /* Morton decoding */
 mg_ForceInline u32 DecodeMorton3X(u32 Code) {
-  return Compact1By2(Code >> 0);
+  return CompactBy2(Code >> 0);
 }
 mg_ForceInline u32 DecodeMorton3Y(u32 Code) {
-  return Compact1By2(Code >> 1);
+  return CompactBy2(Code >> 1);
 }
 mg_ForceInline u32 DecodeMorton3Z(u32 Code) {
-  return Compact1By2(Code >> 2);
+  return CompactBy2(Code >> 2);
+}
+
+mg_ForceInline u32 SplitBy2(u32 X){
+  X &= 0x000003ff;                  // X = ---- ---- ---- ---- ---- --98 7654 3210
+  X = (X ^ (X << 16)) & 0x030000ff; // X = ---- --98 ---- ---- ---- ---- 7654 3210
+  X = (X ^ (X <<  8)) & 0x0300f00f; // X = ---- --98 ---- ---- 7654 ---- ---- 3210
+  X = (X ^ (X <<  4)) & 0x030c30c3; // X = ---- --98 ---- 76-- --54 ---- 32-- --10
+  X = (X ^ (X <<  2)) & 0x09249249; // X = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
+  return X;
+}
+
+mg_ForceInline u32 EncodeMorton3(u32 X, u32 Y, u32 Z) {
+  return SplitBy2(X) | (SplitBy2(Y) << 1) | (SplitBy2(Z) << 2);
 }
 
 } // namespace mg
