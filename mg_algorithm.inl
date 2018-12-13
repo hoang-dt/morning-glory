@@ -1,15 +1,14 @@
 #pragma once
 
 #include "mg_macros.h"
-#include "mg_math.h"
 
 namespace mg {
 
-template <typename t>
+template <typename t> mg_ForceInline
 t Min(t a, t b) {
   return b < a ? b : a;
 }
-template <typename t>
+template <typename t> mg_ForceInline
 t Max(t a, t b) {
   return a < b ? b : a;
 }

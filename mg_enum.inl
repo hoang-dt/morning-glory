@@ -1,9 +1,9 @@
 #pragma once
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
-#include "mg_algorithm.h"
 #include "mg_macros.h"
 #include "mg_string.h"
 #include "mg_types.h"
@@ -35,7 +35,8 @@ struct enum_name {\
         char* EndPtr = nullptr;\
         errno = 0;\
         type Val = type(strtol(EnumVal.Ptr, &EndPtr, 10));\
-        if (errno == ERANGE || (EndPtr == EnumVal.Ptr) || !Contains(string_ref(" ,\0", 3), *EndPtr))\
+        if (errno == ERANGE || EndPtr == EnumVal.Ptr || !EndPtr ||\
+          !(isspace(*EndPtr) || *EndPtr == ',' || *EndPtr == '\0'))\
           assert(false && " non-integer enum values");\
         else if (Val < CurrentVal)\
           assert(false && " non-increasing enum values");\
@@ -50,16 +51,24 @@ struct enum_name {\
   \
   enum_name() : enum_name(__Invalid__) {}\
   enum_name(type Value) {\
-    auto It = FindIf(ConstBegin(NameMap), ConstEnd(NameMap),\
-      [Value](auto& Elem) { return Elem.Value == Value; });\
+    const auto* It = ConstBegin(NameMap);\
+    while (It != ConstEnd(NameMap)) {\
+      if (It->Value == Value)\
+        break;\
+      ++It;\
+    }\
     if (It != ConstEnd(NameMap)) \
       this->Value = It->Value;\
     else\
       this->Value = __Invalid__;\
   }\
   explicit enum_name(string_ref Name) {\
-    auto It = FindIf(ConstBegin(NameMap), ConstEnd(NameMap),\
-      [Name](auto& Elem) { return Elem.Name == Name; });\
+    const auto* It = ConstBegin(NameMap);\
+    while (It != ConstEnd(NameMap)) {\
+      if (It->Name == Name)\
+        break;\
+      ++It;\
+    }\
     if (It != ConstEnd(NameMap)) \
       Value = It->Value;\
     else\
@@ -69,8 +78,12 @@ struct enum_name {\
 }; /* struct enum_name */\
 \
 inline string_ref ToString(enum_name Enum) {\
-  auto It = FindIf(ConstBegin(Enum.NameMap), ConstEnd(Enum.NameMap),\
-    [Enum](auto Elem) { return Elem.Value == Enum.Value; });\
+  const auto* It = ConstBegin(Enum.NameMap);\
+  while (It != ConstEnd(Enum.NameMap)) {\
+    if (It->Value == Enum.Value)\
+      break;\
+    ++It;\
+  }\
   assert(It != ConstEnd(Enum.NameMap));\
   return It->Name;\
 }\

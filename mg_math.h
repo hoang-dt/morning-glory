@@ -5,11 +5,11 @@
 namespace mg {
 
 /* Generate a power table for a particular base and type */
-template <typename t, int N>
-const t (&Power(t Base))[N];
+template <int N>
+const int (&Power(int Base))[N];
 
-template <typename t> bool IsEven(t x);
-template <typename t> bool IsOdd(t x);
+bool IsEven(int X);
+bool IsOdd(int X);
 
 template <typename t>
 int Exponent(t Val);
@@ -21,7 +21,8 @@ int Exponent(t Val);
 namespace mg {
 
 /* Table for powers of 10 */
-static auto& Pow10 = Power<int, 9>(10);
+static auto& Pow10 = Power<9>(10);
+static auto& Pow8  = Power<10>(8);
 
 i64 XyzToI(v3i N, v3i P);
 v3i IToXyz(i64 i, v3i N);
@@ -36,5 +37,15 @@ template <typename t> v3<t> operator+(v3<t> Lhs, t Val);
 template <typename t> v3<t> operator-(v3<t> Lhs, t Val);
 template <typename t> v3<t> operator*(v3<t> Lhs, t Val);
 template <typename t> v3<t> operator/(v3<t> Lhs, t Val);
+
+/* Floor of the log2 of Val */
+i8 Log2Floor(int Val);
+i8 Log8Floor(int Val);
+
+/* Compute Base^Exp (Exp >= 0) */
+int Pow(int Base, int Exp);
+
+/* Compute Base^0 + Base^1 + ... + Base^N */
+int GeometricSum(int Base, int N);
 
 } // namespace mg

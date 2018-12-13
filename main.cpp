@@ -22,8 +22,6 @@
 using namespace mg;
 
 int main(int Argc, const char** Argv) {
-  // TestBitStream(); return 0;
-  TestMorton(); return 0;
   SetHandleAbortSignals();
   timer Timer;
   StartTimer(&Timer);

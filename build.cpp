@@ -5,6 +5,7 @@
 #include "mg_error.cpp"
 #include "mg_filesystem.cpp"
 #include "mg_io.cpp"
+#include "mg_math.cpp"
 #include "mg_memory.cpp"
 #include "mg_mutex.cpp"
 #include "mg_signal_processing.cpp"
