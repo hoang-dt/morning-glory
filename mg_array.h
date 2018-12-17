@@ -1,9 +1,12 @@
 #pragma once
 
-#include "mg_algorithm.h"
-#include "mg_assert.h"
 #include "mg_memory.h"
 #include "mg_types.h"
+
+/* Quickly declare a heap-allocated array which deallocates itself at the end of scope */
+#define mg_HeapArray(Name, Type, Size)
+/* e.g. u8* Arr[8] */
+#define mg_StackArrayOfHeapArrays(Name, Type, StackArraySize, HeapArraySize)
 
 namespace mg {
 

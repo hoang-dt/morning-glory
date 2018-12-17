@@ -11,6 +11,10 @@
             "**/*.pdb": true,
 			"**/*.o": true,
             "_gsdata_": true
-        }
+        },
+        "cSpell.words": [
+            "mask",
+            "negabinary"
+        ]
     }
 }

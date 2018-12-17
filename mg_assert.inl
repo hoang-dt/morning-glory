@@ -30,7 +30,7 @@
 
 #undef mg_Assert
 #if defined(mg_Slow)
-  #define mg_Assert(Cond, ...) mg_AssertHelper(true, Cond, __VA_ARGS__)
+  #define mg_Assert(Cond, ...) mg_AssertHelper(true, (Cond), __VA_ARGS__)
 #else
   #define mg_Assert(Cond, ...) do {} while (0)
 #endif

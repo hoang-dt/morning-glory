@@ -172,19 +172,17 @@ constexpr i8 Perm3[64] = {
 /* Reorder signed coefficients within a zfp block, and convert them to nega-binary */
 template <typename t, typename u>
 void ForwardShuffle(const t* IBlock, u* UBlock) {
-  for (int I = 0; I < 64; ++I) {
-    auto Mask = Traits<u>::NegabinaryMask;
+  auto Mask = Traits<u>::NegabinaryMask;
+  for (int I = 0; I < 64; ++I)
     UBlock[I] = (u)((IBlock[Perm3[I]] + Mask) ^ Mask);
-  }
 }
 
 /* Reorder unsigned coefficients within a block, and convert them to two's complement */
 template <typename t, typename u>
 void InverseShuffle(const u* UBlock, t* IBlock) {
-  for (int I = 0; I < 64; ++I) {
-    auto Mask = Traits<u>::NegabinaryMask;
+  auto Mask = Traits<u>::NegabinaryMask;
+  for (int I = 0; I < 64; ++I)
     IBlock[Perm3[I]] = (t)((UBlock[I] ^ Mask) - Mask);
-  }
 }
 
 /* Pad partial block of width N < 4 and stride S */

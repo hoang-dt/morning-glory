@@ -51,4 +51,6 @@ error ReadFile(cstr FileName, buffer* Buf) {
   return mg_Error(NoError);
 }
 
+// TODO: write a writeFile function
+
 } // namespace mg

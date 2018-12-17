@@ -1,5 +1,23 @@
 #pragma once
 
+#include "mg_algorithm.h"
+#include "mg_assert.h"
+#include "mg_scopeguard.h"
+
+#undef mg_HeapArray
+#define mg_HeapArray(Name, Type, Size)\
+  using namespace mg;\
+  Type* Name = nullptr; Allocate((byte**)&Name, sizeof(Type) * Size);\
+  mg_CleanUp(__LINE__, Deallocate((byte**)&Name))
+
+#undef mg_StackArrayOfHeapArrays
+#define mg_StackArrayOfHeapArrays(Name, Type, StackArraySize, HeapArraySize)\
+  using namespace mg;\
+  Type* Name[StackArraySize] = { 0 }; \
+  for (int I = 0; I < StackArraySize; ++I)\
+    Allocate((byte**)&Name[I], sizeof(Type) * HeapArraySize);\
+  mg_CleanUp(__LINE__, { for (int I = 0; I < StackArraySize; ++I) Deallocate((byte**)&Name[I]); })
+
 namespace mg {
 
 template <typename t>

@@ -103,6 +103,16 @@ v3<t> operator/(v3<t> Lhs, t Val) {
   return v3<t>{ Lhs.X / Val, Lhs.Y / Val, Lhs.Z / Val };
 }
 
+template <typename t> mg_ForceInline
+bool operator==(v3<t> Lhs, v3<t> Rhs) {
+  return Lhs.X == Rhs.X && Lhs.Y == Rhs.Y && Lhs.Z == Rhs.Z;
+}
+
+template <typename t> mg_ForceInline
+bool operator<=(v3<t> Lhs, v3<t> Rhs) {
+  return Lhs.X <= Rhs.X && Lhs.Y <= Rhs.Y && Lhs.Z <= Rhs.Z;
+}
+
 mg_ForceInline
 i8 Log2Floor(int Val) {
   mg_Assert(Val > 0);
