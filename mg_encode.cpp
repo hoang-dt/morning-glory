@@ -136,7 +136,7 @@ void BuildSignificanceOctree(const i8* MsbTable, v3i BlockDims, int Bitplane, u8
 // PrevOctree stores the octree up to the previous bit plane
 // TODO: maybe maintaining a list is faster?
 void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
-  const u8* PrevOctree, const u8* Octree, bitstream* Bs, v3i Pos)
+  const u8* PrevOctree, const u8* Octree, dynamic_array<i16>* Significants, bitstream* Bs)
 {
   mg_Assert(BlockDims == v3i(16, 16, 16));
   int NLevels = NumLevels(Prod<int>(BlockDims));
@@ -152,20 +152,20 @@ void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
     bool IsChildSignificant = (Octree[CurrIndex] >> CurrChild) & 1u;
     bool IsChildSignificantPrev = (PrevOctree[CurrIndex] >> CurrChild) & 1u;
     if (IsChildSignificant) {
-      if (!IsChildSignificantPrev)  // only write 1-bit if the child was not previously significant
+      if (!IsChildSignificantPrev)
         Write(Bs, 1);
       int ChildIndex = CurrIndex * 8 + CurrChild + 1;
-      if (ChildIndex >= BeginIndexLastLevel) { // child is on last level where each node is a sample
-        Write(Bs, 1 & (Block[ChildIndex - BeginIndexLastLevel] >> Bitplane));
-        ++CurrChild; // move to the next child since we can't recurse
-      } else { // not the last level, recurse down
+      if (ChildIndex >= BeginIndexLastLevel) {
+        PushBack(Significants, (i16)(ChildIndex - BeginIndexLastLevel));
+        ++CurrChild;
+      } else {
         Indices [CurrLevel] = CurrIndex; // save the current index
         Children[CurrLevel] = CurrChild; // save the current children
         ++CurrLevel;
         CurrChild = 0;
         CurrIndex = ChildIndex;
       }
-    } else { // child is insignificant, write 0 and go to next child
+    } else {
       Write(Bs, 0);
       ++CurrChild;
     }
@@ -176,6 +176,37 @@ void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
       CurrIndex = Indices[CurrLevel];
       CurrChild = ++Children[CurrLevel]; // go to next children
     }
+    /********************/
+  //   if (IsChildSignificant) {
+  //     if (!IsChildSignificantPrev)  // only write 1-bit if the child was not previously significant
+  //       Write(Bs, 1);
+  //     int ChildIndex = CurrIndex * 8 + CurrChild + 1;
+  //     if (ChildIndex >= BeginIndexLastLevel) { // child is on last level where each node is a sample
+  //       Write(Bs, 1 & (Block[ChildIndex - BeginIndexLastLevel] >> Bitplane));
+  //       ++CurrChild; // move to the next child since we can't recurse
+  //     } else { // not the last level, recurse down
+  //       Indices [CurrLevel] = CurrIndex; // save the current index
+  //       Children[CurrLevel] = CurrChild; // save the current children
+  //       ++CurrLevel;
+  //       CurrChild = 0;
+  //       CurrIndex = ChildIndex;
+  //     }
+  //   } else { // child is insignificant, write 0 and go to next child
+  //     Write(Bs, 0);
+  //     ++CurrChild;
+  //   }
+  //   while (CurrChild >= 8) { // rewind, go up the levels
+  //     --CurrLevel;
+  //     if (CurrLevel < 0)
+  //       break;
+  //     CurrIndex = Indices[CurrLevel];
+  //     CurrChild = ++Children[CurrLevel]; // go to next children
+  //   }
+  }
+  /*********************/
+  int S = Size(*Significants);
+  for (int I = 0; I < S; ++I) {
+    Write(Bs, (1 & (Block[(*Significants)[I]] >> Bitplane)));
   }
 }
 
@@ -252,6 +283,8 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic_arr
       mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize);
       mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
       mg_StackArrayOfHeapArrays(BlockData, f64, 8, Prod<int>(BlockDims));
+      dynamic_array<i16> Significants[8];
+
       for (int I = 0; I < 8; ++I) {
         memset(Octree[I], 0, OctreeSize * sizeof(u8));
         memset(PrevOctree[I], 0, OctreeSize * sizeof(u8));
@@ -270,7 +303,7 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic_arr
             Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
           }
           BuildSignificanceOctree(MsbTable[BI], BlockDims, Bitplane, Octree[BI]);
-          EncodeBlock(Block[BI], BlockDims, Bitplane, PrevOctree[BI], Octree[BI], &Bs, B);
+          EncodeBlock(Block[BI], BlockDims, Bitplane, PrevOctree[BI], Octree[BI], &Significants[BI], &Bs);
           Swap(&PrevOctree[BI], &Octree[BI]);
         }
       }

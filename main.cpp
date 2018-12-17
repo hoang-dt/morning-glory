@@ -66,14 +66,14 @@ int main(int Argc, const char** Argv) {
   int NDims = (Meta.Dimensions.X > 1) + (Meta.Dimensions.Y > 1) + (Meta.Dimensions.Z > 1);
   BuildSubbands(NDims, Meta.Dimensions, NLevels, &Subbands);
   v3i TileDims{ 32, 32, 32 }; // TODO: get from the command line
-  Encode(F, Meta.Dims, TileDims, 32, Subbands, "out.raw");
+  Encode(F, Meta.Dims, TileDims, 16, Subbands, "out.raw");
   //EncodeFast(F, Meta.Dims, TileDims, 32, Subbands, "out2.raw");
   printf("%lld\n", ElapsedTime(&Timer));
   mg_HeapArray(FReconstructed, f64, sizeof(f64) * Prod<i64>(Meta.Dims));
-  Decode("out.raw", Meta.Dims, TileDims, 32, Subbands, FReconstructed);
+  //Decode("out.raw", Meta.Dims, TileDims, 16, Subbands, FReconstructed);
   //DecodeFast("out2.raw", Meta.Dims, TileDims, 32, Subbands, FReconstructed);
-  f64 Ps = PSNR(F, FReconstructed, Prod<i64>(Meta.Dims), data_type::float64);
-  printf("PSNR = %f\n", Ps);
-  printf("%lld\n", ElapsedTime(&Timer));
+  //f64 Ps = PSNR(F, FReconstructed, Prod<i64>(Meta.Dims), data_type::float64);
+  //printf("PSNR = %f\n", Ps);
+  //printf("%lld\n", ElapsedTime(&Timer));
   return 0;
 }
