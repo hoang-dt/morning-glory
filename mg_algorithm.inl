@@ -36,6 +36,19 @@ MinMax<i> MinMaxElement(i Begin, i End) {
   return MinMax<i>{ MinElem, MaxElem };
 }
 
+template <typename i, typename f>
+MinMax<i> MinMaxElement(i Begin, i End, const f& CompareFunc) {
+  auto MinElem = Begin;
+  auto MaxElem = Begin;
+  for (i Pos = Begin; Pos != End; ++Pos) {
+    if (CompareFunc(*Pos, *MinElem))
+      MinElem = Pos;
+    else if (CompareFunc(*MaxElem, *Pos))
+      MaxElem = Pos;
+  }
+  return MinMax<i>{ MinElem, MaxElem };
+}
+
 template <typename i, typename t>
 i Find(i Begin, i End, const t& Val) {
   for (i Pos = Begin; Pos != End; ++Pos) {

@@ -15,6 +15,8 @@ template <typename i>
 struct MinMax { i Min, Max; };
 template <typename i>
 MinMax<i> MinMaxElement(i Begin, i End);
+template <typename i, typename f>
+MinMax<i> MinMaxElement(i Begin, i End, const f& CompareFunc);
 
 template <typename i, typename t>
 i Find(i Begin, i End, const t& Val);

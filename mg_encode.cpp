@@ -12,9 +12,6 @@
 
 namespace mg {
 
-
-FILE* EncodeFile = nullptr;
-FILE* DecodeFile = nullptr;
 // TODO: test these functions
 
 /* Given an octree level, return the first index. The 0th level consists of 1 value at index 0. */
@@ -137,7 +134,6 @@ void BuildSignificanceOctree(const i8* MsbTable, v3i BlockDims, int Bitplane, u8
 
 // Remember the octree does not store the last level (16^3 samples)
 // PrevOctree stores the octree up to the previous bit plane
-// TODO: if the entire block is insignificant, write one bit instead of 8
 // TODO: maybe maintaining a list is faster?
 void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
   const u8* PrevOctree, const u8* Octree, bitstream* Bs, v3i Pos)
@@ -153,22 +149,14 @@ void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
   if (Octree[0] == 0)
     return;
   while (CurrLevel >= 0) {
-    //printf("-%d %d %d", CurrIndex, CurrLevel, CurrChild);
     bool IsChildSignificant = (Octree[CurrIndex] >> CurrChild) & 1u;
     bool IsChildSignificantPrev = (PrevOctree[CurrIndex] >> CurrChild) & 1u;
     if (IsChildSignificant) {
-      if (!IsChildSignificantPrev) { // only write 1-bit if the child was not previously significant
+      if (!IsChildSignificantPrev)  // only write 1-bit if the child was not previously significant
         Write(Bs, 1);
-        // fprintf(EncodeFile, ".1");
-      }
       int ChildIndex = CurrIndex * 8 + CurrChild + 1;
       if (ChildIndex >= BeginIndexLastLevel) { // child is on last level where each node is a sample
-        int Temp = 1 & (Block[ChildIndex - BeginIndexLastLevel] >> Bitplane);
-        // if (Pos == v3i(0, 0, 0) && ChildIndex == BeginIndexLastLevel)
-        //   fprintf(EncodeFile, "Bitplane %d: %d %llx\n", Bitplane, Temp, Block[0]);
-        Write(Bs, Temp);
-        // fprintf(EncodeFile, "%d +%d\n", ChildIndex - BeginIndexLastLevel, 1 & (Block[ChildIndex - BeginIndexLastLevel] >> Bitplane));
-        // fprintf(EncodeFile, "+%d\n", 1 & (Block[ChildIndex - BeginIndexLastLevel] >> Bitplane));
+        Write(Bs, 1 & (Block[ChildIndex - BeginIndexLastLevel] >> Bitplane));
         ++CurrChild; // move to the next child since we can't recurse
       } else { // not the last level, recurse down
         Indices [CurrLevel] = CurrIndex; // save the current index
@@ -179,10 +167,8 @@ void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
       }
     } else { // child is insignificant, write 0 and go to next child
       Write(Bs, 0);
-      // fprintf(EncodeFile, ".0");
       ++CurrChild;
     }
-    //printf("%s %s\n", IsChildSignificantPrev ? "yes" : "no", IsChildSignificant ? "yes" : "no");
     while (CurrChild >= 8) { // rewind, go up the levels
       --CurrLevel;
       if (CurrLevel < 0)
@@ -191,7 +177,6 @@ void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
       CurrChild = ++Children[CurrLevel]; // go to next children
     }
   }
-  // fprintf(EncodeFile, "\n");
 }
 
 /* Update the octree as we decode */
@@ -207,29 +192,17 @@ void DecodeBlock(u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, 
   int BlockSignificant = Read(Bs);
   if (BlockSignificant == 0) return;
   while (CurrLevel >= 0) {
-    // printf("-%d %d %d", CurrIndex, CurrLevel, CurrChild);
     bool IsChildSignificantPrev = (PrevOctree[CurrIndex] >> CurrChild) & 1u;
-    // bool IsChildSignificant = IsChildSignificantPrev ? true : Read(Bs);
     bool IsChildSignificant = IsChildSignificantPrev;
-    if (!IsChildSignificantPrev) {
-      int Temp = Read(Bs);
-      IsChildSignificant = Temp;
-      // fprintf(DecodeFile, ".%d", Temp);
-    }
-
+    if (!IsChildSignificantPrev)
+      IsChildSignificant = Read(Bs);
     if (IsChildSignificant) {
       if (!IsChildSignificantPrev)
         Octree[CurrIndex] |= 1 << CurrChild;
       int ChildIndex = CurrIndex * 8 + CurrChild + 1;
       mg_Assert(ChildIndex - BeginIndexLastLevel < 16*16*16);
       if (ChildIndex >= BeginIndexLastLevel) { // child is on last level where each node is a sample
-        u64 Temp = Read(Bs);
-        // fprintf(DecodeFile, "%d +%d\n", ChildIndex - BeginIndexLastLevel, Temp);
-        // fprintf(DecodeFile, "+%d\n", Temp);
-        Block[ChildIndex - BeginIndexLastLevel] |= Temp << Bitplane;
-        // if (Pos == v3i(0, 0, 0) && ChildIndex == BeginIndexLastLevel) {
-        //   fprintf(DecodeFile, "Bitplane %d: %d %llx\n", Bitplane, Temp, Block[0]);
-        // }
+        Block[ChildIndex - BeginIndexLastLevel] |= Read(Bs) << Bitplane;
         ++CurrChild; // move to the next child since we can't recurse
       } else { // not the last level, recurse down
         Indices [CurrLevel] = CurrIndex; // save the current index
@@ -241,7 +214,6 @@ void DecodeBlock(u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, 
     } else { // child is insignificant, write 0 and go to next child
       ++CurrChild;
     }
-    // printf("%s %s\n", IsChildSignificantPrev ? "yes" : "no", IsChildSignificant ? "yes" : "no");
     while (CurrChild >= 8) { // rewind, go up the levels
       --CurrLevel;
       if (CurrLevel < 0)
@@ -250,24 +222,20 @@ void DecodeBlock(u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, 
       CurrChild = ++Children[CurrLevel]; // go to next children
     }
   }
-  // fprintf(DecodeFile, "\n");
 }
 
 /* Each tile is 32x32x32, but we encode each block of 16x16x16 independently within a tile */
 void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic_array<Block>& Subbands,
   cstr FileName)
 {
-  EncodeFile = fopen("encode.txt", "w");
   FILE* Fp = fopen(FileName, "wb");
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
   mg_Assert(BlockDims <= TileDims);
-  // v3i NumBlocks = (TileDims + BlockDims - 1) / BlockDims;
   const v3i NumBlocks(2, 2, 2);
   bitstream Bs;
   buffer Buf; AllocateBuffer(&Buf, sizeof(u64) * Prod<i64>(Dims));
   InitWrite(&Bs, Buf);
-  /*  */
   int NumBlocksEncoded = 0;
   for (int S = 0; S < Size(Subbands); ++S) {
     v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
@@ -281,7 +249,7 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic_arr
       int NLevels = NumLevels(Prod<int>(BlockDims)) - 1;
       int OctreeSize = BeginIndex(NLevels);
       mg_StackArrayOfHeapArrays(Octree, u8, 8, OctreeSize);
-      mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize); // TODO: initialize this
+      mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize);
       mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
       mg_StackArrayOfHeapArrays(BlockData, f64, 8, Prod<int>(BlockDims));
       for (int I = 0; I < 8; ++I) {
@@ -293,7 +261,6 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic_arr
       for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
         /* loop through the blocks */
         for (int BI = 0; BI < Prod<int>(NumBlocks); ++BI) {
-          // fprintf(DecodeFile, "Block %d bit plane %d\n", BI, Bitplane);
           v3i B(DecodeMorton3X(BI) * BlockDims.X + TX,
                 DecodeMorton3Y(BI) * BlockDims.Y + TY,
                 DecodeMorton3Z(BI) * BlockDims.Z + TZ);
@@ -301,37 +268,26 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic_arr
           if (Bitplane == Bits) { // only do this once
             int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B, BlockData[BI], Block[BI], MsbTable[BI]);
             Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
-            for (int I = 0; I < Prod<int>(BlockDims); ++I) {
-              // fprintf(EncodeFile, "%llx\n", Block[BI][I]);
-            }
           }
           BuildSignificanceOctree(MsbTable[BI], BlockDims, Bitplane, Octree[BI]);
-          // fprintf(EncodeFile, "\n");
           EncodeBlock(Block[BI], BlockDims, Bitplane, PrevOctree[BI], Octree[BI], &Bs, B);
           Swap(&PrevOctree[BI], &Octree[BI]);
-          // if (NumBlocksEncoded >= 300)
-          //   goto END;
         }
-        /* If the total compressed bytes across the blocks add up to at least 4096 bytes, write a chunk */
       }
     }}} // end loop through the tiles
   }
-  END:
   Flush(&Bs);
   fwrite(Bs.Stream.Data, Size(&Bs), 1, Fp);
   fclose(Fp);
   printf("\n------------------------------------\n");
-  fclose(EncodeFile);
 }
 
 void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_array<Block>& Subbands,
   f64* Data)
 {
-  DecodeFile = fopen("decode.txt", "w");
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
   mg_Assert(BlockDims <= TileDims);
-  // v3i NumBlocks = (TileDims + BlockDims - 1) / BlockDims;
   const v3i NumBlocks(2, 2, 2);
   bitstream Bs;
   buffer Buf;
@@ -349,7 +305,7 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_array
       int NLevels = NumLevels(Prod<int>(BlockDims)) - 1;
       int OctreeSize = BeginIndex(NLevels);
       mg_StackArrayOfHeapArrays(Octree, u8, 8, OctreeSize);
-      mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize); // TODO: initialize this
+      mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize);
       mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
       for (int I = 0; I < 8; ++I) {
         memset(Octree[I], 0, OctreeSize * sizeof(u8));
@@ -365,28 +321,130 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_array
                 DecodeMorton3Y(BI) * BlockDims.Y + TY,
                 DecodeMorton3Z(BI) * BlockDims.Z + TZ);
           ++NumBlocksDecoded;
-          if (Bitplane == Bits) {
+          if (Bitplane == Bits)
             EMaxes[BI] = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
-          }
           DecodeBlock(Block[BI], BlockDims, Bitplane, PrevOctree[BI], Octree[BI], &Bs, B);
-          // fprintf(DecodeFile, "\n");
           memcpy(PrevOctree[BI], Octree[BI], sizeof(u8) * OctreeSize); // TODO: merge this step with the below
-          if (Bitplane == 0) {
-            // if (B == v3i(0, 0, 0))
-            //   printf("%llx\n", Block[BI][0]);
-            for (int I = 0; I < Prod<int>(BlockDims); ++I) {
-              // fprintf(DecodeFile, "%llx\n", Block[BI][I]);
-            }
+          if (Bitplane == 0)
             CopyBlockSamplesInverseMorton(Block[BI], Dims, Bits - 1, BlockDims, B, EMaxes[BI], Data);
-          }
-          // if (NumBlocksDecoded >= 300)
-          //   goto END;
         }
       }
     }}} // end loop through the tiles
   }
-  END:
-  fclose(DecodeFile);
+  return;
+}
+
+/* Each tile is 32x32x32, but we encode each block of 16x16x16 independently within a tile */
+void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic_array<Block>& Subbands,
+  cstr FileName)
+{
+  FILE* Fp = fopen(FileName, "wb");
+  mg_Assert(TileDims == v3i(32, 32, 32));
+  v3i BlockDims(16, 16, 16);
+  mg_Assert(BlockDims <= TileDims);
+  const v3i NumBlocks(2, 2, 2);
+  bitstream Bs;
+  buffer Buf; AllocateBuffer(&Buf, sizeof(u64) * Prod<i64>(Dims));
+  InitWrite(&Bs, Buf);
+  int NumBlocksEncoded = 0;
+  for (int S = 0; S < Size(Subbands); ++S) {
+    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
+    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
+    /* loop through the tiles within the subband */
+    for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
+    for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {
+    for (int TX = SubbandPos.X; TX < SubbandPos.X + SubbandDims.X; TX += TileDims.X) {
+      int NLevels = NumLevels(Prod<int>(BlockDims)) - 1;
+      int OctreeSize = BeginIndex(NLevels);
+      mg_StackArrayOfHeapArrays(Octree, u8, 8, OctreeSize);
+      mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
+      mg_StackArrayOfHeapArrays(BlockData, f64, 8, Prod<int>(BlockDims));
+      mg_StackArrayOfHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
+      /* loop through the bit planes */
+      for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
+        /* loop through the blocks */
+        for (int BI = 0; BI < Prod<int>(NumBlocks); ++BI) {
+          v3i B(DecodeMorton3X(BI) * BlockDims.X + TX,
+                DecodeMorton3Y(BI) * BlockDims.Y + TY,
+                DecodeMorton3Z(BI) * BlockDims.Z + TZ);
+          ++NumBlocksEncoded;
+          if (Bitplane == Bits) { // only do this once
+            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B, BlockData[BI], Block[BI], MsbTable[BI]);
+            Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
+          }
+          if (Bitplane == Bits) {
+            BuildSignificanceOctree(MsbTable[BI], BlockDims, Bitplane, Octree[BI]);
+            if (Octree[BI][0] == 0) {
+              Write(&Bs, 0);
+            } else {
+              Write(&Bs, 1);
+              goto ELSE;
+            }
+          } else {
+            ELSE:
+            for (int I = 0; I < Prod<int>(BlockDims); I += 64) {
+              u64 X = 0;
+              for (int J = 0; J < 64; ++J)
+                X += (1 & (Block[BI][I + J] >> Bitplane)) << J;
+              Write(&Bs, X, 64);
+              // Write(&Bs, 1 & (Block[BI][I] >> Bitplane));
+            }
+          }
+        }
+      }
+    }}} // end loop through the tiles
+  }
+  Flush(&Bs);
+  fwrite(Bs.Stream.Data, Size(&Bs), 1, Fp);
+  fclose(Fp);
+  printf("\n------------------------------------\n");
+}
+
+void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_array<Block>& Subbands,
+  f64* Data)
+{
+  mg_Assert(TileDims == v3i(32, 32, 32));
+  v3i BlockDims(16, 16, 16);
+  mg_Assert(BlockDims <= TileDims);
+  const v3i NumBlocks(2, 2, 2);
+  bitstream Bs;
+  buffer Buf;
+  ReadFile(FileName, &Buf);
+  InitRead(&Bs, Buf);
+  int NumBlocksDecoded = 0;
+  for (int S = 0; S < Size(Subbands); ++S) {
+    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
+    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
+    /* loop through the tiles within the subband */
+    for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
+    for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {
+    for (int TX = SubbandPos.X; TX < SubbandPos.X + SubbandDims.X; TX += TileDims.X) {
+      int EMaxes[8];
+      mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
+      for (int I = 0; I < 8; ++I)
+        memset(Block[I], 0, Prod<int>(BlockDims) * sizeof(u64));
+      /* loop through the blocks */
+      for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
+        for (int BI = 0; BI < Prod<int>(NumBlocks); ++BI) {
+          v3i B(DecodeMorton3X(BI) * BlockDims.X + TX,
+                DecodeMorton3Y(BI) * BlockDims.Y + TY,
+                DecodeMorton3Z(BI) * BlockDims.Z + TZ);
+          ++NumBlocksDecoded;
+          if (Bitplane == Bits)
+            EMaxes[BI] = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
+          for (int I = 0; I < Prod<int>(BlockDims); ++I) {
+            //u64 X = Read(&Bs, 64);
+            //for (int J = 0; J < 64; ++J)
+              Block[BI][I] |= Read(&Bs) << Bitplane;
+          }
+          if (Bitplane == 0)
+            CopyBlockSamplesInverseMorton(Block[BI], Dims, Bits - 1, BlockDims, B, EMaxes[BI], Data);
+        }
+      }
+    }}} // end loop through the tiles
+  }
   return;
 }
 

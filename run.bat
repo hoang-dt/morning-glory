@@ -3,6 +3,6 @@ REM   --dataset D:/Datasets/3D/miranda-diffusivity-64x64x64-float64.txt^
 REM   --nlevels 1^
 REM   --output compressed.raw
 main^
-  --dataset D:/Datasets/miranda/miranda-density-384x384x256-float64.txt^
+  --dataset D:/Datasets/miranda/miranda-pressure-384x384x256-float64.txt^
   --nlevels 3^
   --output compressed.raw
