@@ -19,8 +19,8 @@ template <typename t> t FlipBit(t Val, int I);
 
 /* Return the bit plane of the most significant one-bit. Counting starts from the least significant
 bit plane. Examples: Bsr(0) = -1, Bsr(2) = 1, Bsr(5) = 2, Bsr(8) = 3 */
-i8 BitScanReverse(u32 v);
-i8 BitScanReverse(u64 V);
+i8 Msb(u32 v);
+i8 Msb(u64 V);
 
 /* Morton encoding/decoding */
 u32 DecodeMorton3X(u32 Code);

@@ -38,8 +38,13 @@ void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs);
 
 struct block;
 template <typename t> struct dynamic_array;
-void EncodeData(const f64* Data, v3i Dims, v3i TileDims, const dynamic_array<Block>& Subbands, cstr FileName, bitstream* Bs);
+void EncodeData(const f64* Data, v3i Dims, v3i TileDims, const dynamic_array<Block>& Subbands, 
+  cstr FileName, bitstream* Bs);
 void DecodeData(f64* Data, v3i Dims, v3i TileDims);
+void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
+  const dynamic_array<Block>& Subbands, bitstream* Bs);
+void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, 
+  const dynamic_array<Block>& Subbands, bitstream* Bs);
 
 } // namespace mg
 

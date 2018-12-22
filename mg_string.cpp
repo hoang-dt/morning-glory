@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <stdlib.h>
 #include <string.h>
 #include "mg_algorithm.h"
 #include "mg_assert.h"
@@ -91,6 +92,16 @@ bool ToInt(string_ref Str, int* Result) {
       return false;
   }
   return true;
+}
+
+bool ToDouble(string_ref Str, f64* Result) {
+  if (!Str || Str.Size <= 0)
+    return false;
+  char* EndPtr = nullptr;
+  *Result = strtod(Str.ConstPtr, &EndPtr);
+  bool Failure = errno == ERANGE || EndPtr == Str.ConstPtr || !EndPtr ||
+                 !(isspace(*EndPtr) || ispunct(*EndPtr) || (*EndPtr) == 0);
+  return Failure;
 }
 
 /* tokenizer stuff */

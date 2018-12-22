@@ -51,8 +51,9 @@ should be true whenever dst represents a whole string (as opposed to a substring
 larger than Dst, we copy as many characters as we can. We always assume that the null
 character can be optionally added without overflowing the memory of Dst. */
 void Copy(string_ref Dst, string_ref Src, bool AddNull = true);
-/* Parse a string_ref and return an int */
+/* Parse a string_ref and return a number */
 bool ToInt(string_ref Str, int* Result);
+bool ToDouble(string_ref Str, f64* Result);
 
 /* Tokenize strings without allocating memory */
 struct tokenizer {

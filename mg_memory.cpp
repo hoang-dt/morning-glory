@@ -135,4 +135,11 @@ void fallback_allocator::DeallocateAll() {
   Secondary->DeallocateAll();
 }
 
+buffer Clone(buffer Buf, allocator* Alloc) {
+  buffer BufClone;
+  Alloc->Allocate(&BufClone, Buf.Bytes);
+  MemCopy(&BufClone, Buf);
+  return BufClone;
+}
+
 } // namespace mg

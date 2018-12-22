@@ -44,6 +44,11 @@ struct Traits {
   // static constexpr int ExponentBias
 };
 
+template <typename T1, typename T2>
+struct IsSameType{ enum { Result = false }; };
+template< typename T>
+struct IsSameType<T, T> { enum { Result = true }; };
+
 /* Something to replace std::array */
 template <typename t, int N>
 struct array {

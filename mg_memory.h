@@ -97,4 +97,6 @@ static mallocator& Mallocator() {
   return Instance;
 }
 
+buffer Clone(buffer Buf, allocator* Alloc = &Mallocator());
+
 } // namespace mg

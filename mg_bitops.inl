@@ -9,28 +9,28 @@ namespace mg {
 /* Set the I(th) least significant bit of val to 1. Index starts at 0. */
 template <typename t> mg_ForceInline
 t SetBit(t Val, int I) {
-  mg_Assert(I < mg_BitSizeOf(t));
+  mg_Assert(I < (int)mg_BitSizeOf(t));
   return Val | t((1ull << I));
 }
 
 /* Set the I(th) least significant bit of val to 0. Index starts at 0. */
 template <typename t> mg_ForceInline
 t UnsetBit(t Val, int I) {
-  mg_Assert(I < mg_BitSizeOf(t));
+  mg_Assert(I < (int)mg_BitSizeOf(t));
   return Val & t(~(1ull << I));
 }
 
 /* Check if the I(th) least significant bit of val is 1. Index starts at 0. */
 template <typename t> mg_ForceInline
 bool CheckBit(t Val, int I) {
-  mg_Assert(I < mg_BitSizeOf(t));
+  mg_Assert(I < (int)mg_BitSizeOf(t));
   return 1 & (Val >> I);
 }
 
 /* Flip the I(th) least significant bit of val. Index starts at 0. */
 template <typename t> mg_ForceInline
 t FlipBit(t Val, int I) {
-  mg_Assert(I < mg_BitSizeOf(t));
+  mg_Assert(I < (int)mg_BitSizeOf(t));
   return Val ^ t(1ull << I);
 }
 
@@ -38,12 +38,12 @@ t FlipBit(t Val, int I) {
 bit plane. Examples: Bsr(0) = -1, Bsr(2) = 1, Bsr(5) = 2, Bsr(8) = 3 */
 #if defined(__clang__) || defined(__GNUC__)
 mg_ForceInline
-i8 BitScanReverse(u32 V) {
+i8 Msb(u32 V) {
   if (V == 0) return -1;
   return i8(mg_BitSizeOf(V) - 1 - __builtin_clz(V));
 }
 mg_ForceInline
-i8 BitScanReverse(u64 V) {
+i8 Msb(u64 V) {
   if (V == 0) return -1;
   return i8(mg_BitSizeOf(V) - 1 -__builtin_clzll(V));
 }
@@ -52,14 +52,14 @@ i8 BitScanReverse(u64 V) {
 #pragma intrinsic(_BitScanReverse)
 #pragma intrinsic(_BitScanReverse64)
 mg_ForceInline
-i8 BitScanReverse(u32 V) {
+i8 Msb(u32 V) {
   if (V == 0) return -1;
   unsigned long Index = 0;
   _BitScanReverse(&Index, V);
   return (i8)Index;
 }
 mg_ForceInline
-i8 BitScanReverse(u64 V) {
+i8 Msb(u64 V) {
   if (V == 0) return -1;
   unsigned long Index = 0;
   _BitScanReverse64(&Index, V);

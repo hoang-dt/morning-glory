@@ -116,7 +116,7 @@ bool operator<=(v3<t> Lhs, v3<t> Rhs) {
 mg_ForceInline
 i8 Log2Floor(int Val) {
   mg_Assert(Val > 0);
-  return BitScanReverse((u32)Val);
+  return Msb((u32)Val);
 }
 
 mg_ForceInline
