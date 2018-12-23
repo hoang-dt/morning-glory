@@ -60,15 +60,11 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims, const dynamic_array<Blo
       // TODO: use the freelist allocator
       // TODO: use aligned memory allocation
       // TODO: try reusing the memory buffer
-      f64* FloatTile = nullptr; Allocate((byte**)&FloatTile, sizeof(f64) * Prod<i64>(TileDims));
-      mg_CleanUp(1, Deallocate((byte**)&FloatTile))
-      i64* IntTile = nullptr; Allocate((byte**)&IntTile, sizeof(i64) * Prod<i64>(TileDims));
-      mg_CleanUp(2, Deallocate((byte**)&IntTile))
-      u64* UIntTile = nullptr; Allocate((byte**)&UIntTile, sizeof(u64) * Prod<i64>(TileDims));
-      mg_CleanUp(3, Deallocate((byte**)&UIntTile))
-      int* Ns = nullptr; Allocate((byte**)&Ns, sizeof(int) * Prod<i64>(NumBlocks));
-      mg_CleanUp(4, Deallocate((byte**)&Ns))
-      memset(Ns, 0, sizeof(int) * Prod<i64>(NumBlocks));
+      mg_HeapArray(FloatTile, f64, Prod<i64>(TileDims));
+      mg_HeapArray(IntTile, i64, Prod<i64>(TileDims));
+      mg_HeapArray(UIntTile, u64, Prod<i64>(TileDims));
+      mg_HeapArray(Ns, int, Prod<i64>(NumBlocks));
+      memset(Ns.Data, 0, sizeof(int) * Prod<i64>(NumBlocks));
       short ChunkBytes[64] = { 0 }; // store the size of the chunks in bytes (at most we have 64 chunks)
       int ChunkId = 0;
       for (int Bitplane = 63; Bitplane >= 0; --Bitplane) {
@@ -148,17 +144,12 @@ void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
       // TODO: use the freelist allocator
       // TODO: use aligned memory allocation
       // TODO: try reusing the memory buffer
-      f64* FloatTile = nullptr; Allocate((byte**)&FloatTile, sizeof(f64) * Prod<i64>(TileDims));
-      mg_CleanUp(1, Deallocate((byte**)&FloatTile))
-      i64* IntTile = nullptr; Allocate((byte**)&IntTile, sizeof(i64) * Prod<i64>(TileDims));
-      mg_CleanUp(2, Deallocate((byte**)&IntTile))
-      u64* UIntTile = nullptr; Allocate((byte**)&UIntTile, sizeof(u64) * Prod<i64>(TileDims));
-      mg_CleanUp(3, Deallocate((byte**)&UIntTile))
-      int* Ns = nullptr; Allocate((byte**)&Ns, sizeof(int) * Prod<i64>(NumBlocks));
-      mg_CleanUp(4, Deallocate((byte**)&Ns))
-      memset(Ns, 0, sizeof(int) * Prod<i64>(NumBlocks));
-      int* EMaxes = nullptr; Allocate((byte**)&EMaxes, sizeof(int) * Prod<i64>(NumBlocks));
-      mg_CleanUp(5, Deallocate((byte**)&EMaxes))
+      mg_HeapArray(FloatTile, f64, Prod<i64>(TileDims));
+      mg_HeapArray(IntTile, i64, Prod<i64>(TileDims));
+      mg_HeapArray(UIntTile, u64, Prod<i64>(TileDims));
+      mg_HeapArray(Ns, int, Prod<i64>(NumBlocks));
+      memset(Ns.Data, 0, sizeof(int) * Prod<i64>(NumBlocks));
+      mg_HeapArray(EMaxes, int, Prod<i64>(NumBlocks));
       for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
         /* loop through zfp blocks */
         for (int BZ = 0; BZ < TileDims.Z; BZ += BlockDims.Z) {
@@ -206,8 +197,8 @@ void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   printf("Encoding time: %f s\n", ResetTimer(&Timer) / 1000.0);
 }
 
-void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, 
-  const dynamic_array<Block>& Subbands, bitstream* Bs) 
+void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
+  const dynamic_array<Block>& Subbands, bitstream* Bs)
 {
   // TODO: use many different bit streams
   timer Timer;
@@ -231,13 +222,13 @@ void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
       // TODO: use the freelist allocator
       // TODO: use aligned memory allocation
       // TODO: try reusing the memory buffer
-      f64* FloatTile = nullptr; Allocate((byte**)&FloatTile, sizeof(f64) * Prod<i64>(TileDims));
-      i64* IntTile = nullptr; Allocate((byte**)&IntTile, sizeof(i64) * Prod<i64>(TileDims));
-      u64* UIntTile = nullptr; Allocate((byte**)&UIntTile, sizeof(u64) * Prod<i64>(TileDims));
-      memset(UIntTile, 0, sizeof(u64) * Prod<i64>(TileDims));
-      int* Ns = nullptr; Allocate((byte**)&Ns, sizeof(int) * Prod<i64>(NumBlocks));
-      memset(Ns, 0, sizeof(int) * Prod<i64>(NumBlocks));
-      int* EMaxes = nullptr; Allocate((byte**)&EMaxes, sizeof(int) * Prod<i64>(NumBlocks));
+      mg_HeapArray(FloatTile, f64, Prod<i64>(TileDims));
+      mg_HeapArray(IntTile, i64, Prod<i64>(TileDims));
+      mg_HeapArray(UIntTile, u64, Prod<i64>(TileDims));
+      memset(UIntTile.Data, 0, sizeof(u64) * Prod<i64>(TileDims));
+      mg_HeapArray(Ns, int, Prod<i64>(NumBlocks));
+      memset(Ns.Data, 0, sizeof(int) * Prod<i64>(NumBlocks));
+      mg_HeapArray(EMaxes, int, Prod<i64>(NumBlocks));
       /* compute the total size of the chunks */
       for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
         for (int BZ = 0; BZ < TileDims.Z; BZ += BlockDims.Z) { /* loop through zfp blocks */
@@ -272,11 +263,6 @@ void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
       } // end loop through the bit planes
       // fprintf(stderr, "\n");
       // TODO: padding?
-      Deallocate((byte**)&FloatTile);
-      Deallocate((byte**)&IntTile);
-      Deallocate((byte**)&UIntTile);
-      Deallocate((byte**)&Ns);
-      Deallocate((byte**)&EMaxes);
     }}} /* end loop through the tiles */
   }
   printf("Decoding time: %f s\n", ResetTimer(&Timer) / 1000.0);
@@ -288,8 +274,8 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims) {
   v3i BlockDims{ 4, 4, 4 };
   v3i NumTiles = (Dims + TileDims - 1) / TileDims;
   // fseek(Fp, sizeof(void*) * Prod<i64>(NumTiles), SEEK_SET); // reserve space for the tile pointers
-  size_t* TilePointers = nullptr; Allocate((byte**)&TilePointers, sizeof(size_t) * Prod<i64>(NumTiles));
-  fread(TilePointers, sizeof(size_t) * Prod<i64>(NumTiles), 1, Fp);
+  mg_HeapArray(TilePointers, size_t, Prod<i64>(NumTiles));
+  fread(TilePointers.Data, sizeof(size_t) * Prod<i64>(NumTiles), 1, Fp);
   v3i NumBlocks = ((TileDims + BlockDims) - 1) / BlockDims;
   for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
   for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
@@ -298,14 +284,13 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims) {
     // TODO: use the freelist allocator
     // TODO: use aligned memory allocation
     // TODO: try reusing the memory buffer
-    f64* FloatTile = nullptr; Allocate((byte**)&FloatTile, sizeof(f64) * Prod<i64>(TileDims));
-    i64* IntTile = nullptr; Allocate((byte**)&IntTile, sizeof(i64) * Prod<i64>(TileDims));
-    u64* UIntTile = nullptr; Allocate((byte**)&UIntTile, sizeof(u64) * Prod<i64>(TileDims));
-    memset(UIntTile, 0, sizeof(u64) * Prod<i64>(TileDims));
-    int* Ns = nullptr; Allocate((byte**)&Ns, sizeof(int) * Prod<i64>(NumBlocks));
-    memset(Ns, 0, sizeof(int) * Prod<i64>(NumBlocks));
-    int* EMaxes = nullptr; Allocate((byte**)&EMaxes, sizeof(int) * Prod<i64>(NumBlocks));
-    memset(Ns, 0, sizeof(int) * Prod<i64>(NumBlocks));
+    mg_HeapArray(FloatTile, f64, Prod<i64>(TileDims));
+    mg_HeapArray(IntTile, i64, Prod<i64>(TileDims));
+    mg_HeapArray(UIntTile, u64, Prod<i64>(TileDims));
+    memset(UIntTile.Data, 0, sizeof(u64) * Prod<i64>(TileDims));
+    mg_HeapArray(Ns, int, Prod<i64>(NumBlocks));
+    memset(Ns.Data, 0, sizeof(int) * Prod<i64>(NumBlocks));
+    mg_HeapArray(EMaxes, int, Prod<i64>(NumBlocks));
     mg_FSeek(Fp, TilePointers[TileId], SEEK_SET);
     int NumChunks = 0;
     fread(&NumChunks, sizeof(NumChunks), 1, Fp);
@@ -364,13 +349,7 @@ void DecodeData(f64* Data, v3i Dims, v3i TileDims) {
     } // end loop through the bit planes
     // fprintf(stderr, "\n");
     // TODO: padding?
-    Deallocate((byte**)&FloatTile);
-    Deallocate((byte**)&IntTile);
-    Deallocate((byte**)&UIntTile);
-    Deallocate((byte**)&Ns);
-    Deallocate((byte**)&EMaxes);
   }}} /* end loop through the tiles */
-  Deallocate((byte**)&TilePointers);
   fclose(Fp);
 }
 

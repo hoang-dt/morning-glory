@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "mg_macros.h"
 
 namespace mg {
 
@@ -80,18 +81,23 @@ struct Traits<f64> {
 
 /* Something to replace std::array */
 #define TemplateArr template <typename t, int N>
-TemplateArr t& array<t, N>::operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
-TemplateArr const t& array<t, N>::operator[](int Idx) const { assert(Idx < N); return Arr[Idx]; }
-TemplateArr t* Begin(array<t, N>& A) { return &A.Arr[0]; }
-TemplateArr const t* ConstBegin(const array<t, N>& A) { return &A.Arr[0]; }
-TemplateArr t* End(array<t, N>& A) { return &A.Arr[0] + N; }
-TemplateArr const t* ConstEnd(const array<t, N>& A) { return &A.Arr[0] + N; }
-TemplateArr t* ReverseBegin(array<t, N>& A) { return &A.Arr[0] + (N - 1); }
-TemplateArr const t* ConstReverseBegin(const array<t, N>& A) { return &A.Arr[0] + (N - 1); }
-TemplateArr t* ReverseEnd(array<t, N>& A) { return &A.Arr[0] - 1; }
-TemplateArr t* ConstReverseEnd(const array<t, N>& A) { return &A.Arr[0] - 1; }
-TemplateArr int Size(array<t, N>&) { return N; }
+TemplateArr mg_ForceInline t& array<t, N>::operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
+TemplateArr mg_ForceInline const t& array<t, N>::operator[](int Idx) const { assert(Idx < N); return Arr[Idx]; }
+TemplateArr mg_ForceInline t* Begin(array<t, N>& A) { return &A.Arr[0]; }
+TemplateArr mg_ForceInline const t* ConstBegin(const array<t, N>& A) { return &A.Arr[0]; }
+TemplateArr mg_ForceInline t* End(array<t, N>& A) { return &A.Arr[0] + N; }
+TemplateArr mg_ForceInline const t* ConstEnd(const array<t, N>& A) { return &A.Arr[0] + N; }
+TemplateArr mg_ForceInline t* ReverseBegin(array<t, N>& A) { return &A.Arr[0] + (N - 1); }
+TemplateArr mg_ForceInline const t* ConstReverseBegin(const array<t, N>& A) { return &A.Arr[0] + (N - 1); }
+TemplateArr mg_ForceInline t* ReverseEnd(array<t, N>& A) { return &A.Arr[0] - 1; }
+TemplateArr mg_ForceInline t* ConstReverseEnd(const array<t, N>& A) { return &A.Arr[0] - 1; }
+TemplateArr mg_ForceInline int Size(array<t, N>&) { return N; }
 #undef TemplateArr
+
+template <typename t> mg_ForceInline
+t& typed_buffer<t>::operator[](i64 Idx) { assert(Idx < Size); return Data[Idx]; }
+template <typename t> mg_ForceInline
+const t& typed_buffer<t>::operator[](i64 Idx) const { assert(Idx < Size); return Data[Idx]; }
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
@@ -102,13 +108,13 @@ struct v2 {
     struct { t U, V; };
     t E[2];
   };
-  v2() = default;
-  v2(t X, t Y): X(X), Y(Y) {}
-  template <typename u>
+  mg_ForceInline v2() = default;
+  mg_ForceInline v2(t X, t Y): X(X), Y(Y) {}
+  template <typename u> mg_ForceInline
   v2(v2<u> Other): X(Other.X), Y(Other.Y) {}
-  t& operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
-  t operator[](int Idx) const { assert(Idx < 2); return E[Idx]; }
-  template <typename u>
+  mg_ForceInline t& operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
+  mg_ForceInline t operator[](int Idx) const { assert(Idx < 2); return E[Idx]; }
+  template <typename u> mg_ForceInline
   v2& operator=(v2<u> other) { X = other.X; Y = other.Y; return *this; }
 };
 using v2i  = v2<i32>;
@@ -130,13 +136,13 @@ struct v3 {
     struct { t Ignored3_; v2<t> V__; };
     t E[3];
   };
-  v3() = default;
-  v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
-  template <typename u>
+  mg_ForceInline v3() = default;
+  mg_ForceInline v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
+  template <typename u> mg_ForceInline
   v3(v3<u> Other): X(Other.X), Y(Other.Y), Z(Other.Z) {}
-  t& operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
-  t operator[](int Idx) const { assert(Idx < 3); return E[Idx]; }
-  template <typename u>
+  mg_ForceInline t& operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
+  mg_ForceInline t operator[](int Idx) const { assert(Idx < 3); return E[Idx]; }
+  template <typename u> mg_ForceInline
   v3& operator=(v3<u> other) { X = other.X; Y = other.Y; Z = other.Z; return *this; }
 };
 using v3i  = v3<i32>;

@@ -15,12 +15,19 @@ namespace mg {
 thread_local char ScratchBuffer[1024]; // General purpose buffer for string-related operations
 
 /* Abstract away memory allocations/deallocations */
-void Allocate(byte** Ptr, i64 Bytes);
-void Deallocate(byte** Ptr);
 void AllocateBuffer(buffer* Buf, i64 Bytes);
 void DeallocateBuffer(buffer* Buf);
+template <typename t>
+void AllocateTypedBuffer(typed_buffer<t>* Buf, i64 Size);
+template <typename t>
+void DeallocateTypedBuffer(typed_buffer<t>* Buf);
 
 void MemCopy(buffer* Dst, const buffer& Src);
+
+/* Quickly declare a heap-allocated array which deallocates itself at the end of scope */
+#define mg_HeapArray(Name, Type, Size)
+/* e.g. u8* Arr[8] */
+#define mg_StackArrayOfHeapArrays(Name, Type, StackArraySize, HeapArraySize)
 
 struct allocator {
   virtual bool Allocate(buffer* Buf, i64 Bytes) = 0;
@@ -100,3 +107,5 @@ static mallocator& Mallocator() {
 buffer Clone(buffer Buf, allocator* Alloc = &Mallocator());
 
 } // namespace mg
+
+#include "mg_memory.inl"

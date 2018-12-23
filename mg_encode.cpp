@@ -6,6 +6,7 @@
 #include "mg_bitstream.h"
 #include "mg_io.h"
 #include "mg_math.h"
+#include "mg_memory.h"
 #include "mg_scopeguard.h"
 #include "mg_wavelet.h"
 #include "mg_timer.h"
@@ -256,10 +257,9 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
       mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize);
       mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
       mg_StackArrayOfHeapArrays(BlockData, f64, 8, Prod<int>(BlockDims));
-
       for (int I = 0; I < 8; ++I) {
-        memset(Octree[I], 0, OctreeSize * sizeof(u8));
-        memset(PrevOctree[I], 0, OctreeSize * sizeof(u8));
+        memset(Octree[I].Data, 0, OctreeSize * sizeof(u8));
+        memset(PrevOctree[I].Data, 0, OctreeSize * sizeof(u8));
       }
       int EMaxes[8];
       mg_StackArrayOfHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
@@ -272,7 +272,7 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
                 DecodeMorton3Z(BI) * BlockDims.Z + TZ);
           ++NumBlocksEncoded;
           if (Bitplane == Bits) { // only do this once
-            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B, BlockData[BI], Block[BI], MsbTable[BI]);
+            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B, BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
             EMaxes[BI] = EMax;
             // Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
             if (Bits - Bitplane <= EMaxes[BI] - ToleranceExp + 1) {
@@ -283,8 +283,8 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
             }
           }
           if (Bits - Bitplane <= EMaxes[BI] - ToleranceExp + 1) {
-            BuildSignificanceOctree(MsbTable[BI], BlockDims, Bitplane, Octree[BI]);
-            EncodeBlock(Block[BI], BlockDims, Bitplane, PrevOctree[BI], Octree[BI], &Bs);
+            BuildSignificanceOctree(MsbTable[BI].Data, BlockDims, Bitplane, Octree[BI].Data);
+            EncodeBlock(Block[BI].Data, BlockDims, Bitplane, PrevOctree[BI].Data, Octree[BI].Data, &Bs);
             Swap(&PrevOctree[BI], &Octree[BI]);
           }
         }
@@ -328,9 +328,9 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
       mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize);
       mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
       for (int I = 0; I < 8; ++I) {
-        memset(Octree[I], 0, OctreeSize * sizeof(u8));
-        memset(PrevOctree[I], 0, OctreeSize * sizeof(u8));
-        memset(Block[I], 0, Prod<int>(BlockDims) * sizeof(u64));
+        memset(Octree[I].Data, 0, OctreeSize * sizeof(u8));
+        memset(PrevOctree[I].Data, 0, OctreeSize * sizeof(u8));
+        memset(Block[I].Data, 0, Prod<int>(BlockDims) * sizeof(u64));
       }
       mg_StackArrayOfHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
       int EMaxes[8];
@@ -350,11 +350,11 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
               EMaxes[BI] = ToleranceExp - 2;
           }
           if (Bits - Bitplane <= EMaxes[BI] - ToleranceExp + 1) {
-            DecodeBlock(Block[BI], BlockDims, Bitplane, PrevOctree[BI], Octree[BI], &Bs);
-            memcpy(PrevOctree[BI], Octree[BI], sizeof(u8) * OctreeSize); // TODO: merge this step with the below
+            DecodeBlock(Block[BI].Data, BlockDims, Bitplane, PrevOctree[BI].Data, Octree[BI].Data, &Bs);
+            memcpy(PrevOctree[BI].Data, Octree[BI].Data, sizeof(u8) * OctreeSize); // TODO: merge this step with the below
           }
           if (Bitplane == 0)
-            CopyBlockSamplesInverseMorton(Block[BI], Dims, Bits - 1, BlockDims, B, EMaxes[BI], Data);
+            CopyBlockSamplesInverseMorton(Block[BI].Data, Dims, Bits - 1, BlockDims, B, EMaxes[BI], Data);
         }
       }
     }}} // end loop through the tiles
@@ -399,11 +399,11 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic
                 DecodeMorton3Z(BI) * BlockDims.Z + TZ);
           ++NumBlocksEncoded;
           if (Bitplane == Bits) { // only do this once
-            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B, BlockData[BI], Block[BI], MsbTable[BI]);
+            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B, BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
             Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
           }
           if (Bitplane == Bits) {
-            BuildSignificanceOctree(MsbTable[BI], BlockDims, Bitplane, Octree[BI]);
+            BuildSignificanceOctree(MsbTable[BI].Data, BlockDims, Bitplane, Octree[BI].Data);
             if (Octree[BI][0] == 0) {
               Write(&Bs, 0);
             } else {
@@ -453,7 +453,7 @@ void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_a
       int EMaxes[8];
       mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
       for (int I = 0; I < 8; ++I)
-        memset(Block[I], 0, Prod<int>(BlockDims) * sizeof(u64));
+        memset(Block[I].Data, 0, Prod<int>(BlockDims) * sizeof(u64));
       /* loop through the blocks */
       for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
         for (int BI = 0; BI < Prod<int>(NumBlocks); ++BI) {
@@ -469,7 +469,7 @@ void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_a
               Block[BI][I] |= Read(&Bs) << Bitplane;
           }
           if (Bitplane == 0)
-            CopyBlockSamplesInverseMorton(Block[BI], Dims, Bits - 1, BlockDims, B, EMaxes[BI], Data);
+            CopyBlockSamplesInverseMorton(Block[BI].Data, Dims, Bits - 1, BlockDims, B, EMaxes[BI], Data);
         }
       }
     }}} // end loop through the tiles

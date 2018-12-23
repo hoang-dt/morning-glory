@@ -12,18 +12,6 @@ void MemCopy(buffer* Dst, const buffer& Src) {
   memcpy(Dst->Data, Src.Data, Src.Bytes);
 }
 
-// TODO: forward this to the mallocator
-void Allocate(byte** Ptr, i64 Bytes) {
-  mg_Assert(!(*Ptr), "Pointer not freed before allocating new memory");
-  *Ptr = (byte*)malloc(Bytes);
-  mg_AbortIf(!(*Ptr), "Out of memory");
-}
-
-void Deallocate(byte** Ptr) {
-  free(*Ptr);
-  *Ptr = nullptr;
-}
-
 void AllocateBuffer(buffer* Buf, i64 Bytes) {
   Mallocator().Allocate(Buf, Bytes);
 }
@@ -34,7 +22,8 @@ void DeallocateBuffer(buffer* Buf) {
 
 bool mallocator::Allocate(buffer* Buf, i64 Bytes) {
   mg_Assert(!Buf->Data || Buf->Bytes == 0, "Buffer not freed before allocating new memory");
-  mg::Allocate(&Buf->Data, Bytes);
+  Buf->Data = (byte*)malloc(Bytes);
+  mg_AbortIf(!(Buf->Data), "Out of memory");
   Buf->Bytes = Bytes;
   return true;
 }

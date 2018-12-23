@@ -55,13 +55,13 @@ int main(int Argc, const char** Argv) {
   Ok = ReadFile(Meta.File, &BufF);
   buffer BufFClone = Clone(BufF);
   buffer BufFClone2 = Clone(BufF);
-  mg_CleanUp(0, Deallocate(&BufF.Data));
+  // mg_CleanUp(0, Deallocate(&BufF.Data)); // TODO
   mg_AbortIf(!Ok, "%s", ToString(Ok));
   puts("Done reading file\n");
   f64* F = (f64*)BufF.Data;
   f64* FClone = (f64*)BufFClone.Data;
-  mg_CleanUp(1, Deallocate(&BufFClone.Data))
-  mg_CleanUp(2, Deallocate(&BufFClone2.Data));
+  // mg_CleanUp(1, Deallocate(&BufFClone.Data))
+  // mg_CleanUp(2, Deallocate(&BufFClone2.Data));
   buffer CompressBuf;
   AllocateBuffer(&CompressBuf, 400 * 1000 * 1000);
   //mg_CleanUp(3, Deallocate(&BufFClone3.Data));

@@ -34,8 +34,7 @@ void ForwardLiftCdf53##x(t* F, v3i N, v3i L) {\
     t FRight = x < M.x - 1 ? F[mg_RowMajor##x(x + 1, y, z, N)] : FLeft;\
     F[mg_RowMajor##x(x, y, z, N)] += (FLeft + FRight) / 4;\
   }}}\
-  t* Temp = nullptr;\
-  Allocate((byte**)&Temp, sizeof(t) * M.x / 2);\
+  mg_HeapArray(Temp, t, M.x / 2);\
   int S##x = (M.x + 1) / 2;\
   for (int z = 0; z < M.z; ++z) {\
   for (int y = 0; y < M.y; ++y) {\
@@ -48,7 +47,6 @@ void ForwardLiftCdf53##x(t* F, v3i N, v3i L) {\
     for (int x = 0; x < (M.x / 2); ++x)\
       F[mg_RowMajor##x(S##x + x, y, z, N)] = Temp[x];\
   }}\
-  Deallocate((byte**)&Temp);\
 }\
 } // namespace mg
 
@@ -65,8 +63,7 @@ void InverseLiftCdf53##x(t* F, v3i N, v3i L) {\
   v3i M = (N + P - 1) / P;\
   if (M.x <= 1)\
     return;\
-  t* Temp = nullptr;\
-  Allocate((byte**)&Temp, sizeof(t) * M.x / 2);\
+  mg_HeapArray(Temp, t, M.x / 2);\
   int S##x = (M.x + 1) >> 1;\
   for (int z = 0; z < M.z; ++z) {\
   for (int y = 0; y < M.y; ++y) {\
@@ -95,7 +92,6 @@ void InverseLiftCdf53##x(t* F, v3i N, v3i L) {\
     t FRight = x < M.x - 1 ? F[mg_RowMajor##x(x + 1, y, z, N)] : FLeft;\
     F[mg_RowMajor##x(x, y, z, N)] += (FLeft + FRight) / 2;\
   }}}\
-  Deallocate((byte**)&Temp);\
 }\
 } // namespace mg
 

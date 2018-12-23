@@ -92,6 +92,14 @@ struct buffer {
   i64 Bytes = 0;
 };
 
+template <typename t>
+struct typed_buffer {
+  t* Data = nullptr;
+  i64 Size = 0;
+  t& operator[](i64 Idx);
+  const t& operator[](i64 Idx) const;
+};
+
 } // namespace mg
 
 #include "mg_types.inl"
