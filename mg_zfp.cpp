@@ -121,7 +121,7 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims,
 }
 
 void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-  const dynamic_array<Block>& Subbands, bitstream* Bs) {
+               const dynamic_array<block>& Subbands, bitstream* Bs) {
   timer Timer;
   StartTimer(&Timer);
   // TODO: loop through the subbands
@@ -198,7 +198,7 @@ void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
 }
 
 void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-  const dynamic_array<Block>& Subbands, bitstream* Bs)
+               const dynamic_array<block>& Subbands, bitstream* Bs)
 {
   // TODO: use many different bit streams
   timer Timer;

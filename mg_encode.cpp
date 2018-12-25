@@ -223,7 +223,8 @@ void DecodeBlock(u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, 
 }
 
 /* Each tile is 32x32x32, but we encode each block of 16x16x16 independently within a tile */
-void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, const dynamic_array<Block>& Subbands, cstr FileName) {
+void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
+            const dynamic_array<block>& Subbands, cstr FileName) {
   FILE* Fp = fopen(FileName, "wb");
   timer Timer;
   StartTimer(&Timer);
@@ -293,7 +294,8 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, co
   printf("\n------------------------------------\n");
 }
 
-void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, const dynamic_array<Block>& Subbands, f64* Data) {
+void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, 
+            const dynamic_array<block>& Subbands, f64* Data) {
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
   mg_Assert(BlockDims <= TileDims);
@@ -357,7 +359,7 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, cons
 
 /* Each tile is 32x32x32, but we encode each block of 16x16x16 independently within a tile */
 void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, 
-                const dynamic_array<Block>& Subbands, cstr FileName) {
+                const dynamic_array<block>& Subbands, cstr FileName) {
   FILE* Fp = fopen(FileName, "wb");
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
@@ -423,7 +425,7 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
 }
 
 void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, 
-                const dynamic_array<Block>& Subbands, f64* Data) {
+                const dynamic_array<block>& Subbands, f64* Data) {
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
   mg_Assert(BlockDims <= TileDims);

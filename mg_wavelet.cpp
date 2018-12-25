@@ -58,7 +58,7 @@ array<u8, 8> SubbandOrders[4] = {
   { 0, 1, 2, 4, 3, 5, 6, 7 } // for 3D
 };
 
-void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<Block>* Subbands) {
+void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<block>* Subbands) {
   mg_Assert(NDims <= 3);
   mg_Assert(N.Z == 1 || NDims == 3);
   mg_Assert(N.Y == 1 || NDims >= 2);
@@ -73,11 +73,11 @@ void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<Block>* Subbands
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
       if (Prod<i64>(Sm) != 0) // child exists
-        PushBack(Subbands, Block{ XyzToI(N, v3i(X, Y, Z) * P), XyzToI(N, Sm) });
+        PushBack(Subbands, block{ XyzToI(N, v3i(X, Y, Z) * P), XyzToI(N, Sm) });
     }
     M = P;
   }
-  PushBack(Subbands, Block{ 0, XyzToI(N, M) });
+  PushBack(Subbands, block{ 0, XyzToI(N, M) });
   Reverse(Begin(*Subbands), End(*Subbands));
 }
 

@@ -28,6 +28,19 @@ struct MinMaxExp {
   int MaxExp;
 };
 
+array<v3i, 2> BoundLevelTest(v3i N, int L) {
+  v3i P(1 << L, 1 << L, 1 << L);
+  v3i MM = (N + P - 1) / P;
+  for (int I = 0; I < L; ++I) {
+    N.X = ((N.X >> 1) << 1) + 1; N.Y = ((N.Y >> 1) << 1) + 1; N.Z = ((N.Z >> 1) << 1) + 1;
+    N.X = (N.X + 1) >> 1; N.Y = (N.Y + 1) >> 1; N.Z = (N.Z + 1) >> 1;
+  }
+  v3i M = N;
+  N.X = ((N.X >> 1) << 1) + 1; N.Y = ((N.Y >> 1) << 1) + 1; N.Z = ((N.Z >> 1) << 1) + 1;
+  mg_Assert(MM == N);
+  return array<v3i, 2>{ M, N };
+}
+
 MinMaxExp GetMinMaxExp(const f64* Data, i64 Size) {
   auto MM = MinMaxElement(Data, Data + Size, [](auto A, auto B) { return fabs(A) < fabs(B); });
   MinMaxExp Result;
@@ -43,6 +56,7 @@ MinMaxExp GetMinMaxExp(const f64* Data, i64 Size) {
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
+  BoundLevelTest(v3i(512, 512, 512), 0);
   SetHandleAbortSignals();
   timer Timer;
   StartTimer(&Timer);
@@ -81,7 +95,7 @@ int main(int Argc, const char** Argv) {
   printf("Mode: %s Precision: %d Accuracy: %17g\n", Mode == 0 ? "Mine" : "Zfp", NBitplanes, Tolerance);
   Cdf53Forward(F, Meta.Dimensions, NLevels, Meta.DataType);
   printf("Wavelet transform time: %lld ms\n", ResetTimer(&Timer));
-  dynamic_array<Block> Subbands;
+  dynamic_array<block> Subbands;
   int NDims = (Meta.Dimensions.X > 1) + (Meta.Dimensions.Y > 1) + (Meta.Dimensions.Z > 1);
   BuildSubbands(NDims, Meta.Dimensions, NLevels, &Subbands);
   v3i TileDims{ 32, 32, 32 }; // TODO: get from the command line
