@@ -52,7 +52,7 @@ int ParentIndex(int Idx) {
 
 /* Also quantize and convert to negabinary, and return the EMax for the block */
 int CopyBlockSamplesMorton(const f64* Data, v3i Dims, int Bits, v3i BlockDims, v3i Pos,
-  f64* BlockData, u64* UIntData, i8* MsbTable) {
+                           f64* BlockData, u64* UIntData, i8* MsbTable) {
   mg_Assert(BlockDims == v3i(16, 16, 16));
   int BlockSize = Prod<int>(BlockDims);
   f64 Max = 0;
@@ -80,8 +80,7 @@ int CopyBlockSamplesMorton(const f64* Data, v3i Dims, int Bits, v3i BlockDims, v
 }
 
 /* Also dequantize and unconvert from negabinary */
-void CopyBlockSamplesInverseMorton(const u64* UIntData, v3i Dims, int Bits, v3i BlockDims, v3i Pos,
-  int EMax, f64* Data) {
+void CopyBlockSamplesInverseMorton(const u64* UIntData, v3i Dims, int Bits, v3i BlockDims, v3i Pos, int EMax, f64* Data) {
   mg_Assert(BlockDims == v3i(16, 16, 16));
   double Scale = 1.0 / ldexp(1, Bits - 1 - EMax);
   auto Mask = Traits<u64>::NegabinaryMask;
@@ -137,9 +136,7 @@ void BuildSignificanceOctree(const i8* MsbTable, v3i BlockDims, int Bitplane, u8
 // Remember the octree does not store the last level (16^3 samples)
 // PrevOctree stores the octree up to the previous bit plane
 // TODO: maybe maintaining a list is faster?
-void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
-  const u8* PrevOctree, const u8* Octree, bitstream* Bs)
-{
+void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, const u8* Octree, bitstream* Bs) {
   mg_Assert(BlockDims == v3i(16, 16, 16));
   int NLevels = NumLevels(Prod<int>(BlockDims));
   mg_Assert(NLevels == 5);
@@ -182,8 +179,7 @@ void EncodeBlock(const u64* Block, v3i BlockDims, int Bitplane,
 }
 
 /* Update the octree as we decode */
-void DecodeBlock(u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, u8* Octree,
-  bitstream* Bs) {
+void DecodeBlock(u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, u8* Octree, bitstream* Bs) {
   mg_Assert(BlockDims == v3i(16, 16, 16));
   int NLevels = NumLevels(Prod<int>(BlockDims));
   mg_Assert(NLevels == 5);
@@ -227,9 +223,7 @@ void DecodeBlock(u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, 
 }
 
 /* Each tile is 32x32x32, but we encode each block of 16x16x16 independently within a tile */
-void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-  const dynamic_array<Block>& Subbands, cstr FileName)
-{
+void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, const dynamic_array<Block>& Subbands, cstr FileName) {
   FILE* Fp = fopen(FileName, "wb");
   timer Timer;
   StartTimer(&Timer);
@@ -299,9 +293,7 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   printf("\n------------------------------------\n");
 }
 
-void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-  const dynamic_array<Block>& Subbands, f64* Data)
-{
+void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, const dynamic_array<Block>& Subbands, f64* Data) {
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
   mg_Assert(BlockDims <= TileDims);
@@ -364,9 +356,8 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
 }
 
 /* Each tile is 32x32x32, but we encode each block of 16x16x16 independently within a tile */
-void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic_array<Block>& Subbands,
-  cstr FileName)
-{
+void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, 
+                const dynamic_array<Block>& Subbands, cstr FileName) {
   FILE* Fp = fopen(FileName, "wb");
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
@@ -379,7 +370,7 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic
   for (int S = 0; S < Size(Subbands); ++S) {
     v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
     v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
-    mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
+    mg_Assert(TileDims <= SubbandDims);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
     for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {
@@ -399,7 +390,8 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic
                 DecodeMorton3Z(BI) * BlockDims.Z + TZ);
           ++NumBlocksEncoded;
           if (Bitplane == Bits) { // only do this once
-            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B, BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
+            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B,
+                                              BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
             Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
           }
           if (Bitplane == Bits) {
@@ -430,9 +422,8 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, const dynamic
   printf("\n------------------------------------\n");
 }
 
-void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_array<Block>& Subbands,
-  f64* Data)
-{
+void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, 
+                const dynamic_array<Block>& Subbands, f64* Data) {
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
   mg_Assert(BlockDims <= TileDims);
@@ -445,7 +436,7 @@ void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_a
   for (int S = 0; S < Size(Subbands); ++S) {
     v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
     v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
-    mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
+    mg_Assert(TileDims <= SubbandDims);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
     for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {
@@ -469,7 +460,8 @@ void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, const dynamic_a
               Block[BI][I] |= Read(&Bs) << Bitplane;
           }
           if (Bitplane == 0)
-            CopyBlockSamplesInverseMorton(Block[BI].Data, Dims, Bits - 1, BlockDims, B, EMaxes[BI], Data);
+            CopyBlockSamplesInverseMorton(Block[BI].Data, Dims, Bits - 1, BlockDims,
+                                          B, EMaxes[BI], Data);
         }
       }
     }}} // end loop through the tiles

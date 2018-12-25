@@ -66,7 +66,7 @@ struct tokenizer {
 }; // struct tokenizer
 
 void Init(tokenizer* Tk, string_ref Input, string_ref Delims = " \n\t");
-string_ref Next(tokenizer* tk);
-void Reset(tokenizer* tk);
+string_ref Next(tokenizer* Tk);
+void Reset(tokenizer* Tk);
 
 } // namespace mg

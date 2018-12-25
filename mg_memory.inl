@@ -1,4 +1,5 @@
 #pragma once
+//TODO: simplify zeroing arrays
 
 #include "mg_types.h"
 

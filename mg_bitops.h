@@ -18,7 +18,7 @@ template <typename t> bool CheckBit(t Val, int I);
 template <typename t> t FlipBit(t Val, int I);
 
 /* Return the bit plane of the most significant one-bit. Counting starts from the least significant
-bit plane. Examples: Bsr(0) = -1, Bsr(2) = 1, Bsr(5) = 2, Bsr(8) = 3 */
+bit plane. Examples: Msb(0) = -1, Msb(2) = 1, Msb(5) = 2, Msb(8) = 3 */
 i8 Msb(u32 v);
 i8 Msb(u64 V);
 

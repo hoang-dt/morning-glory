@@ -37,8 +37,8 @@ void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs) {
     Block[I] += (u64)(X & 1u) << Bitplane;
 }
 
-void EncodeData(const f64* Data, v3i Dims, v3i TileDims, const dynamic_array<Block>& Subbands,
-  cstr FileName, bitstream* Bs) {
+void EncodeData(const f64* Data, v3i Dims, v3i TileDims,
+                const dynamic_array<block>& Subbands, cstr FileName, bitstream* Bs) {
   // TODO: loop through the subbands
   // TODO: error handling
   v3i BlockDims{ 4, 4, 4 }; // zfp block
