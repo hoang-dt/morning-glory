@@ -22,17 +22,21 @@ void ForwardLiftCdf53##x(t* F, v3i N, v3i L) {\
   for (int z = 0; z < M.z; ++z   ) {\
   for (int y = 0; y < M.y; ++y   ) {\
   for (int x = 1; x < M.x; x += 2) {\
-    t FLeft  =               F[mg_Idx##x(x - 1, y, z, N)];\
-    t FRight = x < M.x - 1 ? F[mg_Idx##x(x + 1, y, z, N)] : FLeft;\
-    F[mg_Idx##x(x, y, z, N)] -= (FLeft + FRight) / 2;\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
+    t & Val = F[mg_Idx##x(x, y, z, N)];\
+    Val -= F[mg_Idx##x(XLeft, y, z, N)] / 2;\
+    Val -= F[mg_Idx##x(XRight, y, z, N)] / 2;\
   }}}\
   _Pragma("omp parallel for collapse(2)")\
   for (int z = 0; z < M.z; ++z   ) {\
   for (int y = 0; y < M.y; ++y   ) {\
-  for (int x = 0; x < M.x; x += 2) {\
-    t FLeft  = x > 0       ? F[mg_Idx##x(x - 1, y, z, N)] : F[mg_Idx##x(x + 1, y, z, N)];\
-    t FRight = x < M.x - 1 ? F[mg_Idx##x(x + 1, y, z, N)] : FLeft;\
-    F[mg_Idx##x(x, y, z, N)] += (FLeft + FRight) / 4;\
+  for (int x = 1; x < M.x; x += 2) {\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
+    t Val = F[mg_Idx##x(x, y, z, N)];\
+    F[mg_Idx##x(XLeft, y, z, N)] += Val / 4;\
+    F[mg_Idx##x(XRight, y, z, N)] += Val / 4;\
   }}}\
   mg_HeapArray(Temp, t, M.x / 2);\
   int S##x = (M.x + 1) / 2;\
@@ -79,18 +83,22 @@ void InverseLiftCdf53##x(t* F, v3i N, v3i L) {\
   _Pragma("omp parallel for collapse(2)")\
   for (int z = 0; z < M.z; ++z   ) {\
   for (int y = 0; y < M.y; ++y   ) {\
-  for (int x = 0; x < M.x; x += 2) {\
-    t FLeft  = x > 0       ? F[mg_Idx##x(x - 1, y, z, N)] : F[mg_Idx##x(x + 1, y, z, N)];\
-    t FRight = x < M.x - 1 ? F[mg_Idx##x(x + 1, y, z, N)] : FLeft;\
-    F[mg_Idx##x(x, y, z, N)] -= (FLeft + FRight) / 4;\
+  for (int x = 1; x < M.x; x += 2) {\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
+    t Val = F[mg_Idx##x(x, y, z, N)];\
+    F[mg_Idx##x(XLeft, y, z, N)] -= Val / 4;\
+    F[mg_Idx##x(XRight, y, z, N)] -= Val / 4;\
   }}}\
   _Pragma("omp parallel for collapse(2)")\
   for (int z = 0; z < M.z; ++z   ) {\
   for (int y = 0; y < M.y; ++y   ) {\
   for (int x = 1; x < M.x; x += 2) {\
-    t FLeft  =               F[mg_Idx##x(x - 1, y, z, N)];\
-    t FRight = x < M.x - 1 ? F[mg_Idx##x(x + 1, y, z, N)] : FLeft;\
-    F[mg_Idx##x(x, y, z, N)] += (FLeft + FRight) / 2;\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
+    t & Val = F[mg_Idx##x(x, y, z, N)];\
+    Val += F[mg_Idx##x(XLeft, y, z, N)] / 2;\
+    Val += F[mg_Idx##x(XRight, y, z, N)] / 2;\
   }}}\
 }\
 } // namespace mg
@@ -107,12 +115,10 @@ mg_InverseLiftCdf53(Y, X, Z) // Z inverse lifting
 namespace mg {
 inline array<v3i, 2> BoundLevel(v3i N, int L) {
   for (int I = 0; I < L; ++I) {
-    N.X = ((N.X >> 1) << 1) + 1; N.Y = ((N.Y >> 1) << 1) + 1; N.Z = ((N.Z >> 1) << 1) + 1;
-    N.X = (N.X + 1) >> 1; N.Y = (N.Y + 1) >> 1; N.Z = (N.Z + 1) >> 1;
+    N = ((N / 2) * 2) + 1;
+    N = (N + 1) / 2;
   }
-  v3i M = N;
-  N.X = ((N.X >> 1) << 1) + 1; N.Y = ((N.Y >> 1) << 1) + 1; N.Z = ((N.Z >> 1) << 1) + 1;
-  return array<v3i, 2>{ M, N };
+  return array<v3i,2>{N, (N / 2) * 2 + 1};
 }
 } // namespace mg
 
@@ -121,6 +127,7 @@ inline array<v3i, 2> BoundLevel(v3i N, int L) {
 namespace mg {\
 template <typename t>\
 void ForwardLiftExtrapolateCdf53##x(t* F, v3i N, v3i L) {\
+  v3i NBig(NextPow2(N.X) + 1, NextPow2(N.Y) + 1, NextPow2(N.Z) + 1);\
   auto Bl = BoundLevel(N, L);\
   v3i M = Bl[0], P = Bl[1];\
   /* linear extrapolate */\

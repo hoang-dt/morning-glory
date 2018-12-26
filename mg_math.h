@@ -46,6 +46,8 @@ i8 Log8Floor(int Val);
 
 /* Compute Base^Exp (Exp >= 0) */
 int Pow(int Base, int Exp);
+/* Return the next power of two that is >= the input */
+int NextPow2(int Val);
 
 /* Compute Base^0 + Base^1 + ... + Base^N */
 int GeometricSum(int Base, int N);
