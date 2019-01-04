@@ -10,52 +10,66 @@
 
 namespace mg {
 
-void Cdf53Forward(f64* F, v3i Dimensions, int NLevels, data_type Type) {
+void Cdf53Forward(f64* F, v3i Dims, int NLevels, data_type Type) {
 #define Body(type)\
   type* FPtr = (type*)F;\
   for (int I = 0; I < NLevels; ++I) {\
-    ForwardLiftCdf53X(FPtr, Dimensions, v3i{I, I, I});\
-    ForwardLiftCdf53Y(FPtr, Dimensions, v3i{I, I, I});\
-    ForwardLiftCdf53Z(FPtr, Dimensions, v3i{I, I, I});\
+    ForwardLiftCdf53X(FPtr, Dims, v3i{I, I, I});\
+    ForwardLiftCdf53Y(FPtr, Dims, v3i{I, I, I});\
+    ForwardLiftCdf53Z(FPtr, Dims, v3i{I, I, I});\
   }\
 
   TypeChooser(Type)
 #undef Body
 }
 
-void Cdf53Inverse(f64* F, v3i Dimensions, int NLevels, data_type Type) {
+void Cdf53Inverse(f64* F, v3i Dims, int NLevels, data_type Type) {
 #define Body(type)\
   type* FPtr = (type*)F;\
   for (int I = NLevels - 1; I >= 0; --I) {\
-    InverseLiftCdf53Z(FPtr, Dimensions, v3i{I, I, I});\
-    InverseLiftCdf53Y(FPtr, Dimensions, v3i{I, I, I});\
-    InverseLiftCdf53X(FPtr, Dimensions, v3i{I, I, I});\
+    InverseLiftCdf53Z(FPtr, Dims, v3i{I, I, I});\
+    InverseLiftCdf53Y(FPtr, Dims, v3i{I, I, I});\
+    InverseLiftCdf53X(FPtr, Dims, v3i{I, I, I});\
   }\
 
   TypeChooser(Type)
 #undef Body
 }
 
-void Cdf53ForwardExtrapolate(f64* F, v3i Dimensions, int NLevels, data_type Type) {
+void Cdf53ForwardExtrapolate(volume* Vol, int NLevels, data_type Type) {
 #define Body(type)\
-  type* FPtr = (type*)F;\
+  v3i SmallDims = Extract3Ints(Vol->Block.SmallDims);\
+  v3i BigDims = Extract3Ints(Vol->Block.BigDims);\
+  if (BigDims.Y > 1)\
+    mg_Assert(BigDims.X == BigDims.Y);\
+  if (BigDims.Z > 1)\
+    mg_Assert(BigDims.Y == BigDims.Z);\
+  mg_Assert(IsPow2(BigDims.X - 1));\
+  type* FPtr = (type*)(Vol->Buffer.Data);\
   for (int I = 0; I < NLevels; ++I) {\
-    ForwardLiftExtrapolateCdf53X(FPtr, Dimensions, v3i{I, I, I});\
-    ForwardLiftExtrapolateCdf53Y(FPtr, Dimensions, v3i{I, I, I});\
-    ForwardLiftExtrapolateCdf53Z(FPtr, Dimensions, v3i{I, I, I});\
+    ForwardLiftExtrapolateCdf53X(FPtr, SmallDims, BigDims, v3i{I, I, I});\
+    ForwardLiftExtrapolateCdf53Y(FPtr, SmallDims, BigDims, v3i{I, I, I});\
+    ForwardLiftExtrapolateCdf53Z(FPtr, SmallDims, BigDims, v3i{I, I, I});\
   }\
 
   TypeChooser(Type)
 #undef Body
 }
 
-void Cdf53InverseExtrapolate(f64* F, v3i Dimensions, int NLevels, data_type Type) {
+void Cdf53InverseExtrapolate(volume* Vol, int NLevels, data_type Type) {
 #define Body(type)\
-  type* FPtr = (type*)F;\
+  v3i SmallDims = Extract3Ints(Vol->Block.SmallDims);\
+  v3i BigDims = Extract3Ints(Vol->Block.BigDims);\
+  if (BigDims.Y > 1)\
+    mg_Assert(BigDims.X == BigDims.Y);\
+  if (BigDims.Z > 1)\
+    mg_Assert(BigDims.Y == BigDims.Z);\
+  mg_Assert(IsPow2(BigDims.X - 1));\
+  type* FPtr = (type*)(Vol->Buffer.Data);\
   for (int I = NLevels - 1; I >= 0; --I) {\
-    InverseLiftExtrapolateCdf53Z(FPtr, Dimensions, v3i{I, I, I});\
-    InverseLiftExtrapolateCdf53Y(FPtr, Dimensions, v3i{I, I, I});\
-    InverseLiftExtrapolateCdf53X(FPtr, Dimensions, v3i{I, I, I});\
+    InverseLiftExtrapolateCdf53Z(FPtr, SmallDims, BigDims, v3i{I, I, I});\
+    InverseLiftExtrapolateCdf53Y(FPtr, SmallDims, BigDims, v3i{I, I, I});\
+    InverseLiftExtrapolateCdf53X(FPtr, SmallDims, BigDims, v3i{I, I, I});\
   }\
 
   TypeChooser(Type)

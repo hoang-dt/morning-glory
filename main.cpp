@@ -102,10 +102,8 @@ int main(int Argc, const char** Argv) {
   AllocateBufferZero(&ExpandedF.Buffer, SizeOf(ExpandedF.Type) * NumSamplesBig);
   mg_CleanUp(1, DeallocateBuffer(&ExpandedF.Buffer));
   Copy(&ExpandedF, OriginalF);
-  Cdf53ForwardExtrapolate((f64*)ExpandedF.Buffer.Data,
-                          Extract3Ints(ExpandedF.Block.SmallDims), NLevels, ExpandedF.Type);
-  Cdf53InverseExtrapolate((f64*)ExpandedF.Buffer.Data,
-                          Extract3Ints(ExpandedF.Block.SmallDims), NLevels, ExpandedF.Type);
+  Cdf53ForwardExtrapolate(&ExpandedF, NLevels, ExpandedF.Type);
+  Cdf53InverseExtrapolate(&ExpandedF, NLevels, ExpandedF.Type);
   WriteFile("out.raw", ExpandedF.Buffer);
   puts("Done");
   //buffer BufFClone2 = Clone(BufF);

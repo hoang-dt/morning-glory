@@ -119,19 +119,16 @@ inline array<v3i, 2> DimsAtLevel(v3i N, int L) {
 }
 } // namespace mg
 
-/*  */
 #define mg_ForwardLiftExtrapolateCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-void ForwardLiftExtrapolateCdf53##x(t* F, v3i N, v3i L) {\
+void ForwardLiftExtrapolateCdf53##x(t* F, v3i N, v3i NBig, v3i L) {\
   mg_Assert(L.X == L.Y && L.Y == L.Z);\
-  v3i NBig(NextPow2(N.X) + 1, NextPow2(N.Y) + 1, NextPow2(N.Z) + 1);\
-  int MaxDim = Max(Max(NBig.X, NBig.Y), NBig.Z);\
-  NBig.X = MaxDim; NBig.Y = N.Y > 1 ? MaxDim : 1; NBig.Z = N.Z > 1 ? MaxDim : 1;\
   auto D = DimsAtLevel(N, L.x);\
   /* linearly extrapolate */\
   if (D[0].x < D[1].x) {\
     mg_Assert(D[0].x + 1 == D[1].x);\
+    _Pragma("omp parallel for")\
     for (int z = 0; z < D[1].z; ++z) {\
     for (int y = 0; y < D[1].y; ++y) {\
       t A = F[mg_Idx##x(D[0].x - 2, y, z, NBig)];\
@@ -143,6 +140,7 @@ void ForwardLiftExtrapolateCdf53##x(t* F, v3i N, v3i L) {\
   v3i M = (NBig + P - 1) / P;\
   if (M.x <= 1)\
     return;\
+  _Pragma("omp parallel for collapse(2)")\
   for (int z = 0; z < M.z; ++z   ) {\
   for (int y = 0; y < M.y; ++y   ) {\
   for (int x = 1; x < D[1].x; x += 2) {\
@@ -150,6 +148,7 @@ void ForwardLiftExtrapolateCdf53##x(t* F, v3i N, v3i L) {\
     Val -= F[mg_Idx##x(x - 1, y, z, NBig)] / 2;\
     Val -= F[mg_Idx##x(x + 1, y, z, NBig)] / 2;\
   }}}\
+  _Pragma("omp parallel for collapse(2)")\
   for (int z = 0; z < M.z; ++z   ) {\
   for (int y = 0; y < M.y; ++y   ) {\
   for (int x = 1; x < D[1].x; x += 2) {\
@@ -181,11 +180,9 @@ mg_ForwardLiftExtrapolateCdf53(Y, X, Z) // Z forward lifting
 #define mg_InverseLiftExtrapolateCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-void InverseLiftExtrapolateCdf53##x(t* F, v3i N, v3i L) {\
+void InverseLiftExtrapolateCdf53##x(t* F, v3i N, v3i NBig, v3i L) {\
+  (void)N;\
   mg_Assert(L.X == L.Y && L.Y == L.Z);\
-  v3i NBig(NextPow2(N.X) + 1, NextPow2(N.Y) + 1, NextPow2(N.Z) + 1);\
-  int MaxDim = Max(Max(NBig.X, NBig.Y), NBig.Z);\
-  NBig.X = MaxDim; NBig.Y = N.Y > 1 ? MaxDim : 1; NBig.Z = N.Z > 1 ? MaxDim : 1;\
   return InverseLiftCdf53##x(F, NBig, L);\
 }\
 } // namespace mg
