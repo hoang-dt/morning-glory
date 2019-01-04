@@ -10,7 +10,8 @@ mg_Enum(error_code, int,
   AttributeNotFound,
   OptionNotSupported,
   TypeNotSupported,
-  FileCreateFailed, FileReadFailed, FileWriteFailed, FileOpenFailed, FileCloseFailed, FileSeekFailed, FileTellFailed,
+  FileCreateFailed, FileReadFailed, FileWriteFailed, FileOpenFailed, FileCloseFailed,
+  FileSeekFailed, FileTellFailed,
   ParseFailed,
   OutOfMemory,
   UnknownError
@@ -37,6 +38,7 @@ void PrintStacktrace(printer* Pr, const error& Err);
 } // namespace mg
 
 #define mg_Error(ErrCode, ...)
-#define mg_PropagateError(Error) // Use this to record file and line information in Error when propagating it up the stack
+// Use this to record file and line information in Error when propagating it up the stack
+#define mg_PropagateError(Error) 
 
 #include "mg_error.inl"

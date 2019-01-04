@@ -17,8 +17,8 @@ template <typename t> bool CheckBit(t Val, int I);
 /* Flip the I(th) least significant bit of val. Index starts at 0. */
 template <typename t> t FlipBit(t Val, int I);
 
-/* Return the bit plane of the most significant one-bit. Counting starts from the least significant
-bit plane. Examples: Msb(0) = -1, Msb(2) = 1, Msb(5) = 2, Msb(8) = 3 */
+/* Return the bit plane of the most significant one-bit. Counting starts from the least
+significant bit plane. Examples: Msb(0) = -1, Msb(2) = 1, Msb(5) = 2, Msb(8) = 3 */
 i8 Msb(u32 v);
 i8 Msb(u64 V);
 
@@ -27,6 +27,11 @@ u32 DecodeMorton3X(u32 Code);
 u32 DecodeMorton3Y(u32 Code);
 u32 DecodeMorton3Z(u32 Code);
 u32 EncodeMorton3(u32 X, u32 Y, u32 Z);
+
+/* Stuff three 21-bit uints into one 64-bit uint */
+u64 Stuff3Ints(v3i V);
+/* The inverse of Stuff3Ints */
+v3i Extract3Ints(u64 V);
 
 } // namespace mg
 

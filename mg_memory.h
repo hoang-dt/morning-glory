@@ -14,19 +14,11 @@ namespace mg {
 
 thread_local char ScratchBuffer[1024]; // General purpose buffer for string-related operations
 
-/* Abstract away memory allocations/deallocations */
-void AllocateBuffer(buffer* Buf, i64 Bytes);
-void DeallocateBuffer(buffer* Buf);
-template <typename t>
-void AllocateTypedBuffer(typed_buffer<t>* Buf, i64 Size);
-template <typename t>
-void DeallocateTypedBuffer(typed_buffer<t>* Buf);
-
-void MemCopy(buffer* Dst, const buffer& Src);
-
 /* Quickly declare a heap-allocated array which deallocates itself at the end of scope */
+/* return a typed_buffer */
 #define mg_HeapArray(Name, Type, Size)
-/* e.g. u8* Arr[8] */
+#define mg_HeapArrayZero(Name, Type, Size)
+/* return an array of typed_buffer */
 #define mg_StackArrayOfHeapArrays(Name, Type, StackArraySize, HeapArraySize)
 
 struct allocator {
@@ -105,6 +97,19 @@ static mallocator& Mallocator() {
 }
 
 buffer Clone(buffer Buf, allocator* Alloc = &Mallocator());
+
+/* Abstract away memory allocations/deallocations */
+void AllocateBuffer(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
+void AllocateBufferZero(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
+void DeallocateBuffer(buffer* Buf, allocator* Alloc = &Mallocator());
+template <typename t>
+void AllocateTypedBuffer(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
+template <typename t>
+void DeallocateTypedBuffer(typed_buffer<t>* Buf, allocator* Alloc = &Mallocator());
+
+void ZeroBuffer(buffer* Buf);
+void MemCopy(buffer* Dst, const buffer& Src);
+
 
 } // namespace mg
 

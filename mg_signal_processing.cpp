@@ -1,56 +1,8 @@
 #include <math.h>
 #include "mg_assert.h"
+#include "mg_common_types.h"
 #include "mg_math.h"
 #include "mg_signal_processing.h"
-
-#define TypeChooser(Type)\
-  if (Type == mg::data_type::float64) {\
-    Body(f64)\
-  } else if (Type == mg::data_type::float32) {\
-    Body(f32)\
-  } else if (Type == mg::data_type::int64) {\
-    Body(i64)\
-  } else if (Type == mg::data_type::int32) {\
-    Body(i32)\
-  } else if (Type == mg::data_type::int16) {\
-    Body(i16)\
-  } else if (Type == mg::data_type::int8) {\
-    Body(i8)\
-  } else {\
-    mg_Assert(false, "type not supported");\
-  }
-
-#define TypeChooserInt(Type)\
-  if (Type == mg::data_type::int64) {\
-    Body(i64)\
-  } else if (Type == mg::data_type::int32) {\
-    Body(i32)\
-  } else if (Type == mg::data_type::int16) {\
-    Body(i16)\
-  } else if (Type == mg::data_type::int8) {\
-    Body(i8)\
-  } else {\
-    mg_Assert(false, "type not supported");\
-  }
-
-#define TypeChooserInt32And64(Type)\
-  if (Type == mg::data_type::int64) {\
-    Body(i64)\
-  } else if (Type == mg::data_type::int32) {\
-    Body(i32)\
-  } else {\
-    mg_Assert(false, "type not supported");\
-  }
-
-#define TypeChooserFloat(Type)\
-  if (Type == mg::data_type::float64) {\
-    Body(f64)\
-  } else if (Type == mg::data_type::float32) {\
-    Body(f32)\
-  } else {\
-    mg_Assert(false, "type not supported");\
-  }
-
 namespace mg {
 
 f64 SquaredError(const f64* F, const f64* G, i64 Size, data_type Type) {
@@ -146,7 +98,3 @@ void Dequantize(const i64* FIn, i64 Size, int EMax, int Bits, f64* FOut, data_ty
 
 } // namespace mg
 
-#undef TypeChooser
-#undef TypeChooserInt
-#undef TypeChooserInt32And64
-#undef TypeChooserFloat

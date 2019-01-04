@@ -11,6 +11,7 @@
 #include "mg_wavelet.h"
 #include "mg_timer.h"
 #include "mg_types.h"
+#include "mg_volume.h"
 
 namespace mg {
 
@@ -224,7 +225,7 @@ void DecodeBlock(u64* Block, v3i BlockDims, int Bitplane, const u8* PrevOctree, 
 
 /* Each tile is 32x32x32, but we encode each block of 16x16x16 independently within a tile */
 void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-            const dynamic_array<block>& Subbands, cstr FileName) {
+            const dynamic_array<block_bounds>& Subbands, cstr FileName) {
   FILE* Fp = fopen(FileName, "wb");
   timer Timer;
   StartTimer(&Timer);
@@ -238,8 +239,8 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   int NumBlocksEncoded = 0;
   int ToleranceExp = Exponent(Tolerance);
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
-    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    v3i SubbandPos = Extract3Ints(Subbands[S].Pos);
+    v3i SubbandDims = Extract3Ints(Subbands[S].SmallDims);
     mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
@@ -294,8 +295,8 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   printf("\n------------------------------------\n");
 }
 
-void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, 
-            const dynamic_array<block>& Subbands, f64* Data) {
+void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
+            const dynamic_array<block_bounds>& Subbands, f64* Data) {
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
   mg_Assert(BlockDims <= TileDims);
@@ -309,8 +310,8 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   int NumBlocksDecoded = 0;
   int ToleranceExp = Exponent(Tolerance);
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
-    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    v3i SubbandPos = Extract3Ints(Subbands[S].Pos);
+    v3i SubbandDims = Extract3Ints(Subbands[S].SmallDims);
     mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
@@ -358,8 +359,8 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
 }
 
 /* Each tile is 32x32x32, but we encode each block of 16x16x16 independently within a tile */
-void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits, 
-                const dynamic_array<block>& Subbands, cstr FileName) {
+void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
+                const dynamic_array<block_bounds>& Subbands, cstr FileName) {
   FILE* Fp = fopen(FileName, "wb");
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
@@ -370,8 +371,8 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
   InitWrite(&Bs, Buf);
   int NumBlocksEncoded = 0;
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
-    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    v3i SubbandPos = Extract3Ints(Subbands[S].Pos);
+    v3i SubbandDims = Extract3Ints(Subbands[S].SmallDims);
     mg_Assert(TileDims <= SubbandDims);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
@@ -424,8 +425,8 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
   printf("\n------------------------------------\n");
 }
 
-void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits, 
-                const dynamic_array<block>& Subbands, f64* Data) {
+void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits,
+                const dynamic_array<block_bounds>& Subbands, f64* Data) {
   mg_Assert(TileDims == v3i(32, 32, 32));
   v3i BlockDims(16, 16, 16);
   mg_Assert(BlockDims <= TileDims);
@@ -436,8 +437,8 @@ void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits,
   InitRead(&Bs, Buf);
   int NumBlocksDecoded = 0;
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
-    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    v3i SubbandPos = Extract3Ints(Subbands[S].Pos);
+    v3i SubbandDims = Extract3Ints(Subbands[S].SmallDims);
     mg_Assert(TileDims <= SubbandDims);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {

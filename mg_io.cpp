@@ -51,6 +51,18 @@ error ReadFile(cstr FileName, buffer* Buf) {
   return mg_Error(NoError);
 }
 
-// TODO: write a writeFile function
+error WriteFile(cstr FileName, const buffer& Buf) {
+  mg_Assert(Buf.Data && Buf.Bytes);
+
+  FILE* Fp = fopen(FileName, "wb");
+  mg_CleanUp(0, if (Fp) fclose(Fp));
+  if (!Fp)
+    return mg_Error(FileCreateFailed, "%s", FileName);
+
+  /* Read file contents */
+  if (fwrite(Buf.Data, Buf.Bytes, 1, Fp) != 1)
+    return mg_Error(FileWriteFailed, "%s", FileName);
+  return mg_Error(NoError);
+}
 
 } // namespace mg

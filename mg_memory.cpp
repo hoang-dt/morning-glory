@@ -12,12 +12,29 @@ void MemCopy(buffer* Dst, const buffer& Src) {
   memcpy(Dst->Data, Src.Data, Src.Bytes);
 }
 
-void AllocateBuffer(buffer* Buf, i64 Bytes) {
-  Mallocator().Allocate(Buf, Bytes);
+void ZeroBuffer(buffer* Buf) {
+  mg_Assert(Buf->Data);
+  memset(Buf->Data, 0, Buf->Bytes);
 }
 
-void DeallocateBuffer(buffer* Buf) {
-  Mallocator().Deallocate(Buf);
+void AllocateBuffer(buffer* Buf, i64 Bytes, allocator* Alloc) {
+  Alloc->Allocate(Buf, Bytes);
+}
+
+void AllocateBufferZero(buffer* Buf, i64 Bytes, allocator* Alloc) {
+  mg_Assert(!Buf->Data || Buf->Bytes == 0, "Buffer not freed before allocating new memory");
+  if (Alloc == &Mallocator()) {
+    Buf->Data = (byte*)calloc(Bytes, 1);
+  }  else {
+    AllocateBuffer(Buf, Bytes, Alloc);
+    ZeroBuffer(Buf);
+  }
+  mg_AbortIf(!(Buf->Data), "Out of memory");
+  Buf->Bytes = Bytes;
+}
+
+void DeallocateBuffer(buffer* Buf, allocator* Alloc) {
+  Alloc->Deallocate(Buf);
 }
 
 bool mallocator::Allocate(buffer* Buf, i64 Bytes) {

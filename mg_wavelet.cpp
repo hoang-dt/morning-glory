@@ -1,27 +1,12 @@
 #include "mg_algorithm.h"
 #include "mg_array.h"
 #include "mg_assert.h"
+#include "mg_bitops.h"
 #include "mg_common_types.h"
 #include "mg_math.h"
 #include "mg_types.h"
+#include "mg_volume.h"
 #include "mg_wavelet.h"
-
-#define TypeChooser(Type)\
-  if (Type == mg::data_type::float64) {\
-    Body(f64)\
-  } else if (Type == mg::data_type::float32) {\
-    Body(f32)\
-  } else if (Type == mg::data_type::int64) {\
-    Body(i64)\
-  } else if (Type == mg::data_type::int32) {\
-    Body(i32)\
-  } else if (Type == mg::data_type::int16) {\
-    Body(i16)\
-  } else if (Type == mg::data_type::int8) {\
-    Body(i8)\
-  } else {\
-    mg_Assert(false, "type not supported");\
-  }
 
 namespace mg {
 
@@ -51,6 +36,32 @@ void Cdf53Inverse(f64* F, v3i Dimensions, int NLevels, data_type Type) {
 #undef Body
 }
 
+void Cdf53ForwardExtrapolate(f64* F, v3i Dimensions, int NLevels, data_type Type) {
+#define Body(type)\
+  type* FPtr = (type*)F;\
+  for (int I = 0; I < NLevels; ++I) {\
+    ForwardLiftExtrapolateCdf53X(FPtr, Dimensions, v3i{I, I, I});\
+    ForwardLiftExtrapolateCdf53Y(FPtr, Dimensions, v3i{I, I, I});\
+    ForwardLiftExtrapolateCdf53Z(FPtr, Dimensions, v3i{I, I, I});\
+  }\
+
+  TypeChooser(Type)
+#undef Body
+}
+
+void Cdf53InverseExtrapolate(f64* F, v3i Dimensions, int NLevels, data_type Type) {
+#define Body(type)\
+  type* FPtr = (type*)F;\
+  for (int I = NLevels - 1; I >= 0; --I) {\
+    InverseLiftExtrapolateCdf53Z(FPtr, Dimensions, v3i{I, I, I});\
+    InverseLiftExtrapolateCdf53Y(FPtr, Dimensions, v3i{I, I, I});\
+    InverseLiftExtrapolateCdf53X(FPtr, Dimensions, v3i{I, I, I});\
+  }\
+
+  TypeChooser(Type)
+#undef Body
+}
+
 array<u8, 8> SubbandOrders[4] = {
   { 127, 127, 127, 127, 127, 127, 127, 127 }, // not used
   { 0, 1, 127, 127, 127, 127, 127, 127 }, // for 1D
@@ -58,7 +69,7 @@ array<u8, 8> SubbandOrders[4] = {
   { 0, 1, 2, 4, 3, 5, 6, 7 } // for 3D
 };
 
-void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<block>* Subbands) {
+void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<block_bounds>* Subbands) {
   mg_Assert(NDims <= 3);
   mg_Assert(N.Z == 1 || NDims == 3);
   mg_Assert(N.Y == 1 || NDims >= 2);
@@ -73,14 +84,13 @@ void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<block>* Subbands
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
       if (Prod<i64>(Sm) != 0) // child exists
-        PushBack(Subbands, block{ XyzToI(N, v3i(X, Y, Z) * P), XyzToI(N, Sm) });
+        PushBack(Subbands, block_bounds(v3i(X, Y, Z) * P, Sm, N));
     }
     M = P;
   }
-  PushBack(Subbands, block{ 0, XyzToI(N, M) });
+  PushBack(Subbands, block_bounds(v3i(0, 0, 0), M, N));
   Reverse(Begin(*Subbands), End(*Subbands));
 }
 
 } // namespace mg
 
-#undef TypeChooser

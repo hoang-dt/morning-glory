@@ -29,24 +29,7 @@ void Reset(printer* Pr, FILE* File);
 initialized in advance, in which case the existing memory will be reused if the file can fit
 in it. The caller is responsible to deallocate the memory. */
 error ReadFile(cstr FileName, buffer* Buf);
-
-/* Write a binary raw file to disk */
-// Error write_raw(const char* file_name, const byte* buf, int64_t size) {
-//   FILE* fp = fopen(file_name,"wb");
-//   if (!fp) {
-//     if (fp) fclose(fp);
-//     return mg_ErrorFmt(FileNotFound);
-//   }
-//   if (fwrite(buf, size, 1, fp) != 1) {
-//     if (fp) fclose(fp);
-//     return mg_ErrorFmt(FileWriteFailed);
-//   }
-//   if (fp) {
-//     if (fclose(fp))
-//       return mg_ErrorFmt(FileCloseFailed);
-//   }
-//   return true;
-// }
+error WriteFile(cstr FileName, const buffer& Buf);
 
 // /* Write a list of values to a text file */
 // template <typename T>

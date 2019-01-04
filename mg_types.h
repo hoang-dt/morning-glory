@@ -87,15 +87,24 @@ struct v3;
 // using v3f  = v3<f32>;
 // using v3d  = v3<f64>;
 
+template <typename t>
+struct typed_buffer;
+
 struct buffer {
   byte* Data = nullptr;
   i64 Bytes = 0;
+  buffer();
+  buffer(byte* Data, i64 Bytes);
+  template<typename t> buffer(typed_buffer<t> Buf);
 };
 
 template <typename t>
 struct typed_buffer {
   t* Data = nullptr;
   i64 Size = 0;
+  typed_buffer();
+  typed_buffer(t* Data, i64 Size);
+  typed_buffer(buffer Buf);
   t& operator[](i64 Idx);
   const t& operator[](i64 Idx) const;
 };

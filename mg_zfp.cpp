@@ -9,6 +9,7 @@
 #include "mg_signal_processing.h"
 #include "mg_timer.h"
 #include "mg_types.h"
+#include "mg_volume.h"
 #include "mg_wavelet.h"
 #include "mg_zfp.h"
 
@@ -38,7 +39,7 @@ void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs) {
 }
 
 void EncodeData(const f64* Data, v3i Dims, v3i TileDims,
-                const dynamic_array<block>& Subbands, cstr FileName, bitstream* Bs) {
+                const dynamic_array<block_bounds>& Subbands, cstr FileName, bitstream* Bs) {
   // TODO: loop through the subbands
   // TODO: error handling
   v3i BlockDims{ 4, 4, 4 }; // zfp block
@@ -50,8 +51,8 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims,
   // TODO: run the loop in parallel?
   /* loop through the subbands */
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
-    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    v3i SubbandPos = Extract3Ints(Subbands[S].Pos);
+    v3i SubbandDims = Extract3Ints(Subbands[S].SmallDims);
     /* loop through the tiles */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
     for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {
@@ -121,7 +122,7 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims,
 }
 
 void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-               const dynamic_array<block>& Subbands, bitstream* Bs) {
+               const dynamic_array<block_bounds>& Subbands, bitstream* Bs) {
   timer Timer;
   StartTimer(&Timer);
   // TODO: loop through the subbands
@@ -132,8 +133,8 @@ void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   int ToleranceExp = Exponent(Tolerance);
   /* loop through the subbands */
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
-    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    v3i SubbandPos = Extract3Ints(Subbands[S].Pos);
+    v3i SubbandDims = Extract3Ints(Subbands[S].SmallDims);
     /* loop through the tiles */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
     for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {
@@ -198,7 +199,7 @@ void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
 }
 
 void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-               const dynamic_array<block>& Subbands, bitstream* Bs)
+               const dynamic_array<block_bounds>& Subbands, bitstream* Bs)
 {
   // TODO: use many different bit streams
   timer Timer;
@@ -207,11 +208,10 @@ void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   InitRead(Bs, Bs->Stream);
   v3i BlockDims{ 4, 4, 4 };
   v3i NumBlocks = ((TileDims + BlockDims) - 1) / BlockDims;
-  v3i NumTiles = (Dims + TileDims - 1) / TileDims;
   int ToleranceExp = Exponent(Tolerance);
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = IToXyz(Subbands[S].Pos, Dims);
-    v3i SubbandDims = IToXyz(Subbands[S].Size, Dims);
+    v3i SubbandPos = Extract3Ints(Subbands[S].Pos);
+    v3i SubbandDims = Extract3Ints(Subbands[S].SmallDims);
     /* loop through the tiles */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
     for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {

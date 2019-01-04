@@ -107,4 +107,14 @@ u32 EncodeMorton3(u32 X, u32 Y, u32 Z) {
   return SplitBy2(X) | (SplitBy2(Y) << 1) | (SplitBy2(Z) << 2);
 }
 
+mg_ForceInline
+u64 Stuff3Ints(v3i V) {
+  return u64(V.X) + (u64(V.Y) << 21) + (u64(V.Z) << 42);
+}
+
+mg_ForceInline
+v3i Extract3Ints(u64 V) {
+  return v3i(V & 0x1FFFFF, (V & 0x3FFFFE00000) >> 21, (V & 0x7FFFFC0000000000ull) >> 42);
+}
+
 } // namespace mg

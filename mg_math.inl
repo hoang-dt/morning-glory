@@ -45,19 +45,6 @@ int Exponent(t Val) {
   return -Traits<t>::ExponentBias;
 }
 
-mg_ForceInline
-i64 XyzToI(v3i N, v3i P) {
-  return i64(P.Z) * N.X * N.Y + i64(P.Y) * N.X + P.X;
-}
-
-mg_ForceInline
-v3i IToXyz(i64 I, v3i N) {
-  i32 Z = I / (N.X * N.Y);
-  i32 X = I % N.X;
-  i32 Y = (I - i64(Z) * (N.X * N.Y)) / N.X;
-  return v3i(X, Y, Z);
-}
-
 template <typename t, typename u> mg_ForceInline
 t Prod(v3<u> Vec) {
   return t(Vec.X) * t(Vec.Y) * t(Vec.Z);

@@ -94,6 +94,16 @@ TemplateArr mg_ForceInline t* ConstReverseEnd(const array<t, N>& A) { return &A.
 TemplateArr mg_ForceInline int Size(array<t, N>&) { return N; }
 #undef TemplateArr
 
+mg_ForceInline buffer::buffer() = default;
+mg_ForceInline buffer::buffer(byte* Data, i64 Bytes) : Data(Data), Bytes(Bytes) {}
+template<typename t> mg_ForceInline
+buffer::buffer(typed_buffer<t> Buf) : Data(Buf.Data), Bytes(Buf.Size * sizeof(t)) {}
+
+template <typename t> mg_ForceInline typed_buffer<t>::typed_buffer() = default;
+template <typename t> mg_ForceInline
+typed_buffer<t>::typed_buffer(t* Data, i64 Size) : Data(Data), Size(Size) {}
+template <typename t> mg_ForceInline
+typed_buffer<t>::typed_buffer(buffer Buf) : Data((t*)Buf.Data), Size(Buf.Bytes / sizeof(t)) {}
 template <typename t> mg_ForceInline
 t& typed_buffer<t>::operator[](i64 Idx) { assert(Idx < Size); return Data[Idx]; }
 template <typename t> mg_ForceInline
