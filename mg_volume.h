@@ -6,19 +6,24 @@
 
 namespace mg {
 
-struct block_bounds {
+struct extent {
   u64 Pos;
-  u64 SmallDims;
-  u64 BigDims;
-  block_bounds();
-  block_bounds(v3i SmallDims, v3i BigDims);
-  block_bounds(v3i Pos, v3i SmallDims, v3i BigDims);
+  u64 Dims;
+  extent();
+  extent(v3i Dims);
+  extent(v3i Pos, v3i Dims);
 };
 
 struct volume {
   buffer Buffer;
-  block_bounds Block;
+  u64 Dims;
   data_type Type;
+};
+
+struct sub_volume : public volume {
+  extent Extent;
+  sub_volume();
+  sub_volume(volume Vol);
 };
 
 i64 XyzToI(v3i N, v3i P);

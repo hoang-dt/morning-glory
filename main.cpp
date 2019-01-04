@@ -89,19 +89,20 @@ int main(int Argc, const char** Argv) {
   mg_CleanUp(0, DeallocateBuffer(&OriginalF.Buffer));
   Ok = ReadVolume(Meta.File, Meta.Dims, Meta.DataType, &OriginalF);
   mg_AbortIf(!Ok, "%s", ToString(Ok));
-  volume ExpandedF; // resize original function so that each dimension is 2^N + 1
+  sub_volume ExpandedF; // resize original function so that each dimension is 2^N + 1
   v3i BigDims(NextPow2(Meta.Dims.X) + 1, NextPow2(Meta.Dims.Y) + 1, NextPow2(Meta.Dims.Z) + 1);
   int MaxDim = Max(Max(BigDims.X, BigDims.Y), BigDims.Z);
   BigDims.X = MaxDim;
   BigDims.Y = Meta.Dims.Y > 1 ? MaxDim : 1;
   BigDims.Z = Meta.Dims.Z > 1 ? MaxDim : 1;
   printf("Big dims: %d %d %d\n", BigDims.X, BigDims.Y, BigDims.Z);
-  ExpandedF.Block = block_bounds(Meta.Dims, BigDims);
+  ExpandedF.Dims = Stuff3Ints(BigDims);
+  ExpandedF.Extent = extent(Meta.Dims);
   ExpandedF.Type = OriginalF.Type;
-  i64 NumSamplesBig = Prod<i64>(Extract3Ints(ExpandedF.Block.BigDims));
+  i64 NumSamplesBig = Prod<i64>(Extract3Ints(ExpandedF.Dims));
   AllocateBufferZero(&ExpandedF.Buffer, SizeOf(ExpandedF.Type) * NumSamplesBig);
   mg_CleanUp(1, DeallocateBuffer(&ExpandedF.Buffer));
-  Copy(&ExpandedF, OriginalF);
+  Copy(&ExpandedF, sub_volume(OriginalF));
   Cdf53ForwardExtrapolate(&ExpandedF, NLevels, ExpandedF.Type);
   Cdf53InverseExtrapolate(&ExpandedF, NLevels, ExpandedF.Type);
   WriteFile("out.raw", ExpandedF.Buffer);

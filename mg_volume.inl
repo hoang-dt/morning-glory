@@ -6,19 +6,24 @@
 namespace mg {
 
 mg_ForceInline
-block_bounds::block_bounds() = default;
+extent::extent() = default;
 
 mg_ForceInline
-block_bounds::block_bounds(v3i SmallDims, v3i BigDims)
+extent::extent(v3i Dims)
   : Pos(Stuff3Ints(v3i(0, 0, 0)))
-  , SmallDims(Stuff3Ints(SmallDims))
-  , BigDims(Stuff3Ints(BigDims)) {}
+  , Dims(Stuff3Ints(Dims)) {}
 
 mg_ForceInline
-block_bounds::block_bounds(v3i Pos, v3i SmallDims, v3i BigDims)
+extent::extent(v3i Pos, v3i Dims)
   : Pos(Stuff3Ints(Pos))
-  , SmallDims(Stuff3Ints(SmallDims))
-  , BigDims(Stuff3Ints(BigDims)) {}
+  , Dims(Stuff3Ints(Dims)) {}
+
+mg_ForceInline
+sub_volume::sub_volume() = default;
+mg_ForceInline
+sub_volume::sub_volume(volume Vol)
+  : volume(Vol)
+  , Extent(v3i(0, 0, 0), Extract3Ints(Vol.Dims)) {}
 
 mg_ForceInline
 i64 XyzToI(v3i N, v3i P) {

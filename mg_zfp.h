@@ -2,7 +2,9 @@
 
 #pragma once
 
+#include "mg_bitstream.h"
 #include "mg_types.h"
+#include "mg_volume.h"
 
 namespace mg {
 
@@ -32,21 +34,19 @@ void PadBlock(t* P, int N, int S);
 
 /* Encode a single bit plane of a single zfp block */
 // TODO: turn this into a template?
-struct bitstream;
 void EncodeBlock(const u64* Block, int Bitplane, int& N, bitstream* Bs);
 /* Decode a single bit plane of a single zfp block */
 // TODO: pointer aliasing?
 void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs);
 
-struct block_bounds;
 template <typename t> struct dynamic_array;
-void EncodeData(const f64* Data, v3i Dims, v3i TileDims, 
-                const dynamic_array<block_bounds>& Subbands, cstr FileName, bitstream* Bs);
+void EncodeData(const f64* Data, v3i Dims, v3i TileDims,
+                const dynamic_array<extent>& Subbands, cstr FileName, bitstream* Bs);
 void DecodeData(f64* Data, v3i Dims, v3i TileDims);
 void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-               const dynamic_array<block_bounds>& Subbands, bitstream* Bs);
-void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance, 
-               const dynamic_array<block_bounds>& Subbands, bitstream* Bs);
+               const dynamic_array<extent>& Subbands, bitstream* Bs);
+void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
+               const dynamic_array<extent>& Subbands, bitstream* Bs);
 
 } // namespace mg
 

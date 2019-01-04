@@ -36,10 +36,10 @@ void Cdf53Inverse(f64* F, v3i Dims, int NLevels, data_type Type) {
 #undef Body
 }
 
-void Cdf53ForwardExtrapolate(volume* Vol, int NLevels, data_type Type) {
+void Cdf53ForwardExtrapolate(sub_volume* Vol, int NLevels, data_type Type) {
 #define Body(type)\
-  v3i SmallDims = Extract3Ints(Vol->Block.SmallDims);\
-  v3i BigDims = Extract3Ints(Vol->Block.BigDims);\
+  v3i SmallDims = Extract3Ints(Vol->Extent.Dims);\
+  v3i BigDims = Extract3Ints(Vol->Dims);\
   if (BigDims.Y > 1)\
     mg_Assert(BigDims.X == BigDims.Y);\
   if (BigDims.Z > 1)\
@@ -56,10 +56,10 @@ void Cdf53ForwardExtrapolate(volume* Vol, int NLevels, data_type Type) {
 #undef Body
 }
 
-void Cdf53InverseExtrapolate(volume* Vol, int NLevels, data_type Type) {
+void Cdf53InverseExtrapolate(sub_volume* Vol, int NLevels, data_type Type) {
 #define Body(type)\
-  v3i SmallDims = Extract3Ints(Vol->Block.SmallDims);\
-  v3i BigDims = Extract3Ints(Vol->Block.BigDims);\
+  v3i SmallDims = Extract3Ints(Vol->Extent.Dims);\
+  v3i BigDims = Extract3Ints(Vol->Dims);\
   if (BigDims.Y > 1)\
     mg_Assert(BigDims.X == BigDims.Y);\
   if (BigDims.Z > 1)\
@@ -83,7 +83,7 @@ array<u8, 8> SubbandOrders[4] = {
   { 0, 1, 2, 4, 3, 5, 6, 7 } // for 3D
 };
 
-void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<block_bounds>* Subbands) {
+void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subbands) {
   mg_Assert(NDims <= 3);
   mg_Assert(N.Z == 1 || NDims == 3);
   mg_Assert(N.Y == 1 || NDims >= 2);
@@ -98,11 +98,11 @@ void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<block_bounds>* S
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
       if (Prod<i64>(Sm) != 0) // child exists
-        PushBack(Subbands, block_bounds(v3i(X, Y, Z) * P, Sm, N));
+        PushBack(Subbands, extent(v3i(X, Y, Z) * P, Sm));
     }
     M = P;
   }
-  PushBack(Subbands, block_bounds(v3i(0, 0, 0), M, N));
+  PushBack(Subbands, extent(v3i(0, 0, 0), M));
   Reverse(Begin(*Subbands), End(*Subbands));
 }
 

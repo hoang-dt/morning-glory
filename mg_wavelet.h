@@ -26,13 +26,13 @@ void Cdf53Forward(f64* F, v3i Dims, int NLevels,
                   data_type Type = data_type::float64);
 void Cdf53Inverse(f64* F, v3i Dims, int NLevels,
                   data_type Type = data_type::float64);
-void Cdf53ForwardExtrapolate(volume* Vol, int NLevels, data_type Type = data_type::float64);
-void Cdf53InverseExtrapolate(volume* Vol, int NLevels, data_type Type = data_type::float64);
+void Cdf53ForwardExtrapolate(sub_volume* Vol, int NLevels, data_type Type = data_type::float64);
+void Cdf53InverseExtrapolate(sub_volume* Vol, int NLevels, data_type Type = data_type::float64);
 
 template <typename t>
 struct dynamic_array;
-struct block_bounds;
-void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<block_bounds>* Subbands);
+struct extent;
+void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subbands);
 
 } // namespace mg
 
