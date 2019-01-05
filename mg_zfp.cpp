@@ -86,7 +86,8 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims,
             }}} /* end loop through the samples in each block */
             // TODO: figure out the number of bit planes to encode (range expansion issues)
             // TODO: add support for fixed accuracy coding
-            int EMax = Quantize(&FloatTile[K], Prod<i32>(BlockDims), 52, &IntTile[K], data_type::float64);
+            int EMax = Quantize(&FloatTile[K], Prod<i32>(BlockDims), 52,
+                                &IntTile[K], data_type::float64);
             // TODO: for now we don't care if the exponent is 2047 which represents Inf or NaN
             Write(Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
             // TODO: padding?
@@ -121,6 +122,93 @@ void EncodeData(const f64* Data, v3i Dims, v3i TileDims,
   } /* end loop through the subbands */
 }
 
+void DecodeData(f64* Data, v3i Dims, v3i TileDims) {
+  // TODO: use many different bit streams
+  FILE* Fp = fopen("compressed.raw", "rb");
+  v3i BlockDims{ 4, 4, 4 };
+  v3i NumTiles = (Dims + TileDims - 1) / TileDims;
+  // fseek(Fp, sizeof(void*) * Prod<i64>(NumTiles), SEEK_SET); // reserve space for the tile pointers
+  mg_HeapArray(TilePointers, size_t, Prod<i64>(NumTiles));
+  fread(TilePointers.Data, sizeof(size_t) * Prod<i64>(NumTiles), 1, Fp);
+  v3i NumBlocks = ((TileDims + BlockDims) - 1) / BlockDims;
+  for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
+  for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
+  for (int TX = 0; TX < Dims.X; TX += TileDims.X) {
+    i64 TileId = XyzToI(NumTiles, v3i{ TX, TY, TZ } / TileDims);
+    // TODO: use the freelist allocator
+    // TODO: use aligned memory allocation
+    // TODO: try reusing the memory buffer
+    mg_HeapArray(FloatTile, f64, Prod<i64>(TileDims));
+    mg_HeapArray(IntTile, i64, Prod<i64>(TileDims));
+    mg_HeapArray(UIntTile, u64, Prod<i64>(TileDims));
+    memset(UIntTile.Data, 0, sizeof(u64) * Prod<i64>(TileDims));
+    mg_HeapArray(Ns, int, Prod<i64>(NumBlocks));
+    memset(Ns.Data, 0, sizeof(int) * Prod<i64>(NumBlocks));
+    mg_HeapArray(EMaxes, int, Prod<i64>(NumBlocks));
+    mg_FSeek(Fp, TilePointers[TileId], SEEK_SET);
+    int NumChunks = 0;
+    fread(&NumChunks, sizeof(NumChunks), 1, Fp);
+    short ChunkBytes[64] = { 0 };
+    fread(ChunkBytes, sizeof(ChunkBytes[0]) * NumChunks, 1, Fp);
+    /* compute the total size of the chunks */
+    size_t TotalChunkSize = 0;
+    for (int I = 0; I < NumChunks; ++I) {
+      TotalChunkSize += ChunkBytes[I];
+    }
+    mg_FSeek(Fp, TilePointers[TileId] - TotalChunkSize, SEEK_SET);
+    dynamic_array<byte> Buf;
+    Resize(&Buf, ChunkBytes[0]);
+    // fprintf(stderr, "0 (%ld)", ftell(Fp));
+    fread(Buf.Buffer.Data, ChunkBytes[0], 1, Fp);
+    bitstream Bs;
+    InitRead(&Bs, Buf.Buffer);
+    int ChunkId = 0;
+    for (int Bitplane = 63; Bitplane >= 0; --Bitplane) {
+      for (int BZ = 0; BZ < TileDims.Z; BZ += BlockDims.Z) { /* loop through zfp blocks */
+      for (int BY = 0; BY < TileDims.Y; BY += BlockDims.Y) {
+      for (int BX = 0; BX < TileDims.X; BX += BlockDims.X) {
+        i64 BlockId = XyzToI(NumBlocks, v3i{ BX, BY, BZ } / BlockDims);
+        if (Bitplane == 63) {
+          int EMax = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
+          EMaxes[BlockId] = EMax; // save EMax here
+        }
+        int& N = Ns[BlockId];
+        i64 K = XyzToI(NumBlocks, v3i{ BX, BY, BZ } / BlockDims) * Prod<i32>(BlockDims);
+        DecodeBlock(&UIntTile[K], Bitplane, N, &Bs);
+        if (Bitplane == 0) { // copy data back in the last loop iteratoin
+          InverseShuffle(&UIntTile[K], &IntTile[K]);
+          InverseBlockTransform(&IntTile[K]);
+          Dequantize(&IntTile[K], Prod<i32>(BlockDims), EMaxes[BlockId], 52,
+                     &FloatTile[K], data_type::float64); // TODO: 64 bit planes?
+          for (int Z = 0; Z < BlockDims.Z; ++Z) { /* loop through each block */
+          for (int Y = 0; Y < BlockDims.Y; ++Y) {
+          for (int X = 0; X < BlockDims.X; ++X) {
+            i64 I = XyzToI(Dims, v3i{ TX + BX + X, TY + BY + Y, TZ + BZ + Z });
+            i64 J = K + XyzToI(BlockDims, v3i{ X, Y, Z });
+            Data[I] = FloatTile[J]; // copy data to the local tile buffer
+          }}}
+        }
+        /* read the next chunk if necessary */
+        if (BlockId + 1 == Prod<i32>(NumBlocks)) {
+          if (Size(&Bs) >= 4096 || Bitplane == 0) {
+            if (ChunkId < NumChunks - 1) {
+              // fprintf(stderr, "%d ", ChunkId + 1);
+              Resize(&Buf, ChunkBytes[++ChunkId]);
+              // fprintf(stderr, "(%ld)", ftell(Fp));
+              fread(Buf.Buffer.Data, ChunkBytes[ChunkId], 1, Fp);
+              InitRead(&Bs, Buf.Buffer);
+            }
+          }
+        }
+      }}} /* end loop through each block */
+    } // end loop through the bit planes
+    // fprintf(stderr, "\n");
+    // TODO: padding?
+  }}} /* end loop through the tiles */
+  fclose(Fp);
+}
+
+/* The "simple" version */
 void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
                const dynamic_array<extent>& Subbands, bitstream* Bs) {
   timer Timer;
@@ -170,7 +258,8 @@ void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
             }}} /* end loop through the samples in each block */
             // TODO: figure out the number of bit planes to encode (range expansion issues)
             // TODO: add support for fixed accuracy coding
-            int EMax = Quantize(&FloatTile[K], Prod<i32>(BlockDims), Bits - 1, &IntTile[K], data_type::float64);
+            int EMax = Quantize(&FloatTile[K], Prod<i32>(BlockDims), Bits - 1,
+                                &IntTile[K], data_type::float64);
             EMaxes[BI] = EMax;
             // TODO: for now we don't care if the exponent is 2047 which represents Inf or NaN
             if (Bits - Bitplane <= EMaxes[BI] - ToleranceExp + 1) {
@@ -250,7 +339,8 @@ void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
           if (Bitplane == 0) { // copy data back in the last loop iteratoin
             InverseShuffle(&UIntTile[K], &IntTile[K]);
             InverseBlockTransform(&IntTile[K]);
-            Dequantize(&IntTile[K], Prod<i32>(BlockDims), EMaxes[BI], Bits - 1, &FloatTile[K], data_type::float64); // TODO: 64 bit planes?
+            Dequantize(&IntTile[K], Prod<i32>(BlockDims), EMaxes[BI], Bits - 1,
+                       &FloatTile[K], data_type::float64); // TODO: 64 bit planes?
             for (int Z = 0; Z < BlockDims.Z; ++Z) { /* loop through each block */
             for (int Y = 0; Y < BlockDims.Y; ++Y) {
             for (int X = 0; X < BlockDims.X; ++X) {
@@ -266,91 +356,6 @@ void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
     }}} /* end loop through the tiles */
   }
   printf("Decoding time: %f s\n", ResetTimer(&Timer) / 1000.0);
-}
-
-void DecodeData(f64* Data, v3i Dims, v3i TileDims) {
-  // TODO: use many different bit streams
-  FILE* Fp = fopen("compressed.raw", "rb");
-  v3i BlockDims{ 4, 4, 4 };
-  v3i NumTiles = (Dims + TileDims - 1) / TileDims;
-  // fseek(Fp, sizeof(void*) * Prod<i64>(NumTiles), SEEK_SET); // reserve space for the tile pointers
-  mg_HeapArray(TilePointers, size_t, Prod<i64>(NumTiles));
-  fread(TilePointers.Data, sizeof(size_t) * Prod<i64>(NumTiles), 1, Fp);
-  v3i NumBlocks = ((TileDims + BlockDims) - 1) / BlockDims;
-  for (int TZ = 0; TZ < Dims.Z; TZ += TileDims.Z) { /* loop through the tiles */
-  for (int TY = 0; TY < Dims.Y; TY += TileDims.Y) {
-  for (int TX = 0; TX < Dims.X; TX += TileDims.X) {
-    i64 TileId = XyzToI(NumTiles, v3i{ TX, TY, TZ } / TileDims);
-    // TODO: use the freelist allocator
-    // TODO: use aligned memory allocation
-    // TODO: try reusing the memory buffer
-    mg_HeapArray(FloatTile, f64, Prod<i64>(TileDims));
-    mg_HeapArray(IntTile, i64, Prod<i64>(TileDims));
-    mg_HeapArray(UIntTile, u64, Prod<i64>(TileDims));
-    memset(UIntTile.Data, 0, sizeof(u64) * Prod<i64>(TileDims));
-    mg_HeapArray(Ns, int, Prod<i64>(NumBlocks));
-    memset(Ns.Data, 0, sizeof(int) * Prod<i64>(NumBlocks));
-    mg_HeapArray(EMaxes, int, Prod<i64>(NumBlocks));
-    mg_FSeek(Fp, TilePointers[TileId], SEEK_SET);
-    int NumChunks = 0;
-    fread(&NumChunks, sizeof(NumChunks), 1, Fp);
-    short ChunkBytes[64] = { 0 };
-    fread(ChunkBytes, sizeof(ChunkBytes[0]) * NumChunks, 1, Fp);
-    /* compute the total size of the chunks */
-    size_t TotalChunkSize = 0;
-    for (int I = 0; I < NumChunks; ++I) {
-      TotalChunkSize += ChunkBytes[I];
-    }
-    mg_FSeek(Fp, TilePointers[TileId] - TotalChunkSize, SEEK_SET);
-    dynamic_array<byte> Buf;
-    Resize(&Buf, ChunkBytes[0]);
-    // fprintf(stderr, "0 (%ld)", ftell(Fp));
-    fread(Buf.Buffer.Data, ChunkBytes[0], 1, Fp);
-    bitstream Bs;
-    InitRead(&Bs, Buf.Buffer);
-    int ChunkId = 0;
-    for (int Bitplane = 63; Bitplane >= 0; --Bitplane) {
-      for (int BZ = 0; BZ < TileDims.Z; BZ += BlockDims.Z) { /* loop through zfp blocks */
-      for (int BY = 0; BY < TileDims.Y; BY += BlockDims.Y) {
-      for (int BX = 0; BX < TileDims.X; BX += BlockDims.X) {
-        i64 BlockId = XyzToI(NumBlocks, v3i{ BX, BY, BZ } / BlockDims);
-        if (Bitplane == 63) {
-          int EMax = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
-          EMaxes[BlockId] = EMax; // save EMax here
-        }
-        int& N = Ns[BlockId];
-        i64 K = XyzToI(NumBlocks, v3i{ BX, BY, BZ } / BlockDims) * Prod<i32>(BlockDims);
-        DecodeBlock(&UIntTile[K], Bitplane, N, &Bs);
-        if (Bitplane == 0) { // copy data back in the last loop iteratoin
-          InverseShuffle(&UIntTile[K], &IntTile[K]);
-          InverseBlockTransform(&IntTile[K]);
-          Dequantize(&IntTile[K], Prod<i32>(BlockDims), EMaxes[BlockId], 52, &FloatTile[K], data_type::float64); // TODO: 64 bit planes?
-          for (int Z = 0; Z < BlockDims.Z; ++Z) { /* loop through each block */
-          for (int Y = 0; Y < BlockDims.Y; ++Y) {
-          for (int X = 0; X < BlockDims.X; ++X) {
-            i64 I = XyzToI(Dims, v3i{ TX + BX + X, TY + BY + Y, TZ + BZ + Z });
-            i64 J = K + XyzToI(BlockDims, v3i{ X, Y, Z });
-            Data[I] = FloatTile[J]; // copy data to the local tile buffer
-          }}}
-        }
-        /* read the next chunk if necessary */
-        if (BlockId + 1 == Prod<i32>(NumBlocks)) {
-          if (Size(&Bs) >= 4096 || Bitplane == 0) {
-            if (ChunkId < NumChunks - 1) {
-              // fprintf(stderr, "%d ", ChunkId + 1);
-              Resize(&Buf, ChunkBytes[++ChunkId]);
-              // fprintf(stderr, "(%ld)", ftell(Fp));
-              fread(Buf.Buffer.Data, ChunkBytes[ChunkId], 1, Fp);
-              InitRead(&Bs, Buf.Buffer);
-            }
-          }
-        }
-      }}} /* end loop through each block */
-    } // end loop through the bit planes
-    // fprintf(stderr, "\n");
-    // TODO: padding?
-  }}} /* end loop through the tiles */
-  fclose(Fp);
 }
 
 } // namespace mg

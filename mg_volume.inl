@@ -19,6 +19,24 @@ extent::extent(v3i Pos, v3i Dims)
   , Dims(Stuff3Ints(Dims)) {}
 
 mg_ForceInline
+bool IsPoint(extent Ext) {
+  v3i Dims = Extract3Ints(Ext.Dims);
+  return Dims.X * Dims.Y * Dims.Z == 1;
+}
+
+mg_ForceInline
+bool IsLine(extent Ext) {
+  v3i Dims = Extract3Ints(Ext.Dims);
+  return (Dims.X * Dims.Y == 1) || (Dims.Y * DimsZ == 1) || (Dims.X * Dims.Z == 1);
+}
+
+mg_ForceInline
+bool IsFace(extent Ext) {
+  v3i Dims = Extract3Ints(Ext.Dims);
+  return Dims.X == 1 || Dims.Y == 1 || Dims.Z == 1;
+}
+
+mg_ForceInline
 sub_volume::sub_volume() = default;
 mg_ForceInline
 sub_volume::sub_volume(volume Vol)

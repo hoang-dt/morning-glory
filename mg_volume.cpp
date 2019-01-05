@@ -55,5 +55,19 @@ volume Clone(const volume& Vol, allocator* Alloc) {
   return VolCopy;
 }
 
+array<extent, 8> Split3D(v3i Dims) {
+  mg_Assert(Dims.X > 1 && Dims.Y > 1 && Dims.Z > 1);
+  array<extent, 8> Vols;
+  Vols[0] = extent(v3i(0, 0, 0), v3i(1, 1, 1));
+  Vols[1] = extent(v3i(1, 0, 0), v3i(Dims.X - 1, 0, 0));
+  Vols[2] = extent(v3i(0, 1, 0), v3i(0, Dims.Y - 1, 0));
+  Vols[3] = extent(v3i(0, 0, 1), v3i(0, 0, Dims.Z - 1));
+  Vols[4] = extent(v3i(1, 1, 0), v3i(Dims.X - 1, Dims.Y - 1, 0));
+  Vols[5] = extent(v3i(0, 1, 1), v3i(0, Dims.Y - 1, Dims.Z - 1));
+  Vols[6] = extent(v3i(1, 0, 1), v3i(Dims.X - 1, 0, Dims.Z - 1));
+  Vols[7] = extent(v3i(1, 1, 1), v3i(Dims.X - 1, Dims.Y - 1, Dims.Z - 1));
+  return Vols;
+}
+
 } // namespace mg
 

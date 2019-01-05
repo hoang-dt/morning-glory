@@ -60,7 +60,8 @@ array<v3i, 2> BoundLevelTest(v3i N, int L) {
 }
 
 MinMaxExp GetMinMaxExp(const f64* Data, i64 Size) {
-  auto MM = MinMaxElement(Data, Data + Size, [](auto A, auto B) { return fabs(A) < fabs(B); });
+  auto MM = MinMaxElement(Data, Data + Size,
+                          [](auto A, auto B) { return fabs(A) < fabs(B); });
   MinMaxExp Result;
   frexp(*(MM.Min), &Result.MinExp);
   frexp(*(MM.Max), &Result.MaxExp);
@@ -90,12 +91,14 @@ int main(int Argc, const char** Argv) {
   Ok = ReadVolume(Meta.File, Meta.Dims, Meta.DataType, &OriginalF);
   mg_AbortIf(!Ok, "%s", ToString(Ok));
   sub_volume ExpandedF; // resize original function so that each dimension is 2^N + 1
-  v3i BigDims(NextPow2(Meta.Dims.X) + 1, NextPow2(Meta.Dims.Y) + 1, NextPow2(Meta.Dims.Z) + 1);
+  v3i BigDims(NextPow2(Meta.Dims.X) + 1,
+              NextPow2(Meta.Dims.Y) + 1,
+              NextPow2(Meta.Dims.Z) + 1);
   int MaxDim = Max(Max(BigDims.X, BigDims.Y), BigDims.Z);
   BigDims.X = MaxDim;
   BigDims.Y = Meta.Dims.Y > 1 ? MaxDim : 1;
   BigDims.Z = Meta.Dims.Z > 1 ? MaxDim : 1;
-  printf("Big dims: %d %d %d\n", BigDims.X, BigDims.Y, BigDims.Z);
+  mg_Log(stderr, "Big dims: %d %d %d\n", BigDims.X, BigDims.Y, BigDims.Z);
   ExpandedF.Dims = Stuff3Ints(BigDims);
   ExpandedF.Extent = extent(Meta.Dims);
   ExpandedF.Type = OriginalF.Type;

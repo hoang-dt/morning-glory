@@ -39,6 +39,15 @@ void Copy(volume* Dst, const volume& Src);
 /* Clone a volume */
 volume Clone(const volume& Vol, allocator* Alloc = &Mallocator());
 
+/* Split a volume into 8 parts: 1 voxel, 3 lines, 3 faces, and one sub volume */
+array<extent, 8> Split3D(v3i Dims);
+
+bool IsPoint(extent Ext);
+/* Note: must test for IsPoint() first */
+bool IsLine(extent Ext);
+/* Note: must test for IsLine() first */
+bool IsFace(extent Ext);
+
 } // namespace mg
 
 #include "mg_volume.inl"
