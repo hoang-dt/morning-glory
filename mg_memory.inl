@@ -49,3 +49,15 @@ void DeallocateTypedBuffer(typed_buffer<t>* Buf, allocator* Alloc) {
   for (int I = 0; I < (StackArraySize); ++I)\
     AllocateTypedBuffer(&Name[I], (HeapArraySize));\
   mg_CleanUp(__LINE__, { for (int I = 0; I < (StackArraySize); ++I) DeallocateTypedBuffer(&Name[I]); })
+
+#undef mg_HeapArrayOfHeapArrays
+#define mg_HeapArrayOfHeapArrays(Name, Type, SizeOuter, SizeInner)\
+  using namespace mg;\
+  typed_buffer<typed_buffer<Type>> Name;\
+  AllocateTypedBuffer(&Name, (SizeOuter));\
+  for (int I = 0; I < (SizeOuter); ++I) \
+    AllocateTypedBuffer(&Name[I], (SizeInner));\
+  mg_CleanUp(__LINE__, {\
+    for (int I = 0; I < (SizeOuter); ++I) DeallocateTypedBuffer(&Name[I]);\
+    DeallocateTypedBuffer(&Name);\
+  })

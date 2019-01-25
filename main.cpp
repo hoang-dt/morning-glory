@@ -70,13 +70,13 @@ MinMaxExp GetMinMaxExp(const f64* Data, i64 Size) {
 
 // TODO: have an abstraction for typed buffer
 // TODO: enforce error checking everywhere
-// TODO: logger
 // TODO: memory out-of-bound/leak detection
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
   SetHandleAbortSignals();
   timer Timer; StartTimer(&Timer);
+  /* Read the original data from a file */
   cstr DataFile = nullptr;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--dataset", &DataFile), "Provide --dataset");
   int NLevels = 0;
@@ -90,14 +90,11 @@ int main(int Argc, const char** Argv) {
   mg_CleanUp(0, DeallocateBuffer(&OriginalF.Buffer));
   Ok = ReadVolume(Meta.File, Meta.Dims, Meta.DataType, &OriginalF);
   mg_AbortIf(!Ok, "%s", ToString(Ok));
-  sub_volume ExpandedF; // resize original function so that each dimension is 2^N + 1
-  v3i BigDims(NextPow2(Meta.Dims.X) + 1,
-              NextPow2(Meta.Dims.Y) + 1,
-              NextPow2(Meta.Dims.Z) + 1);
+  /* Extrapolate the volume to 2^N+1 in each dimension */
+  sub_volume ExpandedF;
+  v3i BigDims(NextPow2(Meta.Dims.X) + 1, NextPow2(Meta.Dims.Y) + 1, NextPow2(Meta.Dims.Z) + 1);
   int MaxDim = Max(Max(BigDims.X, BigDims.Y), BigDims.Z);
-  BigDims.X = MaxDim;
-  BigDims.Y = Meta.Dims.Y > 1 ? MaxDim : 1;
-  BigDims.Z = Meta.Dims.Z > 1 ? MaxDim : 1;
+  BigDims = v3i(MaxDim, Meta.Dims.Y > 1 ? MaxDim : 1, Meta.Dims.Z > 1 ? MaxDim : 1);
   mg_Log(stderr, "Big dims: %d %d %d\n", BigDims.X, BigDims.Y, BigDims.Z);
   ExpandedF.Dims = Stuff3Ints(BigDims);
   ExpandedF.Extent = extent(Meta.Dims);
@@ -106,48 +103,27 @@ int main(int Argc, const char** Argv) {
   AllocateBufferZero(&ExpandedF.Buffer, SizeOf(ExpandedF.Type) * NumSamplesBig);
   mg_CleanUp(1, DeallocateBuffer(&ExpandedF.Buffer));
   Copy(&ExpandedF, sub_volume(OriginalF));
-  Cdf53ForwardExtrapolate(&ExpandedF, NLevels, ExpandedF.Type);
-  Cdf53InverseExtrapolate(&ExpandedF, NLevels, ExpandedF.Type);
-  WriteFile("out.raw", ExpandedF.Buffer);
-  puts("Done");
-  //buffer BufFClone2 = Clone(BufF);
-  //// mg_CleanUp(0, Deallocate(&BufF.Data)); // TODO
-  //mg_AbortIf(!Ok, "%s", ToString(Ok));
-  //puts("Done reading file\n");
-  //f64* F = (f64*)BufF.Data;
-  //f64* FClone = (f64*)BufFClone.Data;
-  //// mg_CleanUp(1, Deallocate(&BufFClone.Data))
-  //// mg_CleanUp(2, Deallocate(&BufFClone2.Data));
-  //buffer CompressBuf;
-  //AllocateBuffer(&CompressBuf, 400 * 1000 * 1000); // TODO?
-  ////mg_CleanUp(3, Deallocate(&BufFClone3.Data));
-  //// TODO: copy F and perform inverse wavelet transform
-  //mg_AbortIf(Prod<i64>(Meta.Dims) * SizeOf(Meta.DataType) != BufF.Bytes,
-             //"Size mismatched. Check file: %s", Meta.File);
-  //[> Compute wavelet transform <]
-  //cstr OutFile = nullptr;
-  //mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &OutFile), "Provide --output");
-  //int NBitplanes = 63;
-  //GetOptionValue(Argc, Argv, "--nbits", &NBitplanes);
-  //f64 Tolerance = 0;
-  //GetOptionValue(Argc, Argv, "--tolerance", &Tolerance);
-  //int Mode = 0;
-  //mg_AbortIf(!GetOptionValue(Argc, Argv, "--mode", &Mode), "Provide --mode");
-  //printf("Mode: %s Precision: %d Accuracy: %17g\n",
-         //Mode == 0 ? "Mine" : "Zfp", NBitplanes, Tolerance);
-  ////Cdf53Forward(F, Meta.Dimensions, NLevels, Meta.DataType);
-  //Cdf53ForwardExtrapolate(F, Meta.Dimensions, NLevels, Meta.DataType);
-  //printf("Wavelet transform time: %lld ms\n", ResetTimer(&Timer));
-  //dynamic_array<block_bounds> Subbands;
-  //int NDims = (Meta.Dimensions.X > 1) + (Meta.Dimensions.Y > 1) + (Meta.Dimensions.Z > 1);
-  //BuildSubbands(NDims, Meta.Dimensions, NLevels, &Subbands);
-  //v3i TileDims{ 32, 32, 32 }; // TODO: get from the command line
-  ////bitstream Bs;
-  ////InitWrite(&Bs, CompressBuf);
-  ////if (Mode == 0)
-    ////Encode(F, Meta.Dims, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  ////else
-    ////EncodeZfp(F, Meta.Dims, TileDims, NBitplanes, Tolerance, Subbands, &Bs);
+  Cdf53ForwardExtrapolate(&ExpandedF, ExpandedF.Type);
+  Cdf53InverseExtrapolate(&ExpandedF, ExpandedF.Type);
+  /* Compute the wavelet transform */
+  cstr OutFile = nullptr;
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &OutFile), "Provide --output");
+  int NBitplanes = 63;
+  GetOptionValue(Argc, Argv, "--nbits", &NBitplanes);
+  f64 Tolerance = 0;
+  GetOptionValue(Argc, Argv, "--tolerance", &Tolerance);
+  Cdf53Forward(&ExpandedF, NLevels, ExpandedF.Type);
+  printf("Wavelet transform time: %lld ms\n", ResetTimer(&Timer));
+  /* Compress and write output files */
+  dynamic_array<extent> Subbands;
+  int NDims = (Meta.Dimensions.X > 1) + (Meta.Dimensions.Y > 1) + (Meta.Dimensions.Z > 1);
+  BuildSubbands(NDims, BigDims, NLevels, &Subbands);
+  buffer CompressBuf;
+  AllocateBuffer(&CompressBuf, 1000 * 1000);
+  bitstream Bs;
+  InitWrite(&Bs, CompressBuf);
+  v3i TileDims(32, 32, 32); // TODO: get from the command line
+  EncodeData(ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile, &Bs);
   ////f64* FReconstructed = (f64*)BufFClone2.Data;
   ////if (Mode == 0)
     ////Decode(OutFile, Meta.Dims, TileDims, NBitplanes, Tolerance, Subbands, FReconstructed);

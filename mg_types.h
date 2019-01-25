@@ -108,6 +108,8 @@ struct typed_buffer {
   t& operator[](i64 Idx);
   const t& operator[](i64 Idx) const;
 };
+template <typename t>
+i64 Size(typed_buffer<t> Buf);
 
 } // namespace mg
 

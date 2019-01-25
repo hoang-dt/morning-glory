@@ -20,6 +20,7 @@ thread_local char ScratchBuffer[1024]; // General purpose buffer for string-rela
 #define mg_HeapArrayZero(Name, Type, Size)
 /* return an array of typed_buffer */
 #define mg_StackArrayOfHeapArrays(Name, Type, StackArraySize, HeapArraySize)
+#define mg_HeapArrayOfHeapArrays(Name, Type, SizeOuter, SizeInner)
 
 struct allocator {
   virtual bool Allocate(buffer* Buf, i64 Bytes) = 0;
@@ -104,6 +105,8 @@ void AllocateBufferZero(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator()
 void DeallocateBuffer(buffer* Buf, allocator* Alloc = &Mallocator());
 template <typename t>
 void AllocateTypedBuffer(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
+template <typename t>
+void AllocateTypedBufferZero(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
 template <typename t>
 void DeallocateTypedBuffer(typed_buffer<t>* Buf, allocator* Alloc = &Mallocator());
 

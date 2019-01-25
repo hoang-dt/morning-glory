@@ -109,6 +109,9 @@ t& typed_buffer<t>::operator[](i64 Idx) { assert(Idx < Size); return Data[Idx]; 
 template <typename t> mg_ForceInline
 const t& typed_buffer<t>::operator[](i64 Idx) const { assert(Idx < Size); return Data[Idx]; }
 
+template <typename t> mg_ForceInline
+i64 Size(typed_buffer<t> Buf) { return Buf.Size; }
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 template <typename t>

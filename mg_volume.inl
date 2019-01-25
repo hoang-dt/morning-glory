@@ -27,7 +27,7 @@ bool IsPoint(extent Ext) {
 mg_ForceInline
 bool IsLine(extent Ext) {
   v3i Dims = Extract3Ints(Ext.Dims);
-  return (Dims.X * Dims.Y == 1) || (Dims.Y * DimsZ == 1) || (Dims.X * Dims.Z == 1);
+  return (Dims.X * Dims.Y == 1) || (Dims.Y * Dims.Z == 1) || (Dims.X * Dims.Z == 1);
 }
 
 mg_ForceInline

@@ -268,7 +268,8 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
                 DecodeMorton3Z(BI) * BlockDims.Z + TZ);
           ++NumBlocksEncoded;
           if (Bitplane == Bits) { // only do this once
-            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B, BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
+            int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B,
+                         BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
             EMaxes[BI] = EMax;
             // Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
             if (Bits - Bitplane <= EMaxes[BI] - ToleranceExp + 1) {
@@ -312,7 +313,9 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   for (int S = 0; S < Size(Subbands); ++S) {
     v3i SubbandPos = Extract3Ints(Subbands[S].Pos);
     v3i SubbandDims = Extract3Ints(Subbands[S].Dims);
-    mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
+    mg_Assert(TileDims.X <= SubbandDims.X &&
+              TileDims.Y <= SubbandDims.Y &&
+              TileDims.Z <= SubbandDims.Z);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
     for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {
@@ -345,11 +348,13 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
               EMaxes[BI] = ToleranceExp - 2;
           }
           if (Bits - Bitplane <= EMaxes[BI] - ToleranceExp + 1) {
-            DecodeBlock(Block[BI].Data, BlockDims, Bitplane, PrevOctree[BI].Data, Octree[BI].Data, &Bs);
-            memcpy(PrevOctree[BI].Data, Octree[BI].Data, sizeof(u8) * OctreeSize); // TODO: merge this step with the below
+            DecodeBlock(Block[BI].Data, BlockDims, Bitplane, PrevOctree[BI].Data,
+                        Octree[BI].Data, &Bs);
+            memcpy(PrevOctree[BI].Data, Octree[BI].Data, sizeof(u8) * OctreeSize);
           }
           if (Bitplane == 0)
-            CopyBlockSamplesInverseMorton(Block[BI].Data, Dims, Bits - 1, BlockDims, B, EMaxes[BI], Data);
+            CopyBlockSamplesInverseMorton(Block[BI].Data, Dims, Bits - 1, BlockDims, B,
+                                          EMaxes[BI], Data);
         }
       }
     }}} // end loop through the tiles
@@ -394,7 +399,7 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
           ++NumBlocksEncoded;
           if (Bitplane == Bits) { // only do this once
             int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B,
-                                              BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
+                         BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
             Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
           }
           if (Bitplane == Bits) {
