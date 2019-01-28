@@ -90,9 +90,11 @@ struct v3;
 template <typename t>
 struct typed_buffer;
 
+struct allocator;
 struct buffer {
   byte* Data = nullptr;
   i64 Bytes = 0;
+  allocator* Alloc = nullptr;
   buffer();
   buffer(byte* Data, i64 Bytes);
   template<typename t> buffer(typed_buffer<t> Buf);
@@ -102,6 +104,7 @@ template <typename t>
 struct typed_buffer {
   t* Data = nullptr;
   i64 Size = 0;
+  allocator* Alloc = nullptr;
   typed_buffer();
   typed_buffer(t* Data, i64 Size);
   typed_buffer(buffer Buf);

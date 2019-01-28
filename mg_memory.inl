@@ -21,9 +21,9 @@ void AllocateTypedBufferZero(typed_buffer<t>* Buf, i64 Size, allocator* Alloc) {
 }
 
 template <typename t>
-void DeallocateTypedBuffer(typed_buffer<t>* Buf, allocator* Alloc) {
-  buffer RawBuf{ (byte*)Buf->Data, i64(Buf->Size * sizeof(t)) };
-  DeallocateBuffer(&RawBuf, Alloc);
+void DeallocateTypedBuffer(typed_buffer<t>* Buf) {
+  buffer RawBuf{(byte*)Buf->Data, i64(Buf->Size * sizeof(t))};
+  DeallocateBuffer(&RawBuf);
 }
 
 } // namespace mg

@@ -37,7 +37,9 @@ error ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume);
 /* Copy a region of the first volume to a region of the second volume */
 void Copy(volume* Dst, const volume& Src);
 /* Clone a volume */
-volume Clone(const volume& Vol, allocator* Alloc = &Mallocator());
+void Clone(volume* Dst, const volume& Src, allocator* Alloc = &Mallocator());
+/* Clone a sub-volume */
+void Clone(sub_volume* Dst, const sub_volume& Src, allocator* Alloc = &Mallocator());
 
 /* Split a volume into 8 parts: 1 voxel, 3 lines, 3 faces, and one sub volume */
 array<extent, 8> Split3D(v3i Dims);

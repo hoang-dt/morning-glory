@@ -105,6 +105,8 @@ int main(int Argc, const char** Argv) {
   Copy(&ExpandedF, sub_volume(OriginalF));
   Cdf53ForwardExtrapolate(&ExpandedF, ExpandedF.Type);
   Cdf53InverseExtrapolate(&ExpandedF, ExpandedF.Type);
+  sub_volume ExpandedFCopy;
+  Clone(&ExpandedFCopy, ExpandedF);
   /* Compute the wavelet transform */
   cstr OutFile = nullptr;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &OutFile), "Provide --output");
@@ -120,10 +122,9 @@ int main(int Argc, const char** Argv) {
   BuildSubbands(NDims, BigDims, NLevels, &Subbands);
   buffer CompressBuf;
   AllocateBuffer(&CompressBuf, 1000 * 1000);
-  bitstream Bs;
-  InitWrite(&Bs, CompressBuf);
   v3i TileDims(32, 32, 32); // TODO: get from the command line
-  EncodeData(ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile, &Bs);
+  EncodeData(ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
+  DecodeData(&ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
   ////f64* FReconstructed = (f64*)BufFClone2.Data;
   ////if (Mode == 0)
     ////Decode(OutFile, Meta.Dims, TileDims, NBitplanes, Tolerance, Subbands, FReconstructed);

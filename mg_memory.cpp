@@ -33,8 +33,9 @@ void AllocateBufferZero(buffer* Buf, i64 Bytes, allocator* Alloc) {
   Buf->Bytes = Bytes;
 }
 
-void DeallocateBuffer(buffer* Buf, allocator* Alloc) {
-  Alloc->Deallocate(Buf);
+void DeallocateBuffer(buffer* Buf) {
+  mg_Assert(Buf->Alloc);
+  Buf->Alloc->Deallocate(Buf);
 }
 
 bool mallocator::Allocate(buffer* Buf, i64 Bytes) {
@@ -42,6 +43,7 @@ bool mallocator::Allocate(buffer* Buf, i64 Bytes) {
   Buf->Data = (byte*)malloc(Bytes);
   mg_AbortIf(!(Buf->Data), "Out of memory");
   Buf->Bytes = Bytes;
+  Buf->Alloc = this;
   return true;
 }
 
@@ -49,6 +51,7 @@ void mallocator::Deallocate(buffer* Buf) {
   free(Buf->Data);
   Buf->Data = nullptr;
   Buf->Bytes = 0;
+  Buf->Alloc = nullptr;
 }
 
 void mallocator::DeallocateAll() {
@@ -63,6 +66,7 @@ bool linear_allocator::Allocate(buffer* Buf, i64 Bytes) {
   if (CurrentBytes + Bytes <= Block.Bytes) {
     Buf->Data = Block.Data + CurrentBytes;
     Buf->Bytes = Bytes;
+    Buf->Alloc = this;
     CurrentBytes += Bytes;
     return true;
   }
@@ -71,6 +75,9 @@ bool linear_allocator::Allocate(buffer* Buf, i64 Bytes) {
 
 void linear_allocator::Deallocate(buffer* Buf) {
   if (Buf->Data + Buf->Bytes == Block.Data + CurrentBytes) {
+    Buf->Data = nullptr;
+    Buf->Bytes = 0;
+    Buf->Alloc = nullptr;
     CurrentBytes -= Buf->Bytes;
   }
 }
@@ -94,6 +101,7 @@ bool free_list_allocator::Allocate(buffer* Buf, i64 Bytes) {
   if (MinBytes <= Bytes && Bytes <= MaxBytes && Head) {
     Buf->Data = (byte*)Head;
     Buf->Bytes = Bytes;
+    Buf->Alloc = this;
     Head = Head->Next;
     return true;
   }
@@ -102,6 +110,9 @@ bool free_list_allocator::Allocate(buffer* Buf, i64 Bytes) {
 
 void free_list_allocator::Deallocate(buffer* Buf) {
   if (MinBytes <= Buf->Bytes && Buf->Bytes <= MaxBytes && Head) {
+    Buf->Data = nullptr;
+    Buf->Bytes = 0;
+    Buf->Alloc = nullptr;
     node* P = (node*)(Buf->Data);
     P->Next = Head;
     Head = P;
@@ -110,7 +121,8 @@ void free_list_allocator::Deallocate(buffer* Buf) {
   }
 }
 
-void free_list_allocator::DeallocateAll() { // Note: the client may want to call Parent->DeallocateAll() as well
+// NOTE: the client may want to call Parent->DeallocateAll() as well
+void free_list_allocator::DeallocateAll() {
   while (Head) {
     node* Next = Head->Next;
     buffer Buf{ (byte*)Head, MaxBytes };
@@ -141,11 +153,12 @@ void fallback_allocator::DeallocateAll() {
   Secondary->DeallocateAll();
 }
 
-buffer Clone(buffer Buf, allocator* Alloc) {
-  buffer BufClone;
-  Alloc->Allocate(&BufClone, Buf.Bytes);
-  MemCopy(&BufClone, Buf);
-  return BufClone;
+void Clone(buffer* Dst, buffer Src, allocator* Alloc) {
+  if (Dst->Data && Dst->Bytes != Src.Bytes)
+    DeallocateBuffer(Dst);
+  if (!Dst->Data && Dst->Bytes == 0)
+    Alloc->Allocate(Dst, Src.Bytes);
+  MemCopy(Dst, Src);
 }
 
 } // namespace mg

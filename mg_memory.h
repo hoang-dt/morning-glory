@@ -97,18 +97,18 @@ static mallocator& Mallocator() {
   return Instance;
 }
 
-buffer Clone(buffer Buf, allocator* Alloc = &Mallocator());
+void Clone(buffer* Dst, buffer Src, allocator* Alloc = &Mallocator());
 
 /* Abstract away memory allocations/deallocations */
 void AllocateBuffer(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
 void AllocateBufferZero(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
-void DeallocateBuffer(buffer* Buf, allocator* Alloc = &Mallocator());
+void DeallocateBuffer(buffer* Buf);
 template <typename t>
 void AllocateTypedBuffer(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
 template <typename t>
 void AllocateTypedBufferZero(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
 template <typename t>
-void DeallocateTypedBuffer(typed_buffer<t>* Buf, allocator* Alloc = &Mallocator());
+void DeallocateTypedBuffer(typed_buffer<t>* Buf);
 
 void ZeroBuffer(buffer* Buf);
 void MemCopy(buffer* Dst, const buffer& Src);

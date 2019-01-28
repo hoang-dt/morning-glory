@@ -48,11 +48,17 @@ void Copy(sub_volume* Dst, const sub_volume& Src) {
 #undef Body
 }
 
-volume Clone(const volume& Vol, allocator* Alloc) {
-  volume VolCopy;
-  VolCopy.Buffer = Clone(Vol.Buffer, Alloc);
-  VolCopy.Type = Vol.Type;
-  return VolCopy;
+void Clone(volume* Dst, const volume& Src, allocator* Alloc) {
+  Clone(&Dst->Buffer, Src.Buffer, Alloc);
+  Dst->Dims = Src.Dims;
+  Dst->Type = Src.Type;
+}
+
+void Clone(sub_volume* Dst, const sub_volume& Src, allocator* Alloc) {
+  Clone(&Dst->Buffer, Src.Buffer, Alloc);
+  Dst->Dims = Src.Dims;
+  Dst->Type = Src.Type;
+  Dst->Extent = Src.Extent;
 }
 
 array<extent, 8> Split3D(v3i Dims) {
