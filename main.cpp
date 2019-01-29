@@ -125,15 +125,11 @@ int main(int Argc, const char** Argv) {
   v3i TileDims(32, 32, 32); // TODO: get from the command line
   EncodeData(ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
   DecodeData(&ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  ////f64* FReconstructed = (f64*)BufFClone2.Data;
-  ////if (Mode == 0)
-    ////Decode(OutFile, Meta.Dims, TileDims, NBitplanes, Tolerance, Subbands, FReconstructed);
-  ////else
-    ////DecodeZfp(FReconstructed, Meta.Dims, TileDims, NBitplanes, Tolerance, Subbands, &Bs);
-  ////Cdf53Inverse(FReconstructed, Meta.Dimensions, NLevels, Meta.DataType);
-  //Cdf53InverseExtrapolate(F, Meta.Dimensions, NLevels, Meta.DataType);
-  //f64 Psnr = PSNR(FClone, F, Prod<i64>(Meta.Dims), data_type::float64);
-  //f64 Rmse = RMSError(FClone, F, Prod<i64>(Meta.Dims), data_type::float64);
-  //printf("RMSE = %17g PSNR = %f\n", Rmse, Psnr);
+  Cdf53Inverse(&ExpandedF, NLevels, ExpandedF.Type);
+  f64 Psnr = PSNR(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
+                  data_type::float64);
+  f64 Rmse = RMSError(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
+                      data_type::float64);
+  printf("RMSE = %17g PSNR = %f\n", Rmse, Psnr);
   return 0;
 }

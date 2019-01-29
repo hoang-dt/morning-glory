@@ -111,8 +111,8 @@ void EncodeData(const volume& Vol, v3i TileDims, int Bits, f64 Tolerance,
             PadBlock(&FloatTile[K], RealBlockDims.X, 1);
             PadBlock(&FloatTile[K], RealBlockDims.Y, 4);
             PadBlock(&FloatTile[K], RealBlockDims.Z, 16);
-            int EMax = Quantize(&FloatTile[K], Prod<i32>(BlockDims), Bits - 1,
-                                &IntTile[K], data_type::float64);
+            int EMax = Quantize((byte*)&FloatTile[K], Prod<i32>(BlockDims), Bits - 1,
+                                (byte*)&IntTile[K], data_type::float64);
             EMaxes[BlockId] = (i16)EMax;
             if (0 <= EMaxes[BlockId] - ToleranceExp + 1) {
               Write(&Bs, 1);
@@ -255,8 +255,8 @@ void DecodeData(volume* Vol, v3i TileDims, int Bits, f64 Tolerance,
                               Min(RealTileDims.Z - BZ, BlockDims.Z));
             InverseShuffle(&UIntTile[K], &IntTile[K]);
             InverseBlockTransform(&IntTile[K]);
-            Dequantize(&IntTile[K], Prod<i32>(BlockDims), EMaxes[BlockId], Bits - 1,
-                       &FloatTile[K], data_type::float64);
+            Dequantize((byte*)&IntTile[K], Prod<i32>(BlockDims), EMaxes[BlockId], Bits - 1,
+                       (byte*)&FloatTile[K], data_type::float64);
             /* loop through the samples in each block */
             for (int Z = 0; Z < RealBlockDims.Z; ++Z) { /* loop through each block */
             for (int Y = 0; Y < RealBlockDims.Y; ++Y) {
@@ -323,8 +323,8 @@ void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
             }}} /* end loop through the samples in each block */
             // TODO: figure out the number of bit planes to encode (range expansion issues)
             // TODO: add support for fixed accuracy coding
-            int EMax = Quantize(&FloatTile[K], Prod<i32>(BlockDims), Bits - 1,
-                                &IntTile[K], data_type::float64);
+            int EMax = Quantize((byte*)&FloatTile[K], Prod<i32>(BlockDims), Bits - 1,
+                                (byte*)&IntTile[K], data_type::float64);
             EMaxes[BI] = EMax;
             // TODO: for now we don't care if the exponent is 2047 which represents Inf or NaN
             if (Bits - Bitplane <= EMaxes[BI] - ToleranceExp + 1) {
@@ -404,8 +404,8 @@ void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
           if (Bitplane == 0) { // copy data back in the last loop iteratoin
             InverseShuffle(&UIntTile[K], &IntTile[K]);
             InverseBlockTransform(&IntTile[K]);
-            Dequantize(&IntTile[K], Prod<i32>(BlockDims), EMaxes[BI], Bits - 1,
-                       &FloatTile[K], data_type::float64); // TODO: 64 bit planes?
+            Dequantize((byte*)&IntTile[K], Prod<i32>(BlockDims), EMaxes[BI], Bits - 1,
+                       (byte*)&FloatTile[K], data_type::float64); // TODO: 64 bit planes?
             for (int Z = 0; Z < BlockDims.Z; ++Z) { /* loop through each block */
             for (int Y = 0; Y < BlockDims.Y; ++Y) {
             for (int X = 0; X < BlockDims.X; ++X) {
