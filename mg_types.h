@@ -96,7 +96,7 @@ struct buffer {
   i64 Bytes = 0;
   allocator* Alloc = nullptr;
   buffer();
-  buffer(byte* Data, i64 Bytes);
+  buffer(byte* Data, i64 Bytes, allocator* Alloc);
   template<typename t> buffer(typed_buffer<t> Buf);
 };
 
@@ -106,7 +106,7 @@ struct typed_buffer {
   i64 Size = 0;
   allocator* Alloc = nullptr;
   typed_buffer();
-  typed_buffer(t* Data, i64 Size);
+  typed_buffer(t* Data, i64 Size, allocator* Alloc);
   typed_buffer(buffer Buf);
   t& operator[](i64 Idx);
   const t& operator[](i64 Idx) const;

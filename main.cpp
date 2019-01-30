@@ -103,10 +103,12 @@ int main(int Argc, const char** Argv) {
   AllocateBufferZero(&ExpandedF.Buffer, SizeOf(ExpandedF.Type) * NumSamplesBig);
   mg_CleanUp(1, DeallocateBuffer(&ExpandedF.Buffer));
   Copy(&ExpandedF, sub_volume(OriginalF));
-  Cdf53ForwardExtrapolate(&ExpandedF, ExpandedF.Type);
-  Cdf53InverseExtrapolate(&ExpandedF, ExpandedF.Type);
-  sub_volume ExpandedFCopy;
-  Clone(&ExpandedFCopy, ExpandedF);
+  //Cdf53ForwardExtrapolate(&ExpandedF, ExpandedF.Type);
+  //Cdf53InverseExtrapolate(&ExpandedF, ExpandedF.Type);
+  //sub_volume ExpandedFCopy;
+  //Clone(&ExpandedFCopy, ExpandedF);
+  volume OriginalFCopy;
+  Clone(&OriginalFCopy, OriginalF);
   /* Compute the wavelet transform */
   cstr OutFile = nullptr;
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &OutFile), "Provide --output");
@@ -114,21 +116,31 @@ int main(int Argc, const char** Argv) {
   GetOptionValue(Argc, Argv, "--nbits", &NBitplanes);
   f64 Tolerance = 0;
   GetOptionValue(Argc, Argv, "--tolerance", &Tolerance);
-  Cdf53Forward(&ExpandedF, NLevels, ExpandedF.Type);
+  //Cdf53Forward(&ExpandedF, NLevels, ExpandedF.Type);
+  Cdf53Forward(&OriginalF, NLevels, OriginalF.Type);
   printf("Wavelet transform time: %lld ms\n", ResetTimer(&Timer));
   /* Compress and write output files */
   dynamic_array<extent> Subbands;
   int NDims = (Meta.Dimensions.X > 1) + (Meta.Dimensions.Y > 1) + (Meta.Dimensions.Z > 1);
-  BuildSubbands(NDims, BigDims, NLevels, &Subbands);
-  buffer CompressBuf;
-  AllocateBuffer(&CompressBuf, 1000 * 1000);
+  //BuildSubbands(NDims, BigDims, NLevels, &Subbands);
+  BuildSubbands(NDims, Meta.Dims, NLevels, &Subbands);
   v3i TileDims(32, 32, 32); // TODO: get from the command line
-  EncodeData(ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  DecodeData(&ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  Cdf53Inverse(&ExpandedF, NLevels, ExpandedF.Type);
-  f64 Psnr = PSNR(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
+  puts("Begin to encode");
+  //EncodeData(ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
+  EncodeData(OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
+  puts("Done encoding");
+  //DecodeData(&ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
+  DecodeData(&OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
+  puts("Done decoding");
+  //Cdf53Inverse(&ExpandedF, NLevels, ExpandedF.Type);
+  Cdf53Inverse(&OriginalF, NLevels, OriginalF.Type);
+  //f64 Psnr = PSNR(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
+                  //data_type::float64);
+  //f64 Rmse = RMSError(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
+                      //data_type::float64);
+  f64 Psnr = PSNR(OriginalF.Buffer.Data, OriginalFCopy.Buffer.Data, Prod<i64>(Meta.Dims),
                   data_type::float64);
-  f64 Rmse = RMSError(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
+  f64 Rmse = RMSError(OriginalF.Buffer.Data, OriginalFCopy.Buffer.Data, Prod<i64>(Meta.Dims),
                       data_type::float64);
   printf("RMSE = %17g PSNR = %f\n", Rmse, Psnr);
   return 0;

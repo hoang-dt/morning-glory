@@ -95,13 +95,15 @@ TemplateArr mg_ForceInline int Size(array<t, N>&) { return N; }
 #undef TemplateArr
 
 mg_ForceInline buffer::buffer() = default;
-mg_ForceInline buffer::buffer(byte* Data, i64 Bytes) : Data(Data), Bytes(Bytes) {}
+mg_ForceInline buffer::buffer(byte* Data, i64 Bytes, allocator* Alloc)
+  : Data(Data), Bytes(Bytes), Alloc(Alloc) {}
 template<typename t> mg_ForceInline
 buffer::buffer(typed_buffer<t> Buf) : Data(Buf.Data), Bytes(Buf.Size * sizeof(t)) {}
 
 template <typename t> mg_ForceInline typed_buffer<t>::typed_buffer() = default;
 template <typename t> mg_ForceInline
-typed_buffer<t>::typed_buffer(t* Data, i64 Size) : Data(Data), Size(Size) {}
+typed_buffer<t>::typed_buffer(t* Data, i64 Size, allocator* Alloc)
+  : Data(Data), Size(Size), Alloc(Alloc) {}
 template <typename t> mg_ForceInline
 typed_buffer<t>::typed_buffer(buffer Buf) : Data((t*)Buf.Data), Size(Buf.Bytes / sizeof(t)) {}
 template <typename t> mg_ForceInline

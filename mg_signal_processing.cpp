@@ -9,9 +9,9 @@ f64 SquaredError(const byte* F, const byte* G, i64 Size, data_type Type) {
 #define Body(type)\
   const type* FPtr = (const type*)F;\
   const type* GPtr = (const type*)G;\
-  type Err = 0;\
+  f64 Err = 0;\
   for (i64 I = 0; I < Size; ++I) {\
-    type Diff = FPtr[I] - GPtr[I];\
+    f64 Diff = FPtr[I] - GPtr[I];\
     Err += Diff * Diff;\
   }\
   return Err;
@@ -26,11 +26,17 @@ f64 RMSError(const byte* F, const byte* G, i64 Size, data_type Type) {
 }
 
 f64 PSNR(const byte* F, const byte* G, i64 Size, data_type Type) {
-  f64 Err = SquaredError(F, G, Size, Type);
-  auto MinMax = MinMaxElement(F, F + Size);
-  f64 D = 0.5 * (*(MinMax.Max) - *(MinMax.Min));
-  Err /= Size;
+#define Body(type)\
+  const type* FPtr = (const type*)F;\
+  f64 Err = SquaredError(F, G, Size, Type);\
+  auto MinMax = MinMaxElement(FPtr, FPtr + Size);\
+  f64 D = 0.5 * (*(MinMax.Max) - *(MinMax.Min));\
+  Err /= Size;\
   return 20.0 * log10(D) - 10.0 * log10(Err);
+
+  TypeChooser(Type)
+  return 0;
+#undef Body 
 }
 
 void ConvertToNegabinary(const byte* FIn, i64 Size, byte* FOut, data_type Type) {
@@ -69,7 +75,7 @@ int Quantize(const byte* FIn, i64 Size, int Bits, byte* FOut, data_type Type) {
   type Max = *(MaxElement(FInPtr, FInPtr + Size,\
                           [](auto A, auto B) { return fabs(A) < fabs(B); }));\
   int EMax = Exponent(fabs(Max));\
-  double Scale = ldexp(1, Bits - 1 - EMax);\
+  f64 Scale = ldexp(1, Bits - 1 - EMax);\
   for (i64 I = 0; I < Size; ++I)\
     FOutPtr[I] = itype(Scale * FInPtr[I]);\
   return EMax;
@@ -84,7 +90,7 @@ void Dequantize(const byte* FIn, i64 Size, int EMax, int Bits, byte* FOut, data_
   using itype = typename Traits<type>::integral_t;\
   const itype* FInPtr = (const itype*)FIn;\
   type* FOutPtr = (type*)FOut;\
-  double Scale = 1.0 / ldexp(1, Bits - 1 - EMax);\
+  f64 Scale = 1.0 / ldexp(1, Bits - 1 - EMax);\
   for (i64 I = 0; I < Size; ++I)\
     FOutPtr[I] = type(Scale * FInPtr[I]);
 

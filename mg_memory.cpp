@@ -31,6 +31,7 @@ void AllocateBufferZero(buffer* Buf, i64 Bytes, allocator* Alloc) {
   }
   mg_AbortIf(!(Buf->Data), "Out of memory");
   Buf->Bytes = Bytes;
+  Buf->Alloc = Alloc;
 }
 
 void DeallocateBuffer(buffer* Buf) {
@@ -125,7 +126,7 @@ void free_list_allocator::Deallocate(buffer* Buf) {
 void free_list_allocator::DeallocateAll() {
   while (Head) {
     node* Next = Head->Next;
-    buffer Buf{ (byte*)Head, MaxBytes };
+    buffer Buf((byte*)Head, MaxBytes, Parent);
     Parent->Deallocate(&Buf);
     Head = Next;
   }

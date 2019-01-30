@@ -11,6 +11,7 @@ void AllocateTypedBuffer(typed_buffer<t>* Buf, i64 Size, allocator* Alloc) {
   AllocateBuffer(&RawBuf, i64(Size * sizeof(t)), Alloc);
   Buf->Data = (t*)RawBuf.Data;
   Buf->Size = Size;
+  Buf->Alloc = Alloc;
 }
 template <typename t>
 void AllocateTypedBufferZero(typed_buffer<t>* Buf, i64 Size, allocator* Alloc) {
@@ -18,11 +19,12 @@ void AllocateTypedBufferZero(typed_buffer<t>* Buf, i64 Size, allocator* Alloc) {
   AllocateBufferZero(&RawBuf, i64(Size * sizeof(t)), Alloc);
   Buf->Data = (t*)RawBuf.Data;
   Buf->Size = Size;
+  Buf->Alloc = Alloc;
 }
 
 template <typename t>
 void DeallocateTypedBuffer(typed_buffer<t>* Buf) {
-  buffer RawBuf{(byte*)Buf->Data, i64(Buf->Size * sizeof(t))};
+  buffer RawBuf{(byte*)Buf->Data, i64(Buf->Size * sizeof(t)), Buf->Alloc};
   DeallocateBuffer(&RawBuf);
 }
 
