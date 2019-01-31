@@ -32,6 +32,10 @@ struct dynamic_array;
 struct extent;
 void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subbands);
 
+/* Utilities */
+
+int LevelToSubband(v3i Level);
+
 } // namespace mg
 
 #include "mg_wavelet.inl"

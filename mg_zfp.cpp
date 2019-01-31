@@ -293,13 +293,29 @@ void SetWaveletTransform(file_format* FileFormat, bool DoWaveletTransform) {
 void SetExtrapolation(file_format* FileFormat, bool DoExtrapolation) {
   FileFormat->DoExtrapolation = DoExtrapolation;
 }
+void Finalize(file_format* FileFormat) {
+  // TODO: add more checking
+  v3i Dims = Extract3Ints(FileFormat->Volume.Dims);
+  int NDims = (Dims.X > 1) + (Dims.Y > 1) + (Dims.Z > 1);
+  BuildSubbands(NDims, Dims, FileFormat->NumLevels, &FileFormat->Subbands);
+  // TODO: initialize FileFormat->Chunks
+}
 void Encode(file_format* FileFormat) {
   if (FileFormat->DoExtrapolation) {
     // TODO
   }
   if (FileFormat->DoWaveletTransform)
     Cdf53Forward(&(FileFormat->Volume), FileFormat->NumLevels);
-  //EncodeData(FileFormat->Volume, v3i(FileFormat->TileDim));
+  EncodeData(FileFormat->Volume, v3i(FileFormat->TileDim), FileFormat->Precision,
+             FileFormat->Tolerance, FileFormat->Subbands, FileFormat->FileName);
+}
+
+v3i GetNextChunk(file_format* FileFormat, v3i Level, v3i Tile, byte* Output) {
+  int Sb = LevelToSubband(Level);
+  // find out how many chunks the tile already has
+  //int NumChunks = (int)Size(FileFormat->Chunks[Sb][]);
+  // read the next chunk from disk and add to the end of the linked list
+  // decode the whole tile from the beginning
 }
 
 } // namespace mg

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "mg_array.h"
 #include "mg_bitstream.h"
 #include "mg_common_types.h"
 #include "mg_linked_list.h"
@@ -51,14 +52,11 @@ void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
 void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
                const dynamic_array<extent>& Subbands, bitstream* Bs);
 
-/* For reading a file into memory */
-struct book_keeper {
-  /* First index is by subband, second index is by tiles within each subband */
-  typed_buffer<typed_buffer<linked_list<buffer>>> Chunks;
-};
-
 struct file_format {
   inline static int TileDim = 32; // dimensions of a tile are fixed at 32x32x32
+  /* First index is by subband, second index is by tiles within each subband */
+  typed_buffer<typed_buffer<linked_list<buffer>>> Chunks;
+  dynamic_array<extent> Subbands;
   cstr FileName = nullptr;
   f64 Tolerance = 0;
   int Precision = 0; /* [0, 63] for double */
@@ -66,6 +64,7 @@ struct file_format {
   volume Volume;
   bool DoWaveletTransform = false;
   bool DoExtrapolation = false;
+  //TODO: add a flag to signify the file_format has been "finalized"
 };
 
 /* API to use the file format */
@@ -80,8 +79,15 @@ void SetNumLevels(file_format* FileFormat, int NumLevels);
 void SetVolume(file_format* FileFormat, byte* Data, v3i Dims, data_type Type);
 void SetWaveletTransform(file_format* FileFormat, bool DoWaveletTransform);
 void SetExtrapolation(file_format* FileFormat, bool DoExtrapolation);
+/* Check to see if all parameters make sense */
+void Finalize(file_format* FileFormat);
 /* TODO: return an error code */
-void Encode(const file_format& FileFormat);
+void Encode(file_format* FileFormat);
+/* Output should be an array large enough to hold a tile. Return the actual dimensions of
+the tile. The coarsest subband is at level (0, 0, 0). Assuming the wavelte transform is
+done in X, Y, then Z, the order of subbands is:
+(0, 0, 0), (0, 0, 1), (0, 1, 0), (1, 0, 0), (1, 1, 1), ... */
+v3i GetNextChunk(file_format* FileFormat, v3i Level, v3i Tile, byte* Output);
 
 } // namespace mg
 

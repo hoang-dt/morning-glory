@@ -97,7 +97,7 @@ void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subband
   for (int I = 0; I < NLevels; ++I) {
     v3i P((M.X + 1) >> 1, (M.Y + 1) >> 1, (M.Z + 1) >> 1);
     for (int J = (1 << NDims) - 1; J > 0; --J) {
-      u8 X = Order[J] & 1u, Y = (Order[J] >> 1) & 1u, Z = (Order[J] >> 2) & 1u;
+      u8 Z = Order[J] & 1u, Y = (Order[J] >> 1) & 1u, X = (Order[J] >> 2) & 1u;
       v3i Sm((X == 0) ? P.X : M.X - P.X,
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
@@ -108,6 +108,14 @@ void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subband
   }
   PushBack(Subbands, extent(v3i(0, 0, 0), M));
   Reverse(Begin(*Subbands), End(*Subbands));
+}
+
+int LevelToSubband(v3i Level) {
+  if (Level.X + Level.Y + Level.Z == 0)
+    return 0;
+  static constexpr int8_t Table[] = { 0, 1, 2, 4, 3, 5, 6, 7 };
+  int Lvl = Max(Max(Level.X, Level.Y), Level.Z);
+  return 7 * (Lvl - 1) + Table[4*(Level.X == Lvl) + 2 * (Level.Y == Lvl) + 1 * (Level.Z == Lvl)];
 }
 
 } // namespace mg
