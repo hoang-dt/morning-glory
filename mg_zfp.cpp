@@ -298,7 +298,12 @@ void Finalize(file_format* FileFormat) {
   v3i Dims = Extract3Ints(FileFormat->Volume.Dims);
   int NDims = (Dims.X > 1) + (Dims.Y > 1) + (Dims.Z > 1);
   BuildSubbands(NDims, Dims, FileFormat->NumLevels, &FileFormat->Subbands);
-  // TODO: initialize FileFormat->Chunks
+  AllocateTypedBuffer(&FileFormat->Chunks, Size(FileFormat->Subbands));
+  for (int S = 0; S < Size(FileFormat->Subbands); ++S) {
+    v3i SubbandDims = Extract3Ints(FileFormat->Subbands[S].Dims);
+    v3i NumTiles = (SubbandDims + file_format::TileDim - 1) / file_format::TileDim;
+    AllocateTypedBuffer(&FileFormat->Chunks[S], Prod<i64>(NumTiles));
+  }
 }
 void Encode(file_format* FileFormat) {
   if (FileFormat->DoExtrapolation) {
@@ -311,11 +316,29 @@ void Encode(file_format* FileFormat) {
 }
 
 v3i GetNextChunk(file_format* FileFormat, v3i Level, v3i Tile, byte* Output) {
+  // TODO: error and parameter checking
   int Sb = LevelToSubband(Level);
-  // find out how many chunks the tile already has
-  //int NumChunks = (int)Size(FileFormat->Chunks[Sb][]);
-  // read the next chunk from disk and add to the end of the linked list
+  // assert(Sb < Size(FileFormat->Subbands)
+  i64 NumTilesInPrevSubbands = 0;
+  for (int S = 0; S < Sb; ++S) {
+    v3i SubbandDims = Extract3Ints(FileFormat->Subbands[S].Dims);
+    v3i NumTiles = (SubbandDims + FileFormat->TileDim - 1) / FileFormat->TileDim;
+    NumTilesInPrevSubbands += Prod<i64>(NumTiles);
+  }
+  v3i SubbandDims = Extract3Ints(FileFormat->Subbands[Sb].Dims);
+  v3i NumTiles = (SubbandDims + FileFormat->TileDim - 1) / FileFormat->TileDim;
+  // TODO: assert(Tile < NumTiles)
+  i64 TileIdInSubband = XyzToI(NumTiles, Tile);
+  i64 TileIGlobal = NumTilesInPrevSubbands + TileIdInSubband;
+  int NumChunks = (int)Size(FileFormat->Chunks[Sb][TileIdInSubband]);
+   
   // decode the whole tile from the beginning
+}
+
+void CleanUp(file_format* FileFormat) {
+  DeallocateTypedBuffer(&FileFormat->Chunks);
+  for (int S = 0; S < Size(FileFormat->Subbands); ++S)
+    DeallocateTypedBuffer(&FileFormat->Chunks[S]);
 }
 
 } // namespace mg

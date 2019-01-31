@@ -87,6 +87,7 @@ array<u8, 8> SubbandOrders[4] = {
   { 0, 1, 2, 4, 3, 5, 6, 7 } // for 3D
 };
 
+/* Here we assume the wavelet transform is done in X, then Y, then Z */
 void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subbands) {
   mg_Assert(NDims <= 3);
   mg_Assert(N.Z == 1 || NDims == 3);
@@ -110,6 +111,7 @@ void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subband
   Reverse(Begin(*Subbands), End(*Subbands));
 }
 
+/* Here we assume the wavelet transform is done in X, then Y, then Z */
 int LevelToSubband(v3i Level) {
   if (Level.X + Level.Y + Level.Z == 0)
     return 0;

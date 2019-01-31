@@ -88,6 +88,7 @@ the tile. The coarsest subband is at level (0, 0, 0). Assuming the wavelte trans
 done in X, Y, then Z, the order of subbands is:
 (0, 0, 0), (0, 0, 1), (0, 1, 0), (1, 0, 0), (1, 1, 1), ... */
 v3i GetNextChunk(file_format* FileFormat, v3i Level, v3i Tile, byte* Output);
+void CleanUp(file_format* FileFormat);
 
 } // namespace mg
 

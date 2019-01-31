@@ -31,15 +31,19 @@ using namespace mg;
 // TODO: memory out-of-bound/leak detection
 
 void TestLinkedList() {
-  linked_list<int>* List = nullptr;
-  List = AddNode(List, 1);
-  auto NextNode = AddNode(List, 2);
-  NextNode = AddNode(NextNode, 3);
-  NextNode = AddNode(NextNode, 4);
-  for (auto Node = List; Node != nullptr; Node = Node->Next) {
-    printf("%d\n", Node->Payload);
+  linked_list<int> List;
+  auto Where1 = PushBack(&List, 1);
+  auto Where2 = PushBack(&List, 2);
+  auto Where3 = PushBack(&List, 3);
+  auto Where4 = PushBack(&List, 4);
+  Insert(&List, Where1, 5);
+  Insert(&List, Where2, 6);
+  Insert(&List, Where3, 7);
+  Insert(&List, Where4, 8);
+  for (auto It = ConstBegin(List); It != ConstEnd(List); ++It) {
+    printf("%d\n", It->Payload);
   }
-  Deallocate(List);
+  Deallocate(&List);
 }
 
 // TODO: handle float/int/int64/etc
