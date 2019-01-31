@@ -10,6 +10,7 @@
 #include "mg_error.h"
 #include "mg_expected.h"
 #include "mg_filesystem.h"
+#include "mg_linked_list.h"
 #include "mg_logger.h"
 #include "mg_io.h"
 #include "mg_math.h"
@@ -25,52 +26,21 @@
 
 using namespace mg;
 
-struct MinMaxExp {
-  int MinExp;
-  int MaxExp;
-};
-
-expected<int> TestExpected(int M) {
-  if (M == 0) {
-    return 1;
-  }
-  return mg_Error(SizeTooSmall);
-}
-
-array<v3i, 2> BoundLevelTest(v3i N, int L) {
-  v3i P(1 << L, 1 << L, 1 << L);
-  v3i MM = (N + P - 1) / P;
-  for (int I = 0; I < L; ++I) {
-    N.X = ((N.X >> 1) << 1) + 1;
-    N.Y = ((N.Y >> 1) << 1) + 1;
-    N.Z = ((N.Z >> 1) << 1) + 1;
-    N.X = (N.X + 1) >> 1;
-    N.Y = (N.Y + 1) >> 1;
-    N.Z = (N.Z + 1) >> 1;
-  }
-  v3i M = N;
-  N.X = ((N.X >> 1) << 1) + 1;
-  N.Y = ((N.Y >> 1) << 1) + 1;
-  N.Z = ((N.Z >> 1) << 1) + 1;
-  printf("M %d %d %d\n", M.X, M.Y, M.Z);
-  printf("MM %d %d %d\n", MM.X, MM.Y, MM.Z);
-  printf("N %d %d %d\n", N.X, N.Y, N.Z);
-  //mg_Assert(MM == N);
-  return array<v3i, 2>{ M, N };
-}
-
-MinMaxExp GetMinMaxExp(const f64* Data, i64 Size) {
-  auto MM = MinMaxElement(Data, Data + Size,
-                          [](auto A, auto B) { return fabs(A) < fabs(B); });
-  MinMaxExp Result;
-  frexp(*(MM.Min), &Result.MinExp);
-  frexp(*(MM.Max), &Result.MaxExp);
-  return Result;
-}
-
 // TODO: have an abstraction for typed buffer
 // TODO: enforce error checking everywhere
 // TODO: memory out-of-bound/leak detection
+
+void TestLinkedList() {
+  linked_list<int>* List = nullptr;
+  List = AddNode(List, 1);
+  auto NextNode = AddNode(List, 2);
+  NextNode = AddNode(NextNode, 3);
+  NextNode = AddNode(NextNode, 4);
+  for (auto Node = List; Node != nullptr; Node = Node->Next) {
+    printf("%d\n", Node->Payload);
+  }
+  Deallocate(List);
+}
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {

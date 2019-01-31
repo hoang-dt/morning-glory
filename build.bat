@@ -2,7 +2,7 @@
 
 :: Parameters
 set "LLVMPath=C:\Program Files\LLVM"
-set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community"
+set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
 set "VSVersion=14.16.27023"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"

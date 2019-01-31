@@ -43,7 +43,6 @@ void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs) {
 void EncodeData(const volume& Vol, v3i TileDims, int Bits, f64 Tolerance,
                 const dynamic_array<extent>& Subbands, cstr FileName)
 {
-  int EncodeTimes = 0;
   // TODO: error handling
   // TODO: create the bit stream(s) inside the function
   v3i Dims = Extract3Ints(Vol.Dims);
@@ -131,7 +130,6 @@ void EncodeData(const volume& Vol, v3i TileDims, int Bits, f64 Tolerance,
           if (Bits - Bitplane <= EMaxes[BlockId] - ToleranceExp + 1) {
             int N = Ns[BlockId];
             EncodeBlock(&UIntTile[K], Bitplane, N, &Bs);
-            ++EncodeTimes;
             Ns[BlockId] = (i8)N;
           }
           size_t Bytes = Size(&Bs);
@@ -166,13 +164,11 @@ void EncodeData(const volume& Vol, v3i TileDims, int Bits, f64 Tolerance,
     }}} /* end loop through the tiles */
     NumTilesSoFar += Prod<i64>(NumTilesInSubband);
   } /* end loop through the subbands */
-  printf("Encode times: %d\n", EncodeTimes);
 }
 
 void DecodeData(volume* Vol, v3i TileDims, int Bits, f64 Tolerance,
                 const dynamic_array<extent>& Subbands, cstr FileName)
 {
-  int DecodeTimes = 0;
   // TODO: error handling
   v3i Dims = Extract3Ints(Vol->Dims);
   v3i BlockDims(4, 4, 4); // zfp block size
@@ -247,7 +243,6 @@ void DecodeData(volume* Vol, v3i TileDims, int Bits, f64 Tolerance,
             mg_Assert(Bs.Stream.Bytes > 0);
             int N = Ns[BlockId];
             DecodeBlock(&UIntTile[K], Bitplane, N, &Bs);
-            ++DecodeTimes;
             Ns[BlockId] = N;
           }
           /* last bit plane, copy the samples back */
@@ -273,7 +268,6 @@ void DecodeData(volume* Vol, v3i TileDims, int Bits, f64 Tolerance,
     }}} /* end loop through the tiles */
     NumTilesSoFar += Prod<i64>(NumTilesInSubband);
   } /* end loop through the subbands */
-  printf("Decode times: %d\n", DecodeTimes);
 }
 
 } // namespace mg
