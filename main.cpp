@@ -87,11 +87,11 @@ int main(int Argc, const char** Argv) {
   f64 Tolerance = 0;
   GetOptionValue(Argc, Argv, "--tolerance", &Tolerance);
   //Cdf53Forward(&ExpandedF, NLevels, ExpandedF.Type);
-  Cdf53Forward(&OriginalF, NLevels, OriginalF.Type);
+  Cdf53Forward(&OriginalF, NLevels);
   printf("Wavelet transform time: %lld ms\n", ResetTimer(&Timer));
   /* Compress and write output files */
   dynamic_array<extent> Subbands;
-  int NDims = (Meta.Dimensions.X > 1) + (Meta.Dimensions.Y > 1) + (Meta.Dimensions.Z > 1);
+  int NDims = (Meta.Dims.X > 1) + (Meta.Dims.Y > 1) + (Meta.Dims.Z > 1);
   //BuildSubbands(NDims, BigDims, NLevels, &Subbands);
   BuildSubbands(NDims, Meta.Dims, NLevels, &Subbands);
   v3i TileDims(32, 32, 32); // TODO: get from the command line
@@ -103,7 +103,7 @@ int main(int Argc, const char** Argv) {
   DecodeData(&OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
   puts("Done decoding");
   //Cdf53Inverse(&ExpandedF, NLevels, ExpandedF.Type);
-  Cdf53Inverse(&OriginalF, NLevels, OriginalF.Type);
+  Cdf53Inverse(&OriginalF, NLevels);
   //f64 Psnr = PSNR(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
                   //data_type::float64);
   //f64 Rmse = RMSError(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,

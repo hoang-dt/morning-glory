@@ -68,24 +68,57 @@ template <typename t, int N> const t* ConstReverseEnd(const array<t, N>& A);
 template <typename t, int N> int Size(array<t, N>&);
 
 /* Vector in 2D, supports .X, .UV, and [] */
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 template <typename t>
-struct v2;
-// using v2i  = v2<i32>;
-// using v2u  = v2<u32>;
-// using v2l  = v2<i64>;
-// using v2ul = v2<u64>;
-// using v2f  = v2<f32>;
-// using v2d  = v2<f64>;
+struct v2 {
+  union {
+    struct { t X, Y; };
+    struct { t U, V; };
+    t E[2];
+  };
+  v2();
+  v2(t X, t Y);
+  template <typename u> v2(v2<u> Other);
+  t& operator[](int Idx);
+  t operator[](int Idx) const;
+  template <typename u> v2& operator=(v2<u> other);
+};
+using v2i  = v2<i32>;
+using v2u  = v2<u32>;
+using v2l  = v2<i64>;
+using v2ul = v2<u64>;
+using v2f  = v2<f32>;
+using v2d  = v2<f64>;
 
 /* Vector in 3D, supports .X, .XY, .UV, .RGB and [] */
 template <typename t>
-struct v3;
-// using v3i  = v3<i32>;
-// using v3u  = v3<u32>;
-// using v3l  = v3<i64>;
-// using v3ul = v3<u64>;
-// using v3f  = v3<f32>;
-// using v3d  = v3<f64>;
+struct v3 {
+  union {
+    struct { t X, Y, Z; };
+    struct { t U, V, __; };
+    struct { t R, G, B; };
+    struct { v2<t> XY; t Ignored0_; };
+    struct { t Ignored1_; v2<t> YZ; };
+    struct { v2<t> UV; t Ignored2_; };
+    struct { t Ignored3_; v2<t> V__; };
+    t E[3];
+  };
+  v3();
+  v3(t V);
+  v3(t X, t Y, t Z);
+  template <typename u> v3(v3<u> Other);
+  t& operator[](int Idx);
+  t operator[](int Idx) const;
+  template <typename u> v3& operator=(v3<u> other);
+};
+#pragma GCC diagnostic pop
+using v3i  = v3<i32>;
+using v3u  = v3<u32>;
+using v3l  = v3<i64>;
+using v3ul = v3<u64>;
+using v3f  = v3<f32>;
+using v3d  = v3<f64>;
 
 template <typename t>
 struct typed_buffer;

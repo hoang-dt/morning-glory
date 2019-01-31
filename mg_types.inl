@@ -114,58 +114,23 @@ const t& typed_buffer<t>::operator[](i64 Idx) const { assert(Idx < Size); return
 template <typename t> mg_ForceInline
 i64 Size(typed_buffer<t> Buf) { return Buf.Size; }
 
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpedantic"
-template <typename t>
-struct v2 {
-  union {
-    struct { t X, Y; };
-    struct { t U, V; };
-    t E[2];
-  };
-  mg_ForceInline v2() = default;
-  mg_ForceInline v2(t X, t Y): X(X), Y(Y) {}
-  template <typename u> mg_ForceInline
-  v2(v2<u> Other): X(Other.X), Y(Other.Y) {}
-  mg_ForceInline t& operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
-  mg_ForceInline t operator[](int Idx) const { assert(Idx < 2); return E[Idx]; }
-  template <typename u> mg_ForceInline
-  v2& operator=(v2<u> other) { X = other.X; Y = other.Y; return *this; }
-};
-using v2i  = v2<i32>;
-using v2u  = v2<u32>;
-using v2l  = v2<i64>;
-using v2ul = v2<u64>;
-using v2f  = v2<f32>;
-using v2d  = v2<f64>;
+template <typename t> mg_ForceInline v2<t>::v2() = default;
+template <typename t> mg_ForceInline v2<t>::v2(t X, t Y): X(X), Y(Y) {}
+template <typename t> template <typename u> mg_ForceInline 
+v2<t>::v2(v2<u> Other): X(Other.X), Y(Other.Y) {}
+template <typename t> mg_ForceInline t& v2<t>::operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
+template <typename t> mg_ForceInline t v2<t>::operator[](int Idx) const { assert(Idx < 2); return E[Idx]; }
+template <typename t> template <typename u> mg_ForceInline
+v2<t>& v2<t>::operator=(v2<u> other) { X = other.X; Y = other.Y; return *this; }
 
-template <typename t>
-struct v3 {
-  union {
-    struct { t X, Y, Z; };
-    struct { t U, V, __; };
-    struct { t R, G, B; };
-    struct { v2<t> XY; t Ignored0_; };
-    struct { t Ignored1_; v2<t> YZ; };
-    struct { v2<t> UV; t Ignored2_; };
-    struct { t Ignored3_; v2<t> V__; };
-    t E[3];
-  };
-  mg_ForceInline v3() = default;
-  mg_ForceInline v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
-  template <typename u> mg_ForceInline
-  v3(v3<u> Other): X(Other.X), Y(Other.Y), Z(Other.Z) {}
-  mg_ForceInline t& operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
-  mg_ForceInline t operator[](int Idx) const { assert(Idx < 3); return E[Idx]; }
-  template <typename u> mg_ForceInline
-  v3& operator=(v3<u> other) { X = other.X; Y = other.Y; Z = other.Z; return *this; }
-};
-using v3i  = v3<i32>;
-using v3u  = v3<u32>;
-using v3l  = v3<i64>;
-using v3ul = v3<u64>;
-using v3f  = v3<f32>;
-using v3d  = v3<f64>;
-#pragma GCC diagnostic pop
+template <typename t> mg_ForceInline v3<t>::v3() = default;
+template <typename t> mg_ForceInline v3<t>::v3(t V): X(V), Y(V), Z(V) {}
+template <typename t> mg_ForceInline v3<t>::v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
+template <typename t> template <typename u> mg_ForceInline
+v3<t>::v3(v3<u> Other): X(Other.X), Y(Other.Y), Z(Other.Z) {}
+template <typename t> mg_ForceInline t& v3<t>::operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
+template <typename t> mg_ForceInline t v3<t>::operator[](int Idx) const { assert(Idx < 3); return E[Idx]; }
+template <typename t> template <typename u> mg_ForceInline 
+v3<t>& v3<t>::operator=(v3<u> other) { X = other.X; Y = other.Y; Z = other.Z; return *this; }
 
 } // namespace mg

@@ -46,11 +46,11 @@ error ReadMetadata(cstr FileName, metadata* Meta) {
       tokenizer TkSpace(Value, " ");
       int D = 0;
       for (string_ref Dim = Next(&TkSpace); Dim && D < 4; Dim = Next(&TkSpace), ++D)
-        if (!ToInt(Dim, &Meta->Dimensions[D]))
+        if (!ToInt(Dim, &Meta->Dims[D]))
           return mg_Error(ParseFailed, "File %s", FileName);
       if (D >= 4) return mg_Error(DimensionsTooMany, "File %s", FileName);
-      if (D <= 2) Meta->Dimensions[2] = 1;
-      if (D <= 1) Meta->Dimensions[1] = 1;
+      if (D <= 2) Meta->Dims[2] = 1;
+      if (D <= 1) Meta->Dims[1] = 1;
     } else if (Attr == "data type") {
       if (!(Meta->DataType = data_type(Value))) {
         return mg_Error(TypeNotSupported, "File %s", FileName);

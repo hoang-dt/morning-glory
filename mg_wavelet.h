@@ -22,10 +22,10 @@ template <typename t> void InverseLiftExtrapolateCdf53X(t* F, v3i N, v3i NBig, v
 template <typename t> void InverseLiftExtrapolateCdf53Y(t* F, v3i N, v3i NBig, v3i L);
 template <typename t> void InverseLiftExtrapolateCdf53Z(t* F, v3i N, v3i NBig, v3i L);
 
-void Cdf53Forward(volume* Vol, int NLevels, data_type Type = data_type::float64);
-void Cdf53Inverse(volume* Vol, int NLevels, data_type Type = data_type::float64);
-void Cdf53ForwardExtrapolate(sub_volume* Vol, data_type Type = data_type::float64);
-void Cdf53InverseExtrapolate(sub_volume* Vol, data_type Type = data_type::float64);
+void Cdf53Forward(volume* Vol, int NLevels);
+void Cdf53Inverse(volume* Vol, int NLevels);
+void Cdf53ForwardExtrapolate(sub_volume* Vol);
+void Cdf53InverseExtrapolate(sub_volume* Vol);
 
 template <typename t>
 struct dynamic_array;

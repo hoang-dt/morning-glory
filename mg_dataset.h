@@ -19,7 +19,7 @@ struct metadata {
   char File[256] = "";
   char Name[32] = "";
   char Field[32] = "";
-  union { v3i Dimensions = { 0, 0, 0 }; v3i Dims; };
+  v3i Dims = v3i(0, 0, 0);
   data_type DataType = data_type::__Invalid__;
   inline thread_local static char String[384];
 }; // struct metadata

@@ -20,6 +20,9 @@ linked_list<t>* AddNode(linked_list<t>* Where, const t& Payload, allocator* Allo
 template <typename t>
 void Deallocate(linked_list<t>* List, allocator* Alloc = &Mallocator());
 
+template <typename t>
+i64 Size(const linked_list<t>& List);
+
 } // namespace mg
 
 #include "mg_linked_list.inl"

@@ -270,4 +270,36 @@ void DecodeData(volume* Vol, v3i TileDims, int Bits, f64 Tolerance,
   } /* end loop through the subbands */
 }
 
+void SetFileName(file_format* FileFormat, cstr FileName) {
+  FileFormat->FileName = FileName;
+}
+void SetTolerance(file_format* FileFormat, f64 Tolerance) {
+  FileFormat->Tolerance = Tolerance;
+}
+void SetPrecision(file_format* FileFormat, int Precision) {
+  FileFormat->Precision = Precision;
+}
+void SetNumLevels(file_format* FileFormat, int NumLevels) {
+  FileFormat->NumLevels = NumLevels;
+}
+void SetVolume(file_format* FileFormat, byte* Data, v3i Dims, data_type Type) {
+  FileFormat->Volume.Buffer.Data = Data;
+  FileFormat->Volume.Buffer.Bytes = SizeOf(Type) * Prod<i64>(Dims);
+  FileFormat->Volume.Dims = Stuff3Ints(Dims);
+}
+void SetWaveletTransform(file_format* FileFormat, bool DoWaveletTransform) {
+  FileFormat->DoWaveletTransform = DoWaveletTransform;
+}
+void SetExtrapolation(file_format* FileFormat, bool DoExtrapolation) {
+  FileFormat->DoExtrapolation = DoExtrapolation;
+}
+void Encode(file_format* FileFormat) {
+  if (FileFormat->DoExtrapolation) {
+    // TODO
+  }
+  if (FileFormat->DoWaveletTransform)
+    Cdf53Forward(&(FileFormat->Volume), FileFormat->NumLevels);
+  //EncodeData(FileFormat->Volume, v3i(FileFormat->TileDim));
+}
+
 } // namespace mg

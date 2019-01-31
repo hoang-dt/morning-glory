@@ -10,7 +10,7 @@
 
 namespace mg {
 
-void Cdf53Forward(volume* Vol, int NLevels, data_type Type) {
+void Cdf53Forward(volume* Vol, int NLevels) {
 #define Body(type)\
   v3i Dims = Extract3Ints(Vol->Dims);\
   type* FPtr = (type*)(Vol->Buffer.Data);\
@@ -20,11 +20,11 @@ void Cdf53Forward(volume* Vol, int NLevels, data_type Type) {
     ForwardLiftCdf53Z(FPtr, Dims, v3i(I, I, I));\
   }\
 
-  TypeChooser(Type)
+  TypeChooser(Vol->Type)
 #undef Body
 }
 
-void Cdf53Inverse(volume* Vol, int NLevels, data_type Type) {
+void Cdf53Inverse(volume* Vol, int NLevels) {
 #define Body(type)\
   v3i Dims = Extract3Ints(Vol->Dims);\
   type* FPtr = (type*)(Vol->Buffer.Data);\
@@ -34,11 +34,11 @@ void Cdf53Inverse(volume* Vol, int NLevels, data_type Type) {
     InverseLiftCdf53X(FPtr, Dims, v3i(I, I, I));\
   }\
 
-  TypeChooser(Type)
+  TypeChooser(Vol->Type)
 #undef Body
 }
 
-void Cdf53ForwardExtrapolate(sub_volume* Vol, data_type Type) {
+void Cdf53ForwardExtrapolate(sub_volume* Vol) {
 #define Body(type)\
   v3i SmallDims = Extract3Ints(Vol->Extent.Dims);\
   v3i BigDims = Extract3Ints(Vol->Dims);\
@@ -55,11 +55,11 @@ void Cdf53ForwardExtrapolate(sub_volume* Vol, data_type Type) {
     ForwardLiftExtrapolateCdf53Z(FPtr, SmallDims, BigDims, v3i(I, I, I));\
   }\
 
-  TypeChooser(Type)
+  TypeChooser(Vol->Type)
 #undef Body
 }
 
-void Cdf53InverseExtrapolate(sub_volume* Vol, data_type Type) {
+void Cdf53InverseExtrapolate(sub_volume* Vol) {
 #define Body(type)\
   v3i SmallDims = Extract3Ints(Vol->Extent.Dims);\
   v3i BigDims = Extract3Ints(Vol->Dims);\
@@ -76,7 +76,7 @@ void Cdf53InverseExtrapolate(sub_volume* Vol, data_type Type) {
     InverseLiftExtrapolateCdf53X(FPtr, SmallDims, BigDims, v3i(I, I, I));\
   }\
 
-  TypeChooser(Type)
+  TypeChooser(Vol->Type)
 #undef Body
 }
 

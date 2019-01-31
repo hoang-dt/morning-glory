@@ -33,5 +33,15 @@ void Deallocate(linked_list<t>* List, allocator* Alloc) {
   }
 }
 
+template <typename t> mg_ForceInline
+i64 Size(const linked_list<t>& List) {
+  i64 Result = 0;
+  while (List) {
+    ++Result;
+    List = List->Next;
+  }
+  return Result;
+}
+
 } // namespace mg
 
