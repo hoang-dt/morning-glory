@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mg_memory.h"
+#include "mg_types.h"
 
 namespace mg {
 
@@ -14,6 +15,7 @@ template <typename t>
 struct linked_list {
   linked_list_node<t>* Head = nullptr;
   allocator* Alloc = nullptr;
+  i64 Size = 0;
   linked_list(allocator* Alloc = &Mallocator());
 };
 
@@ -22,6 +24,7 @@ struct linked_list_iterator {
   linked_list_node<t>* Node = nullptr; 
   linked_list_iterator& operator++();
   linked_list_node<t>* operator->();
+  t& operator*();
   bool operator!=(linked_list_iterator Other) const;
   bool operator==(linked_list_iterator Other) const;
 };

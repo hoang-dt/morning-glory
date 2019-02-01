@@ -20,6 +20,7 @@ linked_list_iterator<t> Insert(linked_list<t>* List, linked_list_iterator<t> Whe
     NewNode->Next = Where->Next;
     Where->Next = NewNode;
   }
+  ++List->Size;
   return linked_list_iterator<t>{NewNode};
 }
 
@@ -34,6 +35,7 @@ linked_list_iterator<t> PushBack(linked_list<t>* List, const t& Payload) {
   auto NewNode = Insert(List, linked_list_iterator<t>{Prev}, Payload);
   if (!Prev) // this new node is the first node in the list
     List->Head = NewNode.Node;
+  ++List->Size;
   return NewNode;
 }
 
@@ -45,27 +47,32 @@ void Deallocate(linked_list<t>* List) {
     Node = Node->Next;
     List->Alloc->Deallocate(&Buf);
   }
+  List->Head = nullptr;
+  List->Size = 0;
 }
 
 template <typename t> mg_ForceInline
 i64 Size(const linked_list<t>& List) {
-  i64 Result = 0;
-  auto Node = List.Head;
-  while (Node) {
-    ++Result;
-    Node = Node->Next;
-  }
-  return Result;
+  return List.Size;
 }
 
 template <typename t> mg_ForceInline
 linked_list_iterator<t>& linked_list_iterator<t>::operator++() {
-  mg_Assert(Node); Node = Node->Next; return *this;
+  mg_Assert(Node);
+  Node = Node->Next;
+  return *this;
 } 
 
 template <typename t> mg_ForceInline
 linked_list_node<t>* linked_list_iterator<t>::operator->() {
-  mg_Assert(Node); return Node;
+  mg_Assert(Node);
+  return Node;
+}
+
+template <typename t> mg_ForceInline
+t& linked_list_iterator<t>::operator*() {
+  mg_Assert(Node);
+  return Node->Payload;
 }
 
 template <typename t> mg_ForceInline

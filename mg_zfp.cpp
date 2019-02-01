@@ -212,7 +212,7 @@ void DecodeData(volume* Vol, v3i TileDims, int Bits, f64 Tolerance,
             mg_FSeek(Fp, sizeof(u64) * TileId, SEEK_SET);
             fread(Where, sizeof(u64), 2, Fp); // read the pointers to the current and next chunks
             mg_Assert(Where[1] >= Where[0]);
-            if (Where[1] > Where[0]) { // chunk exists
+            if (Where[0] > 0 && Where[1] > Where[0]) { // chunk exists
               AllocateBuffer(&ChunkBuf, Where[1] - Where[0]);
               mg_FSeek(Fp, Where[0], SEEK_SET);
               fread(ChunkBuf.Data, ChunkBuf.Bytes, 1, Fp); // read the chunk data
@@ -260,7 +260,7 @@ void DecodeData(volume* Vol, v3i TileDims, int Bits, f64 Tolerance,
             for (int X = 0; X < RealBlockDims.X; ++X) {
               i64 I = XyzToI(Dims, v3i(TX + BX + X, TY + BY + Y, TZ + BZ + Z));
               i64 J = K + XyzToI(BlockDims, v3i(X, Y, Z));
-              Data[I] = FloatTile[J]; // copy data to the local tile buffer
+              Data[I] = FloatTile[J];
             }}}
           } // end last bit plane
         }}} /* end loop through the zfp blocks */
@@ -317,6 +317,7 @@ void Encode(file_format* FileFormat) {
 
 v3i GetNextChunk(file_format* FileFormat, v3i Level, v3i Tile, byte* Output) {
   // TODO: error and parameter checking
+  // TODO: error handling
   int Sb = LevelToSubband(Level);
   // assert(Sb < Size(FileFormat->Subbands)
   i64 NumTilesInPrevSubbands = 0;
@@ -329,16 +330,100 @@ v3i GetNextChunk(file_format* FileFormat, v3i Level, v3i Tile, byte* Output) {
   v3i NumTiles = (SubbandDims + FileFormat->TileDim - 1) / FileFormat->TileDim;
   // TODO: assert(Tile < NumTiles)
   i64 TileIdInSubband = XyzToI(NumTiles, Tile);
-  i64 TileIGlobal = NumTilesInPrevSubbands + TileIdInSubband;
+  i64 TileIdGlobal = NumTilesInPrevSubbands + TileIdInSubband;
+  v3i SubbandPos = Extract3Ints(FileFormat->Subbands[Sb].Pos);
+  v3i T = SubbandPos + Tile * file_format::TileDim;
+  v3i RealTileDims(Min(SubbandPos.X + SubbandDims.X - T.X, file_format::TileDim),
+                   Min(SubbandPos.Y + SubbandDims.Y - T.Y, file_format::TileDim),
+                   Min(SubbandPos.Z + SubbandDims.Z - T.Z, file_format::TileDim));
   int NumChunks = (int)Size(FileFormat->Chunks[Sb][TileIdInSubband]);
-   
-  // decode the whole tile from the beginning
+  char FileNameBuf[256];
+  snprintf(FileNameBuf, sizeof(FileNameBuf), "%s%d", FileFormat->FileName, NumChunks);
+  FILE* Fp = fopen(FileNameBuf, "rb");
+  if (Fp) {
+    mg_FSeek(Fp, sizeof(u64) * TileIdGlobal, SEEK_SET);
+    u64 Where[2] = { 0 };
+    fread(Where, sizeof(u64), 2, Fp);
+    if (Where[0] > 0 && Where[1] > Where[0]) {
+      buffer ChunkBuf;
+      AllocateBuffer(&ChunkBuf, Where[1] - Where[0]);
+      fread(ChunkBuf.Data, ChunkBuf.Bytes, 1, Fp);
+      fclose(Fp);
+      PushBack(&FileFormat->Chunks[Sb][TileIdInSubband], ChunkBuf);
+      linked_list_iterator<buffer> It = Begin(FileFormat->Chunks[Sb][TileIdInSubband]);
+      bitstream Bs;
+      InitRead(&Bs, *It);
+      int ToleranceExp = Exponent(FileFormat->Tolerance);
+      v3i BlockDims(4, 4, 4);
+      v3i NumBlocksInTile = ((RealTileDims + BlockDims) - 1) / BlockDims;
+      mg_HeapArray(FloatTile, f64, Prod<i64>(v3i(file_format::TileDim)));
+      mg_HeapArray(IntTile, i64, Prod<i64>(v3i(file_format::TileDim)));
+      mg_HeapArrayZero(UIntTile, u64, Prod<i64>(v3i(file_format::TileDim)));
+      mg_HeapArrayZero(Ns, i8, Prod<i64>(NumBlocksInTile));
+      mg_HeapArray(EMaxes, i16, Prod<i64>(NumBlocksInTile));
+      bool ContinueDecoding = true;
+      for (int Bitplane = FileFormat->Precision; Bitplane >= 0; --Bitplane) {
+        for (int BZ = 0; BZ < RealTileDims.Z; BZ += BlockDims.Z) {
+        for (int BY = 0; BY < RealTileDims.Y; BY += BlockDims.Y) {
+        for (int BX = 0; BX < RealTileDims.X; BX += BlockDims.X) {
+          i64 BlockId = XyzToI(NumBlocksInTile, v3i(BX, BY, BZ) / BlockDims);
+          if (BlockId == 0 && Size(&Bs) >= 4096) {
+            ++It;
+            if (It == End(FileFormat->Chunks[Sb][TileIdInSubband]))
+              ContinueDecoding = false;
+            else
+              InitRead(&Bs, *It);
+          }
+          i64 K = XyzToI(NumBlocksInTile, v3i(BX, BY, BZ) / BlockDims) * Prod<i32>(BlockDims);
+          if (ContinueDecoding && Bitplane == FileFormat->Precision) {
+            if (Read(&Bs)) // significant 
+              EMaxes[BlockId] = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
+            else 
+              EMaxes[BlockId] = ToleranceExp - 2;
+          }
+          if (ContinueDecoding) { // TODO: add tolerance support?
+            int N = Ns[BlockId];
+            DecodeBlock(&UIntTile[K], Bitplane, N, &Bs);
+            Ns[BlockId] = N;
+          }
+          if (Bitplane == 0) { // dequantize and copy the samples to output
+            v3i RealBlockDims(Min(RealTileDims.X - BX, BlockDims.X),
+                              Min(RealTileDims.Y - BY, BlockDims.Y),
+                              Min(RealTileDims.Z - BZ, BlockDims.Z));
+            InverseShuffle(&UIntTile[K], &IntTile[K]);
+            InverseBlockTransform(&IntTile[K]);
+            Dequantize((byte*)&IntTile[K], Prod<i32>(BlockDims), EMaxes[BlockId],
+                       FileFormat->Precision - 1, (byte*)&FloatTile[K], FileFormat->Volume.Type);
+            /* loop through the samples in each block */
+            f64* OutputPtr = (f64*)Output;
+            for (int Z = 0; Z < RealBlockDims.Z; ++Z) { /* loop through each block */
+            for (int Y = 0; Y < RealBlockDims.Y; ++Y) {
+            for (int X = 0; X < RealBlockDims.X; ++X) {
+              i64 I = XyzToI(RealTileDims, v3i(BX + X, BY + Y, BZ + Z));
+              i64 J = K + XyzToI(BlockDims, v3i(X, Y, Z));
+              OutputPtr[I] = FloatTile[J];
+            }}} // end samples loop
+          }
+        }}} // end blocks loop
+      } // end bit plane loop
+    } else {
+       // TODO
+       return v3i(0);
+    }
+  } else {
+    // TODO
+    return v3i(0);
+  }
+  return RealTileDims;
 }
 
 void CleanUp(file_format* FileFormat) {
-  DeallocateTypedBuffer(&FileFormat->Chunks);
-  for (int S = 0; S < Size(FileFormat->Subbands); ++S)
+for (int S = 0; S < Size(FileFormat->Subbands); ++S) {
+    for (i64 T = 0; T < Size(FileFormat->Chunks[S]); ++T) 
+      Deallocate(&FileFormat->Chunks[S][T]);
     DeallocateTypedBuffer(&FileFormat->Chunks[S]);
+  }
+  DeallocateTypedBuffer(&FileFormat->Chunks);
 }
 
 } // namespace mg
