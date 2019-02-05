@@ -29,40 +29,6 @@ class Block {
         line(startX, startY + j * spacingY, startX + (numPointsX - 1) * spacingX, startY + j * spacingY);
       }
     }
-    //}
-    //  /* down */
-    //  if (coordY < 3) {
-    //    int neighborX = coordX;
-    //    int neighborY = coordY + 1;
-    //    Block neighbor = Blocks[neighborY * 4 + neighborX];
-    //    int numPointsBoundary = max(neighbor.numPointsX, numPointsX);
-    //    float spacingBoundaryX = min(neighbor.spacingX, spacingX);
-    //    float boundaryY1 = startY + (numPointsY - 1) * spacingY;
-    //    float boundaryY2 = neighbor.startY;
-    //    for (int i = 0; i < numPointsBoundary; ++i) {
-    //      line(startX + i * spacingBoundaryX, boundaryY1, startX + i * spacingBoundaryX, boundaryY2);
-    //    }
-    //    line(startX, boundaryY2, startX + (numPointsX - 1) * spacingX, boundaryY2);
-    //  }
-    //  /* right */
-    //  if (coordX < 3) {
-    //    int neighborX = coordX + 1;
-    //    int neighborY = coordY;
-    //    Block neighbor = Blocks[neighborY * 4 + neighborX];
-    //    int numPointsBoundary = max(neighbor.numPointsY, numPointsY);
-    //    float spacingBoundaryY = min(neighbor.spacingY, spacingY);
-    //    float boundaryX1 = startX + (numPointsX - 1) * spacingX;
-    //    float boundaryX2 = neighbor.startX;
-    //    for (int i = 0; i < numPointsBoundary; ++i) {
-    //      line(boundaryX1, startY + i * spacingBoundaryY, boundaryX2, startY + i * spacingBoundaryY);
-    //    }        
-    //    line(boundaryX2, startY, boundaryX2, startY + (numPointsY - 1) * spacingY);
-    //    if (coordY < 3) {
-    //      line(boundaryX1, startY + numPointsBoundary * spacingBoundaryY, boundaryX2, startY + numPointsBoundary * spacingBoundaryY);
-    //      line(boundaryX2, startY, boundaryX2, startY + (numPointsY) * spacingY);
-    //    }
-    //  }
-    //}    
   }
   
   void Draw1() {
@@ -90,10 +56,13 @@ class Block {
         int j = 1;
         for (; startY + j * spacingBoundaryY <= neighbor.startY + (neighbor.numPointsY - 1) * neighbor.spacingY; ++j) {
           ellipse(boundaryX, startY + j * spacingBoundaryY, PointSize, PointSize);
-          if (DrawMesh) {
+          if (DrawMesh && coordX == SelectX && coordY == SelectY) {
             line(boundaryX, startY + j * spacingBoundaryY, startX, startY + j * spacingBoundaryY);
             line(boundaryX, startY + j * spacingBoundaryY, boundaryX, startY + (j - 1) * spacingBoundaryY);
-          }          
+          }
+        }
+        if (DrawMesh && coordX == SelectX && coordY == SelectY) {
+          line(boundaryX, startY, startX, startY);
         }
         /* check the down neighbor of the neighbor */
         boolean meFirst = true;
@@ -111,7 +80,7 @@ class Block {
         if (meFirst) {
           for (; j < numPointsBoundary; ++j) {
             ellipse(boundaryX, startY + j * spacingBoundaryY, PointSize, PointSize);
-            if (DrawMesh) {
+            if (DrawMesh && coordX == SelectX && coordY == SelectY) {
               line(boundaryX, startY + j * spacingBoundaryY, startX, startY + j * spacingBoundaryY);
               line(boundaryX, startY + j * spacingBoundaryY, boundaryX, startY + (j - 1) * spacingBoundaryY);
             }            
@@ -119,7 +88,7 @@ class Block {
         } else {
           for (; j < numPointsBoundary; ++j) {
             ellipse(boundaryX, startY + j * spacingBoundaryY, PointSize, PointSize);
-            if (DrawMesh) {
+            if (DrawMesh && coordX == SelectX && coordY == SelectY) {
               line(boundaryX, startY + j * spacingBoundaryY, startX, startY + j * spacingBoundaryY);
               line(boundaryX, startY + j * spacingBoundaryY, boundaryX, startY + (j - 1) * spacingBoundaryY);
             }            
@@ -138,12 +107,15 @@ class Block {
         float boundaryX = neighbor.startX;
         for (int j = 1; j < numPointsBoundary; ++j) {
           ellipse(boundaryX, startY + j * spacingBoundaryY, PointSize, PointSize);
-          if (DrawMesh) {
+          if (DrawMesh && coordX == SelectX && coordY == SelectY) {
             line(boundaryX, startY + j * spacingBoundaryY, startX + (numPointsX - 1) * spacingX, startY + j * spacingBoundaryY);
             line(boundaryX, startY + j * spacingBoundaryY, boundaryX, startY + (j - 1) * spacingBoundaryY);
           }          
         }
-      }      
+        if (DrawMesh && coordX == SelectX && coordY == SelectY) {
+          line(boundaryX, startY, startX + (numPointsX - 1) * spacingX, startY);
+        }
+      }
     }
     // up
     if (coordY > 0) {
@@ -157,10 +129,13 @@ class Block {
         int i = 1;
         for (; startX + i * spacingBoundaryX <= neighbor.startX + (neighbor.numPointsX - 1) * neighbor.spacingX; ++i) {
           ellipse(startX + i * spacingBoundaryX, boundaryY, PointSize, PointSize);
-          if (DrawMesh) {
+          if (DrawMesh && coordX == SelectX && coordY == SelectY) {
             line(startX + i * spacingBoundaryX, boundaryY, startX + i * spacingBoundaryX, startY);
             line(startX + i * spacingBoundaryX, boundaryY, startX + (i - 1) * spacingBoundaryX, boundaryY);
           }          
+        }
+        if (DrawMesh && coordX == SelectX && coordY == SelectY) {
+          line(startX, boundaryY, startX, startY);
         }
         boolean meFirst = true;
         /* check the right neighbor of the neighbor */        
@@ -178,7 +153,7 @@ class Block {
         if (meFirst) {
           for (; i < numPointsBoundary; ++i) {
             ellipse(startX + i * spacingBoundaryX, boundaryY, PointSize, PointSize);
-            if (DrawMesh) {
+            if (DrawMesh && coordX == SelectX && coordY == SelectY) {
               line(startX + i * spacingBoundaryX, boundaryY, startX + i * spacingBoundaryX, startY);
               line(startX + i * spacingBoundaryX, boundaryY, startX + (i - 1) * spacingBoundaryX, boundaryY);
             }            
@@ -186,7 +161,7 @@ class Block {
         } else {
           for (; i < numPointsBoundary; ++i) {
             ellipse(startX + i * spacingBoundaryX, boundaryY, PointSize, PointSize);
-            if (DrawMesh) {
+            if (DrawMesh && coordX == SelectX && coordY == SelectY) {
               line(startX + i * spacingBoundaryX, boundaryY, startX + i * spacingBoundaryX, startY);
               line(startX + i * spacingBoundaryX, boundaryY, startX + (i - 1) * spacingBoundaryX, boundaryY);
             }            
@@ -205,10 +180,13 @@ class Block {
         float boundaryY = neighbor.startY;
         for (int i = 1; i < numPointsBoundary; ++i) {
           ellipse(startX + i * spacingBoundaryX, boundaryY, PointSize, PointSize);
-          if (DrawMesh) {
+          if (DrawMesh && coordX == SelectX && coordY == SelectY) {
             line(startX + i * spacingBoundaryX, boundaryY, startX + i * spacingBoundaryX, startY + (numPointsY - 1) * spacingY);
             line(startX + i * spacingBoundaryX, boundaryY, startX + (i - 1) * spacingBoundaryX, boundaryY);
           }          
+        }
+        if (DrawMesh && coordX == SelectX && coordY == SelectY) {
+          line(startX, boundaryY, startX, startY + (numPointsY - 1) * spacingY);
         }
       }      
     }    
