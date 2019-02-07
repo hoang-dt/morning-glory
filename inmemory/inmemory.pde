@@ -4,7 +4,6 @@ int Spacing = 100;
 int PointSize = 12;
 int SelectX = 0;
 int SelectY = 0;
-boolean DrawMesh = false;
 
 // TODO: show connections (mesh)
 class Block {
@@ -18,185 +17,163 @@ class Block {
   float spacingX = Spacing;
   float spacingY = Spacing;
   
-  void DrawMesh() {    
-    if (coordX == SelectX && coordY == SelectY) {
-      stroke(0, 36, 181, 100);
-      /* inner */
-      for (int i = 0; i < numPointsX; ++i) {
-        line(startX + i * spacingX, startY, startX + i * spacingX, startY + (numPointsY - 1) * spacingY);
-      }
-      for (int j = 0; j < numPointsY; ++j) {
-        line(startX, startY + j * spacingY, startX + (numPointsX - 1) * spacingX, startY + j * spacingY);
-      }
+  void DrawMesh(float fromX, int numStepsX, float spacingX, float fromY, int numStepsY, float spacingY) {    
+    for (int i = 0; i < numStepsX; ++i) {
+      line(fromX + i * spacingX, fromY, fromX + i * spacingX, fromY + (numStepsY - 1) * spacingY);      
+    }
+    for (int j = 0; j < numStepsY; ++j) {
+      line(fromX, fromY + j * spacingY, fromX + (numStepsX - 1) * spacingX, fromY + j * spacingY);
     }
   }
   
-  void Draw1() {
-    //noStroke();
+  void DrawRealPoints() {
     fill(0, 36, 181);
     for (int i = 0; i < numPointsX; ++i) {
       for (int j = 0; j < numPointsY; ++j) {
         ellipse(startX + i * spacingX, startY + j * spacingY, PointSize, PointSize);
       }
     }
-  }
-  
-  void Draw2() {        
-    // draw the interpolated points
-    fill(181, 36, 0);
-    // left
-    if (coordX > 0) {       //<>//
-      int neighborX = coordX - 1;
-      int neighborY = coordY;
-      Block neighbor = Blocks[neighborY * 4 + neighborX];
-      if (neighbor.numPointsY < numPointsY) { // only put imaginary points if I am more refined than my neighbor
-        int numPointsBoundary = max(neighbor.numPointsY, numPointsY);
-        float spacingBoundaryY = min(neighbor.spacingY, spacingY);
-        float boundaryX = neighbor.startX + neighbor.spacingX * (neighbor.numPointsX - 1);
-        int j = 1;
-        for (; startY + j * spacingBoundaryY <= neighbor.startY + (neighbor.numPointsY - 1) * neighbor.spacingY; ++j) {
-          ellipse(boundaryX, startY + j * spacingBoundaryY, PointSize, PointSize);
-          if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-            line(boundaryX, startY + j * spacingBoundaryY, startX, startY + j * spacingBoundaryY);
-            line(boundaryX, startY + j * spacingBoundaryY, boundaryX, startY + (j - 1) * spacingBoundaryY);
-          }
-        }
-        if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-          line(boundaryX, startY, startX, startY);
-        }
-        /* check the down neighbor of the neighbor */
-        boolean meFirst = true;
-        if (neighborY < 3) {
-          int otherNeighborX = neighborX;
-          int otherNeighborY = neighborY + 1;
-          Block otherNeighbor = Blocks[otherNeighborY * 4 + otherNeighborX];
-          int ratio1 = numPointsY / neighbor.numPointsY;
-          int ratio2 = otherNeighbor.numPointsX / neighbor.numPointsX;          
-          if ((ratio1 < ratio2) || (ratio1 == ratio2 && (coordX + coordY * 4) > (otherNeighborX + otherNeighborY * 4))) {
-            boundaryX = otherNeighbor.startX + (otherNeighbor.numPointsX - 1) * otherNeighbor.spacingX;
-            meFirst = false;
-          }
-        }
-        if (meFirst) {
-          for (; j < numPointsBoundary; ++j) {
-            ellipse(boundaryX, startY + j * spacingBoundaryY, PointSize, PointSize);
-            if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-              line(boundaryX, startY + j * spacingBoundaryY, startX, startY + j * spacingBoundaryY);
-              line(boundaryX, startY + j * spacingBoundaryY, boundaryX, startY + (j - 1) * spacingBoundaryY);
-            }            
-          }
-        } else {
-          for (; j < numPointsBoundary; ++j) {
-            ellipse(boundaryX, startY + j * spacingBoundaryY, PointSize, PointSize);
-            if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-              line(boundaryX, startY + j * spacingBoundaryY, startX, startY + j * spacingBoundaryY);
-              line(boundaryX, startY + j * spacingBoundaryY, boundaryX, startY + (j - 1) * spacingBoundaryY);
-            }            
-          }
-        }
-      }
-    }
-    // right
-    if (coordX < 3) {
-      int neighborX = coordX + 1;
-      int neighborY = coordY;
-      Block neighbor = Blocks[neighborY * 4 + neighborX];
-      if (neighbor.numPointsY < numPointsY) {
-        int numPointsBoundary = max(neighbor.numPointsY, numPointsY);
-        float spacingBoundaryY = min(neighbor.spacingY, spacingY);
-        float boundaryX = neighbor.startX;
-        for (int j = 1; j < numPointsBoundary; ++j) {
-          ellipse(boundaryX, startY + j * spacingBoundaryY, PointSize, PointSize);
-          if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-            line(boundaryX, startY + j * spacingBoundaryY, startX + (numPointsX - 1) * spacingX, startY + j * spacingBoundaryY);
-            line(boundaryX, startY + j * spacingBoundaryY, boundaryX, startY + (j - 1) * spacingBoundaryY);
-          }          
-        }
-        if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-          line(boundaryX, startY, startX + (numPointsX - 1) * spacingX, startY);
-        }
-      }
-    }
-    // up
-    if (coordY > 0) {
-      int neighborX = coordX;
-      int neighborY = coordY - 1;
-      Block neighbor = Blocks[neighborY * 4 + neighborX];
-      if (neighbor.numPointsX < numPointsX) { // only put imaginary points if I am more refined than my neighbor
-        int numPointsBoundary = max(neighbor.numPointsX, numPointsX);
-        float spacingBoundaryX = min(neighbor.spacingX, spacingX);
-        float boundaryY = neighbor.startY + neighbor.spacingY * (neighbor.numPointsY - 1);
-        int i = 1;
-        for (; startX + i * spacingBoundaryX <= neighbor.startX + (neighbor.numPointsX - 1) * neighbor.spacingX; ++i) {
-          ellipse(startX + i * spacingBoundaryX, boundaryY, PointSize, PointSize);
-          if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-            line(startX + i * spacingBoundaryX, boundaryY, startX + i * spacingBoundaryX, startY);
-            line(startX + i * spacingBoundaryX, boundaryY, startX + (i - 1) * spacingBoundaryX, boundaryY);
-          }          
-        }
-        if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-          line(startX, boundaryY, startX, startY);
-        }
-        boolean meFirst = true;
-        /* check the right neighbor of the neighbor */        
-        if (neighborX < 3) {
-          int otherNeighborX = neighborX + 1;
-          int otherNeighborY = neighborY;
-          Block otherNeighbor = Blocks[otherNeighborY * 4 + otherNeighborX];
-          int ratio1 = numPointsX / neighbor.numPointsX;
-          int ratio2 = otherNeighbor.numPointsY / neighbor.numPointsY;
-          if ((ratio1 < ratio2) || (ratio1 == ratio2 && (coordX + coordY * 4) > (otherNeighborX + otherNeighborY * 4))) {
-            boundaryY = otherNeighbor.startY + (otherNeighbor.numPointsY - 1) * otherNeighbor.spacingY;
-            meFirst = false;
-          }
-        }
-        if (meFirst) {
-          for (; i < numPointsBoundary; ++i) {
-            ellipse(startX + i * spacingBoundaryX, boundaryY, PointSize, PointSize);
-            if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-              line(startX + i * spacingBoundaryX, boundaryY, startX + i * spacingBoundaryX, startY);
-              line(startX + i * spacingBoundaryX, boundaryY, startX + (i - 1) * spacingBoundaryX, boundaryY);
-            }            
-          }
-        } else {
-          for (; i < numPointsBoundary; ++i) {
-            ellipse(startX + i * spacingBoundaryX, boundaryY, PointSize, PointSize);
-            if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-              line(startX + i * spacingBoundaryX, boundaryY, startX + i * spacingBoundaryX, startY);
-              line(startX + i * spacingBoundaryX, boundaryY, startX + (i - 1) * spacingBoundaryX, boundaryY);
-            }            
-          }
-        }
-      }
-    }
-    // down
-    if (coordY < 3) {
-      int neighborX = coordX;
-      int neighborY = coordY + 1;
-      Block neighbor = Blocks[neighborY * 4 + neighborX];
-      if (neighbor.numPointsX < numPointsX) {
-        int numPointsBoundary = max(neighbor.numPointsX, numPointsX);
-        float spacingBoundaryX = min(neighbor.spacingX, spacingX);
-        float boundaryY = neighbor.startY;
-        for (int i = 1; i < numPointsBoundary; ++i) {
-          ellipse(startX + i * spacingBoundaryX, boundaryY, PointSize, PointSize);
-          if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-            line(startX + i * spacingBoundaryX, boundaryY, startX + i * spacingBoundaryX, startY + (numPointsY - 1) * spacingY);
-            line(startX + i * spacingBoundaryX, boundaryY, startX + (i - 1) * spacingBoundaryX, boundaryY);
-          }          
-        }
-        if (DrawMesh && coordX == SelectX && coordY == SelectY) {
-          line(startX, boundaryY, startX, startY + (numPointsY - 1) * spacingY);
-        }
-      }      
-    }    
-    // draw the selection rectangle
-    fill(100, 255, 100, 100);
     if (coordX == SelectX && coordY == SelectY) {
-      rect(startX, startY, (numPointsX - 1) * spacingX, (numPointsY - 1) * spacingY);
+      DrawMesh(startX, numPointsX + 1, spacingX, startY, numPointsY + 1, spacingY);
     }
   }
   
+  void DrawVirtualPointsAndMeshRight() {
+    fill(181, 36, 0);    
+    if (coordX < 3) {
+      Block neighborRight = Blocks[coordY * 4 + (coordX + 1)];
+      float leftX = startX + spacingX * (numPointsX - 1);
+      float rightX = neighborRight.startX;      
+      /* draw the virtual points */
+      int j = 0;
+      if (numPointsY >= neighborRight.numPointsY) { // generate points on the right side of the virtual block
+        for (; startY + j * spacingY <= startY + (numPointsY - 1) * spacingY; ++j) { // NOTE: some of the points are real points (so we are overdrawing here)
+          ellipse(rightX, startY + j * spacingY, PointSize, PointSize);
+        }
+        if (coordX == SelectX && coordY == SelectY) {
+          DrawMesh(leftX, 2, (rightX - leftX), startY, j, spacingY);
+        }
+      } else if (numPointsY < neighborRight.numPointsY) { // generate points on the left side of the virtual block
+        for (; neighborRight.startY + j * neighborRight.spacingY <= startY + (numPointsY - 1) * spacingY; ++j) { // NOTE: some of the points are real points (so we are overdrawing here)
+          ellipse(leftX, neighborRight.startY + j * neighborRight.spacingY, PointSize, PointSize);
+        }
+        if (coordX == SelectX && coordY == SelectY) {
+          DrawMesh(leftX, 2, (rightX - leftX), neighborRight.startY, j, neighborRight.spacingY);
+        }
+      }
+      
+    }
+  } // end DrawVirtualPointsAndMeshRight
+  
+  void DrawVirtualPointsAndMeshDown() {
+    fill(181, 36, 0);
+    if (coordY < 3) {
+      Block neighborDown = Blocks[(coordY + 1) * 4 + coordX];
+      float topY = startY + spacingY * (numPointsY - 1);
+      float bottomY = neighborDown.startY;
+      /* draw the virtual points */
+      int i = 0;
+      if (numPointsX >= neighborDown.numPointsX) { // generate points on the bottom side of the virtual block
+        for (; startX + i * spacingX <= startX + (numPointsX - 1) * spacingX; ++i) { // NOTE: some of the points are real points (so we are overdrawing here)
+          ellipse(startX + i * spacingX, bottomY, PointSize, PointSize);
+        }
+        if (coordX == SelectX && coordY == SelectY) {
+          DrawMesh(startX, i, spacingX, topY, 2, (bottomY - topY));
+        }
+      } else if (numPointsX < neighborDown.numPointsX) { // generate points on the top side of the virtual block
+        for (; neighborDown.startX + i * neighborDown.spacingX <= startX + (numPointsX - 1) * spacingX; ++i) { // NOTE: some of the points are real points (so we are overdrawing here)
+          ellipse(neighborDown.startX + i * neighborDown.spacingX, topY, PointSize, PointSize);
+        }
+        if (coordX == SelectX && coordY == SelectY) {
+          DrawMesh(neighborDown.startX, i, neighborDown.spacingX, topY, 2, (bottomY - topY));
+        }
+      }
+    }
+  } // end DrawVirtualPointsAndMeshDown
+  
+  void DrawVirtualPointsAndMeshRightDown() {
+    fill(181, 36, 0);
+    Block neighborRight = coordX < 3 ? Blocks[coordX + 1 + coordY * 4] : null;
+    Block neighborBottom = coordY < 3 ? Blocks[coordX + (coordY + 1) * 4] : null;          //<>//
+    float topY = startY + (numPointsY - 1) * spacingY;    
+    float leftX = startX + (numPointsX - 1) * spacingX;
+    if (neighborRight == null && neighborBottom == null) {
+      return;
+    }
+    boolean bottomGoesFirst = (neighborRight == null && neighborBottom != null) ||
+                              (neighborRight != null && neighborBottom != null && float(neighborRight.numPointsY) / numPointsY < float(neighborBottom.numPointsX) / numPointsX);
+    boolean rightGoesFirst =  (neighborRight != null && neighborBottom == null) ||
+                              (neighborRight != null && neighborBottom != null && float(neighborRight.numPointsY) / numPointsY >= float(neighborBottom.numPointsX) / numPointsX);                                                          
+    if (bottomGoesFirst) { // the bottom one goes first
+      if (neighborBottom != null && neighborBottom.numPointsX >= numPointsX) {        
+        int i = neighborBottom.numPointsX - 1;
+        for (; neighborBottom.startX + i * neighborBottom.spacingX > startX + (numPointsX - 1) * spacingX; --i) {            
+          ellipse(neighborBottom.startX + i * neighborBottom.spacingX, topY, PointSize, PointSize);
+        }
+        if (coordX == SelectX && coordY == SelectY) {
+          float bottomY = neighborBottom.startY;
+          DrawMesh(leftX, neighborBottom.numPointsX - i + 1, neighborBottom.spacingX, topY, 2, (bottomY - topY));
+        } //<>//
+        leftX = neighborBottom.startX + (neighborBottom.numPointsX - 1) * neighborBottom.spacingX;
+      }
+      if (neighborRight != null && neighborRight.numPointsY >= numPointsY) {        
+        int j = neighborRight.numPointsY - 1; 
+        for (; neighborRight.startY + j * neighborRight.spacingY > startY + (numPointsY - 1) * spacingY; --j) {
+          ellipse(leftX, neighborRight.startY + j * neighborRight.spacingY, PointSize, PointSize);
+        }
+        if (coordX == SelectX && coordY == SelectY) {
+          float rightX = neighborRight.startX;
+          DrawMesh(leftX, 2, (rightX - leftX), topY, neighborRight.numPointsY - j + 1, neighborRight.spacingY);
+        }
+      }
+    } else if (rightGoesFirst) { // the right one goes first
+      if (neighborRight != null && neighborRight.numPointsY >= numPointsY) {
+        int j = neighborRight.numPointsY - 1;                 
+        for (; neighborRight.startY + j * neighborRight.spacingY > startY + (numPointsY - 1) * spacingY; --j) {
+          ellipse(leftX, neighborRight.startY + j * neighborRight.spacingY, PointSize, PointSize);
+        }        
+        if (coordX == SelectX && coordY == SelectY) {
+          float rightX = neighborRight.startX;
+          DrawMesh(leftX, 2, (rightX - leftX), topY, neighborRight.numPointsY - j + 1, neighborRight.spacingY);
+        }
+        topY = neighborRight.startY + (neighborRight.numPointsY - 1) * neighborRight.spacingY;
+      }
+      if (neighborBottom != null && neighborBottom.numPointsX >= numPointsX) {
+        int i = neighborBottom.numPointsX - 1;
+        for (; neighborBottom.startX + i * neighborBottom.spacingX > startX + (numPointsX - 1) * spacingX; --i) {
+          ellipse(neighborBottom.startX + i * neighborBottom.spacingX, topY, PointSize, PointSize);
+        }
+        if (coordX == SelectX && coordY == SelectY) {
+          float bottomY = neighborBottom.startY;
+          DrawMesh(leftX, neighborBottom.numPointsX - i + 1, neighborBottom.spacingX, topY, 2, (bottomY - topY));
+        }
+      }
+    }
+  }
+  
+  void DrawSelection() {
+    // draw the selection rectangles
+    if (coordX == SelectX && coordY == SelectY) {
+      fill(100, 255, 100, 100);      
+      rect(startX, startY, (numPointsX - 1) * spacingX, (numPointsY - 1) * spacingY);      
+      fill(255, 100, 100, 100);
+      rect(startX + (numPointsX - 1) * spacingX, startY, spacingX, (numPointsY - 1) * spacingY);
+      fill(100, 100, 255, 100);
+      rect(startX, startY + (numPointsY - 1) * spacingY, (numPointsX - 1) * spacingX, spacingY);
+      fill(255, 170, 100, 100);
+      rect(startX + (numPointsX - 1) * spacingX, startY + (numPointsY - 1) * spacingY, spacingX, spacingY);
+    }
+    
+  }
+  
+  void Draw() {    
+    DrawVirtualPointsAndMeshRight();
+    DrawVirtualPointsAndMeshDown();
+    DrawVirtualPointsAndMeshRightDown();
+    DrawRealPoints();    
+    DrawSelection();
+  }
+   
   void refine() {
     ++level;
     if (level % 2 == 1) {
@@ -255,23 +232,18 @@ void keyPressed() {
     Blocks[SelectY * 4 + SelectX].refine();
   } else if (keyCode == BACKSPACE) {
     Blocks[SelectY * 4 + SelectX].undoRefine();
-  } else if (key == ' ') { // space
-    DrawMesh = !DrawMesh;    
-  }  
+  }
 }
 
 void draw() {
   background(255, 255, 255);   
   for (int i = 0; i < Blocks.length; ++i) {
-    Blocks[i].Draw2();    
+  //  Blocks[i].Draw2();    
   }
   for (int i = 0; i < Blocks.length; ++i) {
-    Blocks[i].Draw1();    
+//    Blocks[i].Draw1();    
   }
-  if (DrawMesh) {
-    for (int i = 0; i < Blocks.length; ++i) {
-      Blocks[i].DrawMesh();    
-    }
-  }
-  
+  for (int i = 0; i < Blocks.length; ++i) {
+    Blocks[i].Draw();    
+  }  
 }
