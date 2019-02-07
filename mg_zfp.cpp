@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "mg_algorithm.h"
 #include "mg_array.h"
 #include "mg_bitstream.h"
 #include "mg_common_types.h"
@@ -16,16 +17,28 @@
 
 namespace mg {
 
-void EncodeBlock(const u64* Block, int Bitplane, int& N, bitstream* Bs) {
+const int ChunkBytes = 4096;
+
+void EncodeBlock(const u64* Block, int Bitplane, size_t BitsMax, i8& N, i8& M,
+                 bool& InnerLoop, bitstream* Bs)
+{
   /* extract bit plane Bitplane to X */
   u64 X = 0;
   for (int I = 0; I < 64; ++I)
     X += u64((Block[I] >> Bitplane) & 1u) << I;
   /* code the last N bits of bit plane b */
-  WriteLong(Bs, X, N);
+  M = Min(size_t(N - M), BitsMax * 8 - BitSize(*Bs));
+  mg_Assert(M >= 0);
+  WriteLong(Bs, X, M);
   X >>= N;
-  for (; N < 64 && Write(Bs, !!X); X >>= 1, ++N)
-    for (; N < 64 - 1 && !Write(Bs, X & 1u); X >>= 1, ++N) ;
+  if (InnerLoop) goto INNER_LOOP;
+  InnerLoop = false;
+  for (; BitSize(*Bs) < BitsMax && N < 64 && Write(Bs, !!X); X >>= 1, ++N) {
+INNER_LOOP:
+    InnerLoop = true;
+    for (; BitSize(*Bs) < BitsMax && N < 64 - 1 && !Write(Bs, X & 1u); X >>= 1, ++N);
+    InnerLoop = false;
+  }
 }
 
 void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs) {
@@ -83,8 +96,10 @@ void EncodeData(const volume& Vol, v3i TileDims, int Bits, f64 Tolerance,
       mg_HeapArray(FloatTile, f64, Prod<i64>(TileDims));
       mg_HeapArray(IntTile, i64, Prod<i64>(TileDims));
       mg_HeapArray(UIntTile, u64, Prod<i64>(TileDims));
-      mg_HeapArrayZero(Ns, i8, Prod<i64>(NumBlocksInTile));
-      mg_HeapArray(EMaxes, i16, Prod<i64>(NumBlocksInTile));
+      mg_HeapArrayZero(Ns, i8, Prod<i32>(NumBlocksInTile));
+      mg_HeapArrayZero(Ms, i8, Prod<i32>(NumBlocksInTile));
+      mg_HeapArrayZero(InnerLoops, bool, Prod<i32>(NumBlocksInTile));
+      mg_HeapArray(EMaxes, i16, Prod<i32>(NumBlocksInTile));
       int ChunkId = 0;
       bitstream Bs;
       buffer CompressedChunkBuf;
@@ -128,9 +143,8 @@ void EncodeData(const volume& Vol, v3i TileDims, int Bits, f64 Tolerance,
           } // end of the first iteration
           /* encode */
           if (Bits - Bitplane <= EMaxes[BlockId] - ToleranceExp + 1) {
-            int N = Ns[BlockId];
-            EncodeBlock(&UIntTile[K], Bitplane, N, &Bs);
-            Ns[BlockId] = (i8)N;
+            EncodeBlock(&UIntTile[K], Bitplane, ChunkBytes * 8, Ns[BlockId], Ms[BlockId],
+                        InnerLoops[BlockId], &Bs);
           }
           size_t Bytes = Size(&Bs);
           if (BlockId + 1 == Prod<i32>(NumBlocksInTile)) { // last block in the tile
