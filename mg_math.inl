@@ -100,6 +100,18 @@ bool operator<=(v3<t> Lhs, v3<t> Rhs) {
   return Lhs.X <= Rhs.X && Lhs.Y <= Rhs.Y && Lhs.Z <= Rhs.Z;
 }
 
+template <typename t> mg_ForceInline
+v3<t> Min(v3<t> Lhs, v3<t> Rhs) {
+  return v3<t>(Min(Lhs.X, Rhs.X), Min(Lhs.Y, Rhs.Y), Min(Lhs.Z, Rhs.Z));
+}
+
+template <typename t> mg_ForceInline
+v3<t> Max(v3<t> Lhs, v3<t> Rhs) {
+  return v3<t>(Max(Lhs.X, Rhs.X), Max(Lhs.Y, Rhs.Y), Max(Lhs.Z, Rhs.Z));
+}
+
+template <typename t> v3<t> Max(v3<t> Lhs, v3<t> Rhs);
+
 mg_ForceInline
 i8 Log2Floor(int Val) {
   mg_Assert(Val > 0);

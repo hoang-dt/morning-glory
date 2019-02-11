@@ -2,14 +2,12 @@
 
 #pragma once
 
-#include "mg_array.h"
 #include "mg_bitstream.h"
-#include "mg_common_types.h"
-#include "mg_linked_list.h"
 #include "mg_types.h"
-#include "mg_volume.h"
 
 namespace mg {
+
+extern const v3i ZfpBlockDims;
 
 template <typename t>
 void ForwardLift(t* P, int S);
@@ -37,58 +35,12 @@ void PadBlock(t* P, int N, int S);
 
 /* Encode a single bit plane of a single zfp block */
 // TODO: turn this into a template?
-void EncodeBlock(const u64* Block, int Bitplane, int& N, bitstream* Bs);
+bool EncodeBlock(const u64* Block, int Bitplane, int BitsMax, i8& N, i8& M, 
+                 bool& InnerLoop, bitstream* Bs);
 /* Decode a single bit plane of a single zfp block */
 // TODO: pointer aliasing?
-void DecodeBlock(u64* Block, int Bitplane, int& N, bitstream* Bs);
-
-template <typename t> struct dynamic_array;
-void EncodeData(const volume& Vol, v3i TileDims, int Bits, f64 Tolerance,
-                const dynamic_array<extent>& Subbands, cstr FileName);
-void DecodeData(volume* Vol, v3i TileDims, int Bits, f64 Tolerance,
-                const dynamic_array<extent>& Subbands, cstr FileName);
-void EncodeZfp(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-               const dynamic_array<extent>& Subbands, bitstream* Bs);
-void DecodeZfp(f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
-               const dynamic_array<extent>& Subbands, bitstream* Bs);
-
-struct file_format {
-  inline static int TileDim = 32; // dimensions of a tile are fixed at 32x32x32
-  /* First index is by subband, second index is by tiles within each subband */
-  typed_buffer<typed_buffer<linked_list<buffer>>> Chunks;
-  dynamic_array<extent> Subbands;
-  cstr FileName = nullptr;
-  f64 Tolerance = 0;
-  int Precision = 0; /* [0, 63] for double */
-  int NumLevels = 0;
-  volume Volume;
-  bool DoWaveletTransform = false;
-  bool DoExtrapolation = false;
-  //TODO: add a flag to signify the file_format has been "finalized"
-};
-
-/* API to use the file format */
-void SetFileName(file_format* FileFormat, cstr FileName);
-void SetTolerance(file_format* FileFormat, f64 Tolerance);
-/* Precision = 63 means that the values in a zfp block are quantized to 63-bit integers,
-and that 64 bit planes are encoded */
-void SetPrecision(file_format* FileFormat, int Precision);
-/* NLevels = 3 means performing the wavelet transform 3 times in each dimension */
-void SetNumLevels(file_format* FileFormat, int NumLevels);
-/* Pointer to the data, type and and size of the data */
-void SetVolume(file_format* FileFormat, byte* Data, v3i Dims, data_type Type);
-void SetWaveletTransform(file_format* FileFormat, bool DoWaveletTransform);
-void SetExtrapolation(file_format* FileFormat, bool DoExtrapolation);
-/* Check to see if all parameters make sense */
-void Finalize(file_format* FileFormat);
-/* TODO: return an error code */
-void Encode(file_format* FileFormat);
-/* Output should be an array large enough to hold a tile. Return the actual dimensions of
-the tile. The coarsest subband is at level (0, 0, 0). Assuming the wavelte transform is
-done in X, Y, then Z, the order of subbands is:
-(0, 0, 0), (0, 0, 1), (0, 1, 0), (1, 0, 0), (1, 1, 1), ... */
-v3i GetNextChunk(file_format* FileFormat, v3i Level, v3i Tile, byte* Output);
-void CleanUp(file_format* FileFormat);
+bool DecodeBlock(u64* Block, int Bitplane, int BitsMax, i8& N, i8& M, 
+                 bool& InnerLoop, bitstream* Bs);
 
 } // namespace mg
 

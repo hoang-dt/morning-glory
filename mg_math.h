@@ -39,6 +39,8 @@ template <typename t> v3<t> operator*(v3<t> Lhs, t Val);
 template <typename t> v3<t> operator/(v3<t> Lhs, t Val);
 template <typename t> bool operator==(v3<t> Lhs, v3<t> Rhs);
 template <typename t> bool operator<=(v3<t> Lhs, v3<t> Rhs);
+template <typename t> v3<t> Min(v3<t> Lhs, v3<t> Rhs);
+template <typename t> v3<t> Max(v3<t> Lhs, v3<t> Rhs);
 
 /* Floor of the log2 of Val */
 i8 Log2Floor(int Val);

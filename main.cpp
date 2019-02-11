@@ -9,6 +9,7 @@
 #include "mg_enum.h"
 #include "mg_error.h"
 #include "mg_expected.h"
+#include "mg_file_format.h"
 #include "mg_filesystem.h"
 #include "mg_linked_list.h"
 #include "mg_logger.h"
@@ -101,10 +102,12 @@ int main(int Argc, const char** Argv) {
   v3i TileDims(32, 32, 32); // TODO: get from the command line
   puts("Begin to encode");
   //EncodeData(ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  EncodeData(OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
+  //EncodeData(OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
+  file_format FileData;
+  Encode(&FileData);
   puts("Done encoding");
   //DecodeData(&ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  DecodeData(&OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
+  //DecodeData(&OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
   puts("Done decoding");
   //Cdf53Inverse(&ExpandedF, NLevels, ExpandedF.Type);
   Cdf53Inverse(&OriginalF, NLevels);

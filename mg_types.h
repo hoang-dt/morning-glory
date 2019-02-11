@@ -77,6 +77,8 @@ struct v2 {
     struct { t U, V; };
     t E[2];
   };
+  static v2 Zero();
+  static v2 One();
   v2();
   v2(t X, t Y);
   template <typename u> v2(v2<u> Other);
@@ -104,6 +106,8 @@ struct v3 {
     struct { t Ignored3_; v2<t> V__; };
     t E[3];
   };
+  static v3 Zero();
+  static v3 One();
   v3();
   v3(t V);
   v3(t X, t Y, t Z);
@@ -119,6 +123,10 @@ using v3l  = v3<i64>;
 using v3ul = v3<u64>;
 using v3f  = v3<f32>;
 using v3d  = v3<f64>;
+
+/* 3-level nested for loop */
+#define mg_BeginFor3(Counter, Begin, End, Step)
+#define mg_EndFor3
 
 template <typename t>
 struct typed_buffer;
@@ -146,6 +154,8 @@ struct typed_buffer {
 };
 template <typename t>
 i64 Size(typed_buffer<t> Buf);
+template <typename t>
+i64 Bytes(typed_buffer<t> Buf);
 
 } // namespace mg
 

@@ -11,11 +11,11 @@ mg_ForceInline void Rewind(bitstream* Bs) {
   Bs->BitBuf = Bs->BitPos = 0;
 }
 
-mg_ForceInline size_t Size(const bitstream& Bs) {
+mg_ForceInline i64 Size(const bitstream& Bs) {
   return (Bs.BitPtr - Bs.Stream.Data) + (Bs.BitPos + 7) / 8;
 }
 
-mg_ForceInline size_t BitSize(const bitstream& Bs) {
+mg_ForceInline i64 BitSize(const bitstream& Bs) {
   return (Bs.BitPtr - Bs.Stream.Data) + Bs.BitPos;
 }
 

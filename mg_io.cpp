@@ -34,12 +34,12 @@ error ReadFile(cstr FileName, buffer* Buf) {
   /* Determine the file size */
   if (mg_FSeek(Fp, 0, SEEK_END))
     return mg_Error(FileSeekFailed, "%s", FileName);
-  size_t Size = 0;
-  if ((Size = mg_FTell(Fp)) == size_t(-1))
+  i64 Size = 0;
+  if ((Size = mg_FTell(Fp)) == -1)
     return mg_Error(FileTellFailed, "%s", FileName);
   if (mg_FSeek(Fp, 0, SEEK_SET))
     return mg_Error(FileSeekFailed, "%s", FileName);
-  if ((size_t)Buf->Bytes < Size)
+  if (Buf->Bytes < Size)
     AllocateBuffer(Buf, Size);
 
   /* Read file contents */

@@ -2,7 +2,7 @@
 
 :: Parameters
 set "LLVMPath=C:\Program Files\LLVM"
-set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
+set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community"
 set "VSVersion=14.16.27023"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
@@ -19,19 +19,19 @@ set CFLAGS="Please provide a build config: Debug, FastDebug, Release"
 if %1==Release (set CFLAGS= ^
   -Xclang -flto-visibility-public-std -std=gnu++2a^
   -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
-  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
+  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
   -g -gcodeview -gno-column-info -O2 -DNDEBUG -ftree-vectorize -march=native)
 if %1==FastDebug (set CFLAGS= ^
   -Xclang -flto-visibility-public-std -std=gnu++2a^
   -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
-  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
+  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
   -g -gcodeview -gno-column-info -Og -DNDEBUG -ftree-vectorize -march=native)
 if %1==Debug (set CFLAGS= ^
   -Xclang -flto-visibility-public-std -std=gnu++2a^
   -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
-  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments^
+  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
   -g -gcodeview -gno-column-info -O0)
 
@@ -60,7 +60,9 @@ set LDLIBS= ^
 :: Compiling
 @echo on
 ::@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
-clang++.exe "build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
+md bin
+cd bin
+clang++.exe "../build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
 
 :: Linking
 ::@set "LINK_FILES="
@@ -70,7 +72,8 @@ clang++.exe "build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
 lld-link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
+del "build.o"
+cd ..
 
 @echo off
-del "build.o"
 set "PATH=%OLD_PATH%"

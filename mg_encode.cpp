@@ -290,8 +290,8 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   }
   Flush(&Bs);
   printf("Encoding time: %f s\n", ResetTimer(&Timer) / 1000.0);
-  fwrite(Bs.Stream.Data, Size(&Bs), 1, Fp);
-  printf("Compressed size = %llu", Size(&Bs));
+  fwrite(Bs.Stream.Data, Size(Bs), 1, Fp);
+  printf("Compressed size = %llu", Size(Bs));
   fclose(Fp);
   printf("\n------------------------------------\n");
 }
@@ -425,7 +425,7 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
     }}} // end loop through the tiles
   }
   Flush(&Bs);
-  fwrite(Bs.Stream.Data, Size(&Bs), 1, Fp);
+  fwrite(Bs.Stream.Data, Size(Bs), 1, Fp);
   fclose(Fp);
   printf("\n------------------------------------\n");
 }

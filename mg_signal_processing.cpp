@@ -5,6 +5,8 @@
 #include "mg_signal_processing.h"
 namespace mg {
 
+/* TODO: rewrite these functions to take in a volume with dimensions, strides, etc */
+
 f64 SquaredError(const byte* F, const byte* G, i64 Size, data_type Type) {
 #define Body(type)\
   const type* FPtr = (const type*)F;\
