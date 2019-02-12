@@ -102,7 +102,8 @@ int main(int Argc, const char** Argv) {
   SetFileName(&FileData, OutFile);
   Encode(&FileData);
   puts("Done encoding");
-  //CleanUp(&FileData);
+  CleanUp(&FileData);
+  mg_Assert(_CrtCheckMemory());
   //Cdf53Inverse(&ExpandedF, NLevels, ExpandedF.Type);
   //Cdf53Inverse(&OriginalF, NLevels);
   //f64 Psnr = PSNR(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
