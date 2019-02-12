@@ -14,23 +14,23 @@ error ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
   error Ok = ReadFile(FileName, &Volume->Buffer);
   if (!Ok)
     return Ok;
-  Volume->Dims = Stuff3Ints(Dims);
+  Volume->DimsCompact = Stuff3Ints(Dims);
   Volume->Type = Type;
   return mg_Error(NoError);
 }
 
 void Copy(sub_volume* Dst, const sub_volume& Src) {
 #define Body(type)\
-  mg_Assert(Src.Extent.Dims == Dst->Extent.Dims);\
+  mg_Assert(Src.Extent.DimsCompact == Dst->Extent.DimsCompact);\
   mg_Assert(Dst->Buffer.Data && Src.Buffer.Data);\
   mg_Assert(Dst->Type == Src.Type);\
   type* DstBuf = (type*)Dst->Buffer.Data;\
   const type* SrcBuf = (const type*)Src.Buffer.Data;\
-  v3i StartSrc = Extract3Ints(Src.Extent.Pos);\
-  v3i StartDst = Extract3Ints(Dst->Extent.Pos);\
-  v3i Dims = Extract3Ints(Src.Extent.Dims);\
-  v3i BigDimsSrc = Extract3Ints(Src.Dims);\
-  v3i BigDimsDst = Extract3Ints(Dst->Dims);\
+  v3i StartSrc = Extract3Ints(Src.Extent.PosCompact);\
+  v3i StartDst = Extract3Ints(Dst->Extent.PosCompact);\
+  v3i Dims = Extract3Ints(Src.Extent.DimsCompact);\
+  v3i BigDimsSrc = Extract3Ints(Src.DimsCompact);\
+  v3i BigDimsDst = Extract3Ints(Dst->DimsCompact);\
   v3i PosSrc = StartSrc;\
   v3i PosDst = StartDst;\
   for (PosSrc.Z = StartSrc.Z, PosDst.Z = StartDst.Z;\
@@ -50,13 +50,13 @@ void Copy(sub_volume* Dst, const sub_volume& Src) {
 
 void Clone(volume* Dst, const volume& Src, allocator* Alloc) {
   Clone(&Dst->Buffer, Src.Buffer, Alloc);
-  Dst->Dims = Src.Dims;
+  Dst->DimsCompact = Src.DimsCompact;
   Dst->Type = Src.Type;
 }
 
 void Clone(sub_volume* Dst, const sub_volume& Src, allocator* Alloc) {
   Clone(&Dst->Buffer, Src.Buffer, Alloc);
-  Dst->Dims = Src.Dims;
+  Dst->DimsCompact = Src.DimsCompact;
   Dst->Type = Src.Type;
   Dst->Extent = Src.Extent;
 }

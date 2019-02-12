@@ -27,6 +27,7 @@ struct bitstream {
 void Rewind(bitstream* Bs);
 i64 Size(const bitstream& Bs); // TODO: takes a non-pointer as argument
 i64 BitSize(const bitstream& Bs);
+int BufferSize(const bitstream& Bs);
 /* ---------------- Read functions ---------------- */
 void InitRead(bitstream* Bs, buffer Stream);
 /* Refill our buffer (replace the consumed bytes with new bytes from memory) */

@@ -121,6 +121,7 @@ i64 Bytes(typed_buffer<t> Buf) { return Buf.Size * sizeof(t); }
 template <typename t> mg_ForceInline v2<t> v2<t>::Zero() { static v2<t> Z(0); return Z; }
 template <typename t> mg_ForceInline v2<t> v2<t>::One() { static v2<t> O(1); return O; }
 template <typename t> mg_ForceInline v2<t>::v2() = default;
+template <typename t> mg_ForceInline v2<t>::v2(t V): X(V), Y(V) {}
 template <typename t> mg_ForceInline v2<t>::v2(t X, t Y): X(X), Y(Y) {}
 template <typename t> template <typename u> mg_ForceInline 
 v2<t>::v2(v2<u> Other): X(Other.X), Y(Other.Y) {}

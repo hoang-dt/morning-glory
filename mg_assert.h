@@ -2,6 +2,7 @@
 
 #pragma once
 
+// TODO: add a mg_AssertIf
 #define mg_Assert(Cond, ...)
 #define mg_AbortIf(Cond, ...)
 #define mg_Abort(...)

@@ -71,10 +71,10 @@ int main(int Argc, const char** Argv) {
   int MaxDim = Max(Max(BigDims.X, BigDims.Y), BigDims.Z);
   BigDims = v3i(MaxDim, Meta.Dims.Y > 1 ? MaxDim : 1, Meta.Dims.Z > 1 ? MaxDim : 1);
   mg_Log(stderr, "Big dims: %d %d %d\n", BigDims.X, BigDims.Y, BigDims.Z);
-  ExpandedF.Dims = Stuff3Ints(BigDims);
+  ExpandedF.DimsCompact = Stuff3Ints(BigDims);
   ExpandedF.Extent = extent(Meta.Dims);
   ExpandedF.Type = OriginalF.Type;
-  i64 NumSamplesBig = Prod<i64>(Extract3Ints(ExpandedF.Dims));
+  i64 NumSamplesBig = Prod<i64>(Extract3Ints(ExpandedF.DimsCompact));
   AllocateBufferZero(&ExpandedF.Buffer, SizeOf(ExpandedF.Type) * NumSamplesBig);
   mg_CleanUp(1, DeallocateBuffer(&ExpandedF.Buffer));
   Copy(&ExpandedF, sub_volume(OriginalF));
@@ -91,34 +91,28 @@ int main(int Argc, const char** Argv) {
   GetOptionValue(Argc, Argv, "--nbits", &NBitplanes);
   f64 Tolerance = 0;
   GetOptionValue(Argc, Argv, "--tolerance", &Tolerance);
-  //Cdf53Forward(&ExpandedF, NLevels, ExpandedF.Type);
-  Cdf53Forward(&OriginalF, NLevels);
-  printf("Wavelet transform time: %lld ms\n", ResetTimer(&Timer));
   /* Compress and write output files */
   dynamic_array<extent> Subbands;
-  int NDims = (Meta.Dims.X > 1) + (Meta.Dims.Y > 1) + (Meta.Dims.Z > 1);
-  //BuildSubbands(NDims, BigDims, NLevels, &Subbands);
-  BuildSubbands(NDims, Meta.Dims, NLevels, &Subbands);
-  v3i TileDims(32, 32, 32); // TODO: get from the command line
   puts("Begin to encode");
-  //EncodeData(ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  //EncodeData(OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
   file_format FileData;
+  SetVolume(&FileData, OriginalF.Buffer.Data, Extract3Ints(OriginalF.DimsCompact), OriginalF.Type);
+  SetWaveletTransform(&FileData, NLevels);
+  SetPrecision(&FileData, NBitplanes);
+  SetTolerance(&FileData, Tolerance);
+  SetFileName(&FileData, OutFile);
   Encode(&FileData);
   puts("Done encoding");
-  //DecodeData(&ExpandedF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  //DecodeData(&OriginalF, TileDims, NBitplanes, Tolerance, Subbands, OutFile);
-  puts("Done decoding");
+  //CleanUp(&FileData);
   //Cdf53Inverse(&ExpandedF, NLevels, ExpandedF.Type);
-  Cdf53Inverse(&OriginalF, NLevels);
+  //Cdf53Inverse(&OriginalF, NLevels);
   //f64 Psnr = PSNR(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
                   //data_type::float64);
   //f64 Rmse = RMSError(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
                       //data_type::float64);
-  f64 Psnr = PSNR(OriginalF.Buffer.Data, OriginalFCopy.Buffer.Data, Prod<i64>(Meta.Dims),
-                  data_type::float64);
-  f64 Rmse = RMSError(OriginalF.Buffer.Data, OriginalFCopy.Buffer.Data, Prod<i64>(Meta.Dims),
-                      data_type::float64);
-  printf("RMSE = %17g PSNR = %f\n", Rmse, Psnr);
+  //f64 Psnr = PSNR(OriginalF.Buffer.Data, OriginalFCopy.Buffer.Data, Prod<i64>(Meta.Dims),
+                  //data_type::float64);
+  //f64 Rmse = RMSError(OriginalF.Buffer.Data, OriginalFCopy.Buffer.Data, Prod<i64>(Meta.Dims),
+                      //data_type::float64);
+  //printf("RMSE = %17g PSNR = %f\n", Rmse, Psnr);
   return 0;
 }

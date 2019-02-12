@@ -26,28 +26,26 @@ struct tile_data {
 int GetNumTilesInPrevSubbands(const file_format& FileData, int Subband) {
   int NumTilesInPrevSubbands = 0;
   for (int S = 0; S < Subband; ++S) {
-    v3i SubbandDims = Extract3Ints(FileData.Subbands[S].Dims);
+    v3i SubbandDims = Extract3Ints(FileData.Subbands[S].DimsCompact);
     v3i NumTiles = (SubbandDims + FileData.TileDims - 1) / FileData.TileDims;
     NumTilesInPrevSubbands += Prod<i64>(NumTiles);
   }
   return NumTilesInPrevSubbands;
 }
 
-int CopyBlockForward(const file_format& FileData, tile_data* TileData, v3i Block) {
-  v3i Dims(FileData.Volume.Dims);
+void CopyBlockForward(const file_format& FileData, tile_data* TileData, v3i Block, int K) {
+  v3i Dims = Extract3Ints(FileData.Volume.DimsCompact);
   v3i RealBlockDims = Min(FileData.TileDims - Block, ZfpBlockDims);
   const f64* Data = (f64*)FileData.Volume.Buffer.Data;
   v3i Voxel;
   mg_BeginFor3(Voxel, v3i::Zero(), RealBlockDims, v3i::One()) {
     i64 I = XyzToI(Dims, TileData->Tile + Block + Voxel);
-    i64 J = XyzToI(ZfpBlockDims, Voxel);
+    i64 J = K + XyzToI(ZfpBlockDims, Voxel);
     TileData->Floats[J] = Data[I];
-  } mg_EndFor3 
+  } mg_EndFor3
   PadBlock(TileData->Floats.Data, RealBlockDims.X, 1);
   PadBlock(TileData->Floats.Data, RealBlockDims.Y, 4);
   PadBlock(TileData->Floats.Data, RealBlockDims.Z, 16);
-  return Quantize((byte*)TileData->Floats.Data, Prod<int>(ZfpBlockDims), FileData.Precision - 1,
-                  (byte*)TileData->Ints.Data, FileData.Volume.Type);
 }
 
 /* TODO: Output should be something else? */
@@ -100,35 +98,38 @@ void WriteChunk(const file_format& FileData, tile_data* TileData, int ChunkId) {
 }
 
 // TODO: minimize file opening
+// TODO: the tile size should depend on the precision at some level, to reduce internal fragmentation
 int WriteBlock(const file_format& FileData, tile_data* TileData, v3i Block, int ChunkId, int Bitplane) {
+  auto Bitsize = BitSize(TileData->Bs);
   i64 BlockId = XyzToI(TileData->NumBlocks, Block / ZfpBlockDims);
   i64 K = XyzToI(TileData->NumBlocks, Block / ZfpBlockDims) * Prod<int>(ZfpBlockDims);
-  if (ChunkId == 0) {
-    TileData->EMaxes[BlockId] = (i16)CopyBlockForward(FileData, TileData, Block);
+  if (Bitplane == FileData.Precision) {
+    CopyBlockForward(FileData, TileData, Block, K);
+    TileData->EMaxes[BlockId] =
+      (i16)Quantize((byte*)&TileData->Floats[K], Prod<int>(ZfpBlockDims), FileData.Precision - 1,
+                    (byte*)&TileData->Ints[K], FileData.Volume.Type);
     WriteEMax(TileData->EMaxes[BlockId], Exponent(FileData.Tolerance), &TileData->Bs);
+    auto Bitsize2 = BitSize(TileData->Bs);
     ForwardBlockTransform(&TileData->Ints[K]);
     ForwardShuffle(&TileData->Ints[K], &TileData->UInts[K]);
   }
-  if (FileData.Precision - Bitplane <= 
-      TileData->EMaxes[BlockId] - Exponent(FileData.Tolerance) + 1) 
-  {
-ENCODE_NEXT:
-    bool FullyEncoded = 
-      EncodeBlock(&TileData->UInts[K], Bitplane, FileData.ChunkBytes * 8, TileData->Ns[BlockId],
-                  TileData->Ms[BlockId], TileData->InnerLoops[BlockId], &TileData->Bs);
-    bool ChunkComplete = Size(TileData->Bs) >= FileData.ChunkBytes;
-    bool LastChunk = 
-      (FullyEncoded) && (Bitplane == 0) && (BlockId + 1 == Prod<int>(TileData->NumBlocks));
-    if (ChunkComplete || LastChunk) {
-      if (!LastChunk)
-        mg_Assert(Size(TileData->Bs) == FileData.ChunkBytes);
-      WriteChunk(FileData, TileData, ChunkId++);
-      if (!FullyEncoded)
-        goto ENCODE_NEXT;
-    } else {
-      mg_Assert(FullyEncoded);
+
+  bool DoEncode =
+    FileData.Precision - Bitplane <= TileData->EMaxes[BlockId] - Exponent(FileData.Tolerance) + 1;
+  bool LastChunk = (Bitplane == 0) && (BlockId + 1 == Prod<int>(TileData->NumBlocks));
+  bool FullyEncoded = true;
+  do {
+    if (DoEncode) {
+      FullyEncoded =
+        EncodeBlock(&TileData->UInts[K], Bitplane, FileData.ChunkBytes * 8, TileData->Ns[BlockId],
+                    TileData->Ms[BlockId], TileData->InnerLoops[BlockId], &TileData->Bs);
+      Bitsize = BitSize(TileData->Bs);
     }
-  }
+    bool ChunkComplete = Size(TileData->Bs) >= FileData.ChunkBytes;
+    if (ChunkComplete || LastChunk)
+      WriteChunk(FileData, TileData, ChunkId++);
+  } while (!FullyEncoded);
+
   return ChunkId;
 }
 
@@ -148,12 +149,12 @@ void WriteTile(const file_format& FileData, tile_data* TileData) {
   // TODO: use aligned memory allocation
   // TODO: try reusing the memory buffer
 void WriteSubband(const file_format& FileData, int Sb) {
-  v3i SubbandPos = Extract3Ints(FileData.Subbands[Sb].Pos);
-  v3i SubbandDims = Extract3Ints(FileData.Subbands[Sb].Dims);
+  v3i SubbandPos = Extract3Ints(FileData.Subbands[Sb].PosCompact);
+  v3i SubbandDims = Extract3Ints(FileData.Subbands[Sb].DimsCompact);
+  tile_data TileData;
   v3i Tile;
   mg_BeginFor3(Tile, SubbandPos, SubbandPos + SubbandDims, FileData.TileDims) {
     v3i NumTilesInSubband = (SubbandDims + FileData.TileDims - 1) / FileData.TileDims;
-    tile_data TileData;
     TileData.Tile = Tile;
     TileData.RealDims = Min(SubbandPos + SubbandDims - Tile, FileData.TileDims);
     TileData.IdInSubband = XyzToI(NumTilesInSubband, (Tile - SubbandPos) / FileData.TileDims);
@@ -163,10 +164,10 @@ void WriteSubband(const file_format& FileData, int Sb) {
     AllocateTypedBuffer(&TileData.Ints, Prod<int>(FileData.TileDims));
     AllocateTypedBuffer(&TileData.UInts, Prod<int>(FileData.TileDims));
     AllocateTypedBuffer(&TileData.EMaxes, Prod<int>(TileData.NumBlocks));
-    AllocateTypedBuffer(&TileData.Ns, Prod<int>(TileData.NumBlocks));
-    AllocateTypedBuffer(&TileData.Ms, Prod<int>(TileData.NumBlocks));
-    AllocateTypedBuffer(&TileData.InnerLoops, Prod<int>(TileData.NumBlocks));
-    AllocateBuffer(&TileData.Bs.Stream, FileData.ChunkBytes);
+    AllocateTypedBufferZero(&TileData.Ns, Prod<int>(TileData.NumBlocks));
+    AllocateTypedBufferZero(&TileData.Ms, Prod<int>(TileData.NumBlocks));
+    AllocateTypedBufferZero(&TileData.InnerLoops, Prod<int>(TileData.NumBlocks));
+    AllocateBuffer(&TileData.Bs.Stream, FileData.ChunkBytes + BufferSize(TileData.Bs));
     WriteTile(FileData, &TileData);
     DeallocateTypedBuffer(&TileData.Floats);
     DeallocateTypedBuffer(&TileData.Ints);
@@ -192,48 +193,49 @@ void SetTolerance(file_format* FileData, f64 Tolerance) {
 void SetPrecision(file_format* FileData, int Precision) {
   FileData->Precision = Precision;
 }
-void SetNumLevels(file_format* FileData, int NumLevels) {
-  FileData->NumLevels = NumLevels;
-}
 void SetVolume(file_format* FileData, byte* Data, v3i Dims, data_type Type) {
   FileData->Volume.Buffer.Data = Data;
   FileData->Volume.Buffer.Bytes = SizeOf(Type) * Prod<i64>(Dims);
-  FileData->Volume.Dims = Stuff3Ints(Dims);
+  FileData->Volume.DimsCompact = Stuff3Ints(Dims);
+  FileData->Volume.Type = Type;
 }
-void SetWaveletTransform(file_format* FileData, bool DoWaveletTransform) {
-  FileData->DoWaveletTransform = DoWaveletTransform;
+void SetWaveletTransform(file_format* FileData, int NumLevels) {
+  FileData->NumLevels = NumLevels;
 }
 void SetExtrapolation(file_format* FileData, bool DoExtrapolation) {
   FileData->DoExtrapolation = DoExtrapolation;
 }
-void Finalize(file_format* FileData) {
+bool Finalize(file_format* FileData) {
   // TODO: add more checking
-  v3i Dims = Extract3Ints(FileData->Volume.Dims);
+  v3i Dims = Extract3Ints(FileData->Volume.DimsCompact);
   int NDims = (Dims.X > 1) + (Dims.Y > 1) + (Dims.Z > 1);
   BuildSubbands(NDims, Dims, FileData->NumLevels, &FileData->Subbands);
   AllocateTypedBuffer(&FileData->Chunks, Size(FileData->Subbands));
   for (int S = 0; S < Size(FileData->Subbands); ++S) {
-    v3i SubbandDims = Extract3Ints(FileData->Subbands[S].Dims);
+    v3i SubbandDims = Extract3Ints(FileData->Subbands[S].DimsCompact);
     v3i NumTiles = (SubbandDims + FileData->TileDims - 1) / FileData->TileDims;
     AllocateTypedBuffer(&FileData->Chunks[S], Prod<i64>(NumTiles));
   }
   int NumTilesTotal = GetNumTilesInPrevSubbands(*FileData, Size(FileData->Subbands));
   AllocateTypedBuffer(&FileData->TileHeaders, NumTilesTotal);
+  return true;
 }
 
+// TODO: error checking
 void Encode(file_format* FileData) {
+  Finalize(FileData);
   if (FileData->DoExtrapolation) {
     // TODO
   }
-  if (FileData->DoWaveletTransform)
+  if (FileData->NumLevels > 0)
     Cdf53Forward(&(FileData->Volume), FileData->NumLevels);
   for (int Sb = 0; Sb < Size(FileData->Subbands); ++Sb)
     WriteSubband(*FileData, Sb);
 }
 
 // TODO: the read may fail
-linked_list_iterator<buffer> ReadChunk(FILE* Fp, file_format* FileData, int Subband, 
-                                       int TileIdInSubband, buffer* ChunkBuf, bitstream* Bs)
+linked_list_iterator<buffer> ReadChunk(
+  FILE* Fp, file_format* FileData, int Subband, int TileIdInSubband, buffer* ChunkBuf, bitstream* Bs)
 {
   mg_Assert(ChunkBuf->Bytes == FileData->ChunkBytes);
   fread(ChunkBuf->Data, ChunkBuf->Bytes, 1, Fp);
@@ -265,12 +267,12 @@ v3i GetNextChunk(file_format* FileData, v3i Level, v3i Tile, byte* Output) {
   int Sb = LevelToSubband(Level);
   // assert(Sb < Size(FileData->Subbands)
   int NumTilesInPrevSubbands = GetNumTilesInPrevSubbands(*FileData, Sb);
-  v3i SubbandDims = Extract3Ints(FileData->Subbands[Sb].Dims);
+  v3i SubbandDims = Extract3Ints(FileData->Subbands[Sb].DimsCompact);
   v3i TileDims = FileData->TileDims;
   // TODO: assert(Tile < NumTiles)
   int TileIdInSubband = XyzToI((SubbandDims + TileDims - 1) / TileDims, Tile);
   int TileIdGlobal = NumTilesInPrevSubbands + TileIdInSubband;
-  v3i SubbandPos = Extract3Ints(FileData->Subbands[Sb].Pos);
+  v3i SubbandPos = Extract3Ints(FileData->Subbands[Sb].PosCompact);
   v3i T = SubbandPos + Tile * TileDims;
   v3i RealTileDims = Min(SubbandPos + SubbandDims - T, TileDims);
   int NumChunks = (int)Size(FileData->Chunks[Sb][TileIdInSubband]);
@@ -300,7 +302,7 @@ v3i GetNextChunk(file_format* FileData, v3i Level, v3i Tile, byte* Output) {
       mg_BeginFor3(Block, v3i::Zero(), RealTileDims, BlockDims) {
         i64 BlockId = XyzToI(NumBlocksInTile, Block / BlockDims);
         if (BlockId == 0 && Size(Bs) >= FileData->ChunkBytes) {
-MOVE_TO_NEXT_CHUNK:          
+MOVE_TO_NEXT_CHUNK:
           ++It; // move on to the next chunk
           if (It == End(FileData->Chunks[Sb][TileIdInSubband]))
             ContinueDecoding = false;
@@ -309,14 +311,14 @@ MOVE_TO_NEXT_CHUNK:
         }
         i64 K = XyzToI(NumBlocksInTile, Block / BlockDims) * Prod<i32>(BlockDims);
         if (ContinueDecoding && !Visited[BlockId]) {
-          if (Read(&Bs)) // significant 
+          if (Read(&Bs)) // significant
             EMaxes[BlockId] = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
           else
             EMaxes[BlockId] = ToleranceExp - 2;
           Visited[BlockId] = true;
         }
         if (ContinueDecoding) { // TODO: add tolerance support?
-          if (!DecodeBlock(&UIntTile[K], Bitplane, FileData->ChunkBytes * 8, Ns[BlockId], 
+          if (!DecodeBlock(&UIntTile[K], Bitplane, FileData->ChunkBytes * 8, Ns[BlockId],
                            Ms[BlockId], InnerLoops[BlockId], &Bs))
             goto MOVE_TO_NEXT_CHUNK;
         }
@@ -334,8 +336,8 @@ MOVE_TO_NEXT_CHUNK:
 }
 
 void CleanUp(file_format* FileData) {
-for (int S = 0; S < Size(FileData->Subbands); ++S) {
-    for (i64 T = 0; T < Size(FileData->Chunks[S]); ++T) 
+  for (int S = 0; S < Size(FileData->Subbands); ++S) {
+    for (i64 T = 0; T < Size(FileData->Chunks[S]); ++T)
       Deallocate(&FileData->Chunks[S][T]);
     DeallocateTypedBuffer(&FileData->Chunks[S]);
   }

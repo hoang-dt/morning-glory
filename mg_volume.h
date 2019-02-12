@@ -7,8 +7,8 @@
 namespace mg {
 
 struct extent {
-  u64 Pos;
-  u64 Dims;
+  u64 PosCompact;
+  u64 DimsCompact;
   extent();
   extent(v3i Dims);
   extent(v3i Pos, v3i Dims);
@@ -16,7 +16,7 @@ struct extent {
 
 struct volume {
   buffer Buffer;
-  u64 Dims;
+  u64 DimsCompact;
   data_type Type;
 };
 

@@ -111,6 +111,7 @@ template <typename t>
 void DeallocateTypedBuffer(typed_buffer<t>* Buf);
 
 void ZeroBuffer(buffer* Buf);
+template <typename t> void ZeroTypedBuffer(typed_buffer<t>* Buf);
 void MemCopy(buffer* Dst, const buffer& Src);
 
 

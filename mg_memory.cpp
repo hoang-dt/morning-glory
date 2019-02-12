@@ -17,6 +17,12 @@ void ZeroBuffer(buffer* Buf) {
   memset(Buf->Data, 0, Buf->Bytes);
 }
 
+template <typename t>
+void ZeroTypedBuffer(typed_buffer<t>* Buf) {
+  mg_Assert(Buf->Data);
+  memset(Buf->Data, 0, Buf->Size * sizeof(t));
+}
+
 void AllocateBuffer(buffer* Buf, i64 Bytes, allocator* Alloc) {
   Alloc->Allocate(Buf, Bytes);
 }

@@ -2,7 +2,7 @@
 
 :: Parameters
 set "LLVMPath=C:\Program Files\LLVM"
-set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Community"
+set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
 set "VSVersion=14.16.27023"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
@@ -33,7 +33,7 @@ if %1==Debug (set CFLAGS= ^
   -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
   -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
-  -g -gcodeview -gno-column-info -O0)
+  -g -gcodeview -gno-column-info -O0 -D_DEBUG -MTd)
 
 if %1==Release (set CDEFS= -D_CRT_SECURE_NO_WARNINGS -Dmg_Verbose=1)
 if %1==FastDebug (set CDEFS= -D_CRT_SECURE_NO_WARNINGS -Dmg_Slow=1)
@@ -48,14 +48,30 @@ if %1==Debug (set LDFLAGS= ^
   -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
 
 :: Linked libs
-set LDLIBS= ^
+if %1==Release (set LDLIBS= ^
   -libpath:"%VSBasePath%\lib\x64" ^
   -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\ucrt\x64" ^
   -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\um\x64" ^
   -libpath:"%LLVMPath%\lib" ^
   libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib kernel32.lib User32.lib ^
   legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
-  libomp.lib dbghelp.lib
+  libomp.lib dbghelp.lib)
+if %1==FastDebug (set LDLIBS= ^
+  -libpath:"%VSBasePath%\lib\x64" ^
+  -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\ucrt\x64" ^
+  -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\um\x64" ^
+  -libpath:"%LLVMPath%\lib" ^
+  libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib kernel32.lib User32.lib ^
+  legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
+  libomp.lib dbghelp.lib)
+if %1==Debug (set LDLIBS= ^
+  -libpath:"%VSBasePath%\lib\x64" ^
+  -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\ucrt\x64" ^
+  -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\um\x64" ^
+  -libpath:"%LLVMPath%\lib" ^
+  libucrtd.lib libvcruntimed.lib libcmtd.lib libcpmtd.lib kernel32.lib User32.lib ^
+  legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
+  libomp.lib dbghelp.lib)
 
 :: Compiling
 @echo on
@@ -70,8 +86,8 @@ clang++.exe "../build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
 
 ::lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
-lld-link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
-::link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
+::lld-link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
+link.exe "build.o" /DEBUG -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 del "build.o"
 cd ..
 

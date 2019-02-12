@@ -16,7 +16,11 @@ mg_ForceInline i64 Size(const bitstream& Bs) {
 }
 
 mg_ForceInline i64 BitSize(const bitstream& Bs) {
-  return (Bs.BitPtr - Bs.Stream.Data) + Bs.BitPos;
+  return (Bs.BitPtr - Bs.Stream.Data) * 8 + Bs.BitPos;
+}
+
+mg_ForceInline int BufferSize(const bitstream& Bs) {
+  return sizeof(Bs.BitBuf);
 }
 
 mg_ForceInline void InitRead(bitstream* Bs, buffer Stream) {

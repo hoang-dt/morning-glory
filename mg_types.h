@@ -80,6 +80,7 @@ struct v2 {
   static v2 Zero();
   static v2 One();
   v2();
+  explicit v2(t V);
   v2(t X, t Y);
   template <typename u> v2(v2<u> Other);
   t& operator[](int Idx);
@@ -109,7 +110,7 @@ struct v3 {
   static v3 Zero();
   static v3 One();
   v3();
-  v3(t V);
+  explicit v3(t V);
   v3(t X, t Y, t Z);
   template <typename u> v3(v3<u> Other);
   t& operator[](int Idx);

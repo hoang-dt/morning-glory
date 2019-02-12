@@ -1,3 +1,7 @@
+#define _CRTDBG_MAP_ALLOC  
+#include <stdlib.h>  
+#include <crtdbg.h> 
+
 #include "mg_args.cpp"
 #include "mg_assert.cpp"
 #include "mg_common_types.cpp"
