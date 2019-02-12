@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mg_array.h"
+#include "mg_error.h"
 #include "mg_linked_list.h"
 #include "mg_volume.h"
 #include "mg_types.h"
@@ -8,6 +9,7 @@
 namespace mg {
 
 struct file_format {
+  enum class mode : bool { Write, Read };
   /* First index is by subband, second index is by tiles within each subband */
   volume Volume;
   typed_buffer<typed_buffer<linked_list<buffer>>> Chunks;
@@ -20,6 +22,7 @@ struct file_format {
   int NumLevels = 0;
   int ChunkBytes = 4096;
   bool DoExtrapolation = false;
+  mode Mode = mode::Write;
   //TODO: add a flag to signify the file_format has been "finalized"
 };
 
@@ -27,11 +30,12 @@ struct file_format {
 /* Must call */
 void SetFileName(file_format* FileData, cstr FileName);
 void SetVolume(file_format* FileData, byte* Data, v3i Dims, data_type Type);
+error Finalize(file_format* FileData, file_format::mode Mode);
 /* TODO: return an error code */
-void Encode(file_format* FileData);
+error Encode(file_format* FileData);
 void CleanUp(file_format* FileData);
 /* Optional */
-void SetTileDims(file_format* FileData, v3i TileDims); 
+void SetTileDims(file_format* FileData, v3i TileDims);
 void SetTolerance(file_format* FileData, f64 Tolerance);
 /* Precision = 63 means that the values in a zfp block are quantized to 63-bit integers,
 and that 64 bit planes are encoded */

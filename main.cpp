@@ -100,6 +100,7 @@ int main(int Argc, const char** Argv) {
   SetPrecision(&FileData, NBitplanes);
   SetTolerance(&FileData, Tolerance);
   SetFileName(&FileData, OutFile);
+  Finalize(&FileData, file_format::mode::Write);
   Encode(&FileData);
   puts("Done encoding");
   CleanUp(&FileData);

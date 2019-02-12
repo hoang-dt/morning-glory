@@ -148,10 +148,10 @@ void WriteTile(const file_format& FileData, tile_data* TileData) {
 void WriteSubband(const file_format& FileData, int Sb) {
   v3i SubbandPos = Extract3Ints(FileData.Subbands[Sb].PosCompact);
   v3i SubbandDims = Extract3Ints(FileData.Subbands[Sb].DimsCompact);
-  tile_data TileData;
   v3i Tile;
   mg_BeginFor3(Tile, SubbandPos, SubbandPos + SubbandDims, FileData.TileDims) {
     v3i NumTilesInSubband = (SubbandDims + FileData.TileDims - 1) / FileData.TileDims;
+    tile_data TileData;
     TileData.Tile = Tile;
     TileData.RealDims = Min(SubbandPos + SubbandDims - Tile, FileData.TileDims);
     TileData.IdInSubband = XyzToI(NumTilesInSubband, (Tile - SubbandPos) / FileData.TileDims);
@@ -202,32 +202,29 @@ void SetWaveletTransform(file_format* FileData, int NumLevels) {
 void SetExtrapolation(file_format* FileData, bool DoExtrapolation) {
   FileData->DoExtrapolation = DoExtrapolation;
 }
-bool Finalize(file_format* FileData) {
+error Finalize(file_format* FileData, file_format::mode Mode) {
   // TODO: add more checking
   v3i Dims = Extract3Ints(FileData->Volume.DimsCompact);
   int NDims = (Dims.X > 1) + (Dims.Y > 1) + (Dims.Z > 1);
   BuildSubbands(NDims, Dims, FileData->NumLevels, &FileData->Subbands);
   int NumTilesTotal = GetNumTilesInPrevSubbands(*FileData, Size(FileData->Subbands));
   AllocateTypedBuffer(&FileData->TileHeaders, NumTilesTotal);
-  return true;
-}
-
-/* Only called when decoding */
-void FinalizeRead(file_format* FileData) {
-  /* allocate memory for the linked list */
-  AllocateTypedBuffer(&FileData->Chunks, Size(FileData->Subbands));
-  for (int S = 0; S < Size(FileData->Subbands); ++S) {
-    v3i SubbandDims = Extract3Ints(FileData->Subbands[S].DimsCompact);
-    v3i NumTiles = (SubbandDims + FileData->TileDims - 1) / FileData->TileDims;
-    AllocateTypedBuffer(&FileData->Chunks[S], Prod<i64>(NumTiles));
-    for (int T = 0; T < Size(FileData->Chunks[S]); ++T)
-      new (&FileData->Chunks[S][T]) linked_list<buffer>;
+  if (Mode == file_format::mode::Read) {
+    /* allocate memory for the linked list */
+    AllocateTypedBuffer(&FileData->Chunks, Size(FileData->Subbands));
+    for (int S = 0; S < Size(FileData->Subbands); ++S) {
+      v3i SubbandDims = Extract3Ints(FileData->Subbands[S].DimsCompact);
+      v3i NumTiles = (SubbandDims + FileData->TileDims - 1) / FileData->TileDims;
+      AllocateTypedBuffer(&FileData->Chunks[S], Prod<i64>(NumTiles));
+      for (int T = 0; T < Size(FileData->Chunks[S]); ++T)
+        new (&FileData->Chunks[S][T]) linked_list<buffer>;
+    }
   }
+  return error(error_code::NoError);
 }
 
 // TODO: error checking
-void Encode(file_format* FileData) {
-  Finalize(FileData);
+error Encode(file_format* FileData) {
   if (FileData->DoExtrapolation) {
     // TODO
   }
@@ -235,6 +232,7 @@ void Encode(file_format* FileData) {
     Cdf53Forward(&(FileData->Volume), FileData->NumLevels);
   for (int Sb = 0; Sb < Size(FileData->Subbands); ++Sb)
     WriteSubband(*FileData, Sb);
+  return error(error_code::NoError);
 }
 
 // TODO: the read may fail
@@ -340,13 +338,17 @@ MOVE_TO_NEXT_CHUNK:
 }
 
 void CleanUp(file_format* FileData) {
-  for (int S = 0; S < Size(FileData->Subbands); ++S) {
-    for (int T = 0; T < Size(FileData->Chunks[S]); ++T)
-      Deallocate(&FileData->Chunks[S][T]);
-    DeallocateTypedBuffer(&FileData->Chunks[S]);
+  if (FileData->Mode == file_format::mode::Read) {
+    for (int S = 0; S < Size(FileData->Subbands); ++S) {
+      for (int T = 0; T < Size(FileData->Chunks[S]); ++T)
+        Deallocate(&FileData->Chunks[S][T]);
+      DeallocateTypedBuffer(&FileData->Chunks[S]);
+    }
+    if (Size(FileData->Chunks) > 0)
+      DeallocateTypedBuffer(&FileData->Chunks);
   }
-  DeallocateTypedBuffer(&FileData->Chunks);
-  DeallocateTypedBuffer(&FileData->TileHeaders);
+  if (Size(FileData->TileHeaders) > 0)
+    DeallocateTypedBuffer(&FileData->TileHeaders);
 }
 
 }
