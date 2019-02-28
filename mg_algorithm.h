@@ -1,6 +1,6 @@
 /* Generic algorithms to replace <algorithm> */
-
 #pragma once
+
 namespace mg {
 
 template <typename t>

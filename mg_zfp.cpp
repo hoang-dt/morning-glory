@@ -8,7 +8,8 @@ const v3i ZfpBlockDims(4, 4, 4);
 
 /* Only return true if the block is fully encoded */
 bool EncodeBlock(const u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,
-                 bool& InnerLoop, bitstream* Bs) {
+                 bool& InnerLoop, bitstream* Bs) 
+{
   /* extract bit plane Bitplane to X */
   mg_Assert(N <= 64);
   u64 X = 0;
@@ -34,7 +35,8 @@ bool EncodeBlock(const u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,
 
 /* Only return true if the block is fully decoded */
 bool DecodeBlock(u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,
-                 bool& InnerLoop, bitstream* Bs) {
+                 bool& InnerLoop, bitstream* Bs)
+{
   M = Min(N - M, BitsMax - (int)BitSize(*Bs));
   /* decode first N bits of bit plane #Bitplane */
   u64 X = ReadLong(Bs, M);

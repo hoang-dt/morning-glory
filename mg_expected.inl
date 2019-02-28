@@ -6,7 +6,6 @@
 
 namespace mg {
 
-
 template <typename t> mg_ForceInline
 expected<t>::expected() : Ok(false) {}
 template <typename t> mg_ForceInline
