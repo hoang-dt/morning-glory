@@ -10,13 +10,13 @@
 
 namespace mg {
 
-error ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
+error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
   error Ok = ReadFile(FileName, &Volume->Buffer);
   if (!Ok)
     return Ok;
   Volume->DimsCompact = Stuff3Ints(Dims);
   Volume->Type = Type;
-  return mg_Error(NoError);
+  return mg_Error(err_code::NoError);
 }
 
 void Copy(sub_volume* Dst, const sub_volume& Src) {

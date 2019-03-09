@@ -12,7 +12,7 @@
 
 namespace mg {
 
-thread_local char ScratchBuffer[1024]; // General purpose buffer for string-related operations
+thread_local char ScratchBuf[1024]; // General purpose buffer for string-related operations
 
 /* Quickly declare a heap-allocated array which deallocates itself at the end of scope */
 /* return a typed_buffer */

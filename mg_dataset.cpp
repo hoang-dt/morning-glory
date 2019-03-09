@@ -20,7 +20,7 @@ cstr ToString(const metadata& Meta) {
   return Meta.String;
 }
 
-error ReadMetadata(cstr FileName, metadata* Meta) {
+error<> ReadMetadata(cstr FileName, metadata* Meta) {
   buffer Buf;
   error Ok = ReadFile(FileName, &Buf);
   if (!Ok) return Ok;
@@ -32,9 +32,9 @@ error ReadMetadata(cstr FileName, metadata* Meta) {
     string_ref Attr = Trim(Next(&TkEq));
     string_ref Value = Trim(Next(&TkEq));
     if (!Attr || !Value)
-      return mg_Error(ParseFailed, "File %s", FileName);
+      return mg_Error(err_code::ParseFailed, "File %s", FileName);
 
-    if (Attr == "file") { // add the dir part of the FileName to make Meta->File a absolute path
+    if (Attr == "file") {
       path Path(GetDirName(FileName));
       Append(&Path, Trim(Value));
       Copy(mg_StringRef(Meta->File), ToString(Path));
@@ -45,21 +45,26 @@ error ReadMetadata(cstr FileName, metadata* Meta) {
     } else if (Attr == "dimensions") {
       tokenizer TkSpace(Value, " ");
       int D = 0;
-      for (string_ref Dim = Next(&TkSpace); Dim && D < 4; Dim = Next(&TkSpace), ++D)
+      for (string_ref Dim = Next(&TkSpace); Dim && D < 4;
+           Dim = Next(&TkSpace), ++D) {
         if (!ToInt(Dim, &Meta->Dims[D]))
-          return mg_Error(ParseFailed, "File %s", FileName);
-      if (D >= 4) return mg_Error(DimensionsTooMany, "File %s", FileName);
+          return mg_Error(err_code::ParseFailed, "File %s", FileName);
+      }
+      if (D >= 4) 
+        return mg_Error(err_code::DimensionsTooMany, "File %s", FileName);
       if (D <= 2) Meta->Dims[2] = 1;
       if (D <= 1) Meta->Dims[1] = 1;
     } else if (Attr == "data type") {
-      if (!(Meta->DataType = data_type(Value))) {
-        return mg_Error(TypeNotSupported, "File %s", FileName);
+      if ((Meta->DataType = StringTo<data_type>()(Value)) == 
+          data_type::__Invalid__) 
+      {
+        return mg_Error(err_code::TypeNotSupported, "File %s", FileName);
       }
     } else {
-      return mg_Error(AttributeNotFound, "File %s", FileName);
+      return mg_Error(err_code::AttributeNotFound, "File %s", FileName);
     }
   }
-  return mg_Error(NoError);
+  return mg_Error(err_code::NoError);
 }
 
 } // namespace mg

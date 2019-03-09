@@ -7,7 +7,6 @@
 #include "mg_common_types.cpp"
 #include "mg_dataset.cpp"
 #include "mg_encode.cpp"
-#include "mg_error.cpp"
 #include "mg_file_format.cpp"
 #include "mg_filesystem.cpp"
 #include "mg_io.cpp"

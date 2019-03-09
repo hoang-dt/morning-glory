@@ -11,14 +11,12 @@
 #undef mg_Enum
 #define mg_Enum(enum_name, type, ...)\
 namespace mg {\
-\
-struct enum_name {\
-  enum : type { __VA_ARGS__, __Invalid__ };\
-  type Value;\
-  \
+enum class enum_name : type { __VA_ARGS__, __Invalid__ };\
+struct enum_name##_s {\
+  enum_name Val;\
   struct enum_item {\
     string_ref Name;\
-    type Value;\
+    enum_name Val;\
   };\
   using name_map = array<enum_item, mg_NumArgs(__VA_ARGS__)>;\
   inline static name_map NameMap = []() {\
@@ -34,61 +32,62 @@ struct enum_name {\
       if (EnumVal) {\
         char* EndPtr = nullptr;\
         errno = 0;\
-        type Val = type(strtol(EnumVal.Ptr, &EndPtr, 10));\
+        enum_name Val = enum_name(strtol(EnumVal.Ptr, &EndPtr, 10));\
         if (errno == ERANGE || EndPtr == EnumVal.Ptr || !EndPtr ||\
-          !(isspace(*EndPtr) || *EndPtr == ',' || *EndPtr == '\0'))\
+            !(isspace(*EndPtr) || *EndPtr == ',' || *EndPtr == '\0'))\
           assert(false && " non-integer enum values");\
-        else if (Val < CurrentVal)\
+        else if (Val < static_cast<enum_name>(CurrentVal))\
           assert(false && " non-increasing enum values");\
         else\
-          CurrentVal = Val;\
+          CurrentVal = static_cast<type>(Val);\
       }\
       assert(I < Size(NameMap));\
-      NameMap[I] = enum_item{ EnumStr, CurrentVal };\
+      NameMap[I] = enum_item{EnumStr, static_cast<enum_name>(CurrentVal)};\
     }\
     return NameMap;\
   }();\
   \
-  enum_name() : enum_name(__Invalid__) {}\
-  enum_name(type Value) {\
+  enum_name##_s() : enum_name##_s(enum_name::__Invalid__) {}\
+  enum_name##_s(enum_name Val) {\
     const auto* It = ConstBegin(NameMap);\
     while (It != ConstEnd(NameMap)) {\
-      if (It->Value == Value)\
+      if (It->Val == Val)\
         break;\
       ++It;\
     }\
-    if (It != ConstEnd(NameMap)) \
-      this->Value = It->Value;\
-    else\
-      this->Value = __Invalid__;\
+    this->Val = (It != ConstEnd(NameMap)) ? It->Val : enum_name::__Invalid__;\
   }\
-  explicit enum_name(string_ref Name) {\
+  explicit enum_name##_s(string_ref Name) {\
     const auto* It = ConstBegin(NameMap);\
     while (It != ConstEnd(NameMap)) {\
       if (It->Name == Name)\
         break;\
       ++It;\
     }\
-    if (It != ConstEnd(NameMap)) \
-      Value = It->Value;\
-    else\
-      Value = __Invalid__;\
+    Val = (It != ConstEnd(NameMap)) ? It->Val : enum_name::__Invalid__;\
   }\
-  explicit operator bool() const { return Value != __Invalid__; }\
+  explicit operator bool() const { return Val != enum_name::__Invalid__; }\
 }; /* struct enum_name */\
 \
 inline string_ref ToString(enum_name Enum) {\
-  const auto* It = ConstBegin(Enum.NameMap);\
-  while (It != ConstEnd(Enum.NameMap)) {\
-    if (It->Value == Enum.Value)\
+  enum_name##_s EnumS(Enum);\
+  const auto* It = ConstBegin(EnumS.NameMap);\
+  while (It != ConstEnd(EnumS.NameMap)) {\
+    if (It->Val == EnumS.Val)\
       break;\
     ++It;\
   }\
-  assert(It != ConstEnd(Enum.NameMap));\
+  assert(It != ConstEnd(EnumS.NameMap));\
   return It->Name;\
 }\
-inline bool operator==(enum_name Lhs, enum_name Rhs) { return Lhs.Value == Rhs.Value; }\
-inline bool operator!=(enum_name Lhs, enum_name Rhs) { return Lhs.Value != Rhs.Value; }\
-inline bool operator< (enum_name Lhs, enum_name Rhs) { return Lhs.Value <  Rhs.Value; }\
+\
+template <>\
+struct StringTo<enum_name> {\
+  enum_name operator()(string_ref Name) {\
+    enum_name##_s EnumS(Name);\
+    return EnumS.Val;\
+  }\
+};\
 \
 } // namespace mg
+

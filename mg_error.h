@@ -3,37 +3,42 @@
 #include "mg_enum.h"
 #include "mg_types.h"
 
-mg_Enum(error_code, int,
-  NoError,
-  SizeZero, SizeTooSmall, SizeMismatched,
-  DimensionMismatched, DimensionsTooMany,
-  AttributeNotFound,
-  OptionNotSupported,
-  TypeNotSupported,
-  FileCreateFailed, FileReadFailed, FileWriteFailed, FileOpenFailed, FileCloseFailed,
-  FileSeekFailed, FileTellFailed,
-  ParseFailed,
-  OutOfMemory,
-  UnknownError
-)
+// TODO: spread the common errors across multiple modules
+
+#define mg_CommonErrs\
+  NoError, UnknownError,\
+  SizeZero, SizeTooSmall, SizeMismatched,\
+  DimensionMismatched, DimensionsTooMany,\
+  AttributeNotFound,\
+  OptionNotSupported,\
+  TypeNotSupported,\
+  FileCreateFailed, FileReadFailed, FileWriteFailed, FileOpenFailed,\
+  FileCloseFailed, FileSeekFailed, FileTellFailed,\
+  ParseFailed,\
+  OutOfMemory
+
+mg_Enum(err_code, int, mg_CommonErrs)
 
 namespace mg {
 
 /* There should be only one error in-flight on each thread */
-struct error {
-  cstr Message = "";
-  error_code Code = error_code::NoError;
-  i8 StackIndex = 0;
-  bool StringGenerated = false;
-  error(error_code Code, bool StringGenerated = false, cstr Message = "");
+template <typename t = err_code>
+struct error {  
+  cstr Msg = "";
+  t ErrCode;
+  i8 StackIdx = 0;
+  bool StrGenerated = false;
+  error(t ErrCode, bool StrGenerated = false, cstr Msg = "");
   inline thread_local static cstr Files[64]; // Store file names up the stack
   inline thread_local static i16 Lines[64]; // Store line numbers up the stack
   explicit operator bool() const; // Return true if no error
-}; // struct error
+}; // struct err_template
 
-cstr ToString(const error& Err, bool Force = false);
+template <typename t> 
+cstr ToString(const error<t>& Err, bool Force = false);
 struct printer;
-void PrintStacktrace(printer* Pr, const error& Err);
+template <typename t> 
+void PrintStacktrace(printer* Pr, const error<t>& Err);
 
 } // namespace mg
 

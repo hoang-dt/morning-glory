@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mg_common_types.h"
+#include "mg_error.h"
 #include "mg_memory.h"
 #include "mg_types.h"
 
@@ -29,10 +30,8 @@ struct sub_volume : public volume {
 i64 XyzToI(v3i N, v3i P);
 v3i IToXyz(i64 I, v3i N);
 
-struct data_type;
-struct error;
 /* Read a volume from a file */
-error ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume);
+error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume);
 
 /* Copy a region of the first volume to a region of the second volume */
 void Copy(volume* Dst, const volume& Src);

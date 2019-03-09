@@ -45,7 +45,7 @@ int Exponent(t Val) {
   return -Traits<t>::ExponentBias;
 }
 
-template <typename t, typename u> mg_ForceInline
+template <typename t = int, typename u> mg_ForceInline
 t Prod(v3<u> Vec) {
   return t(Vec.X) * t(Vec.Y) * t(Vec.Z);
 }

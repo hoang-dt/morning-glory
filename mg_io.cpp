@@ -23,46 +23,46 @@ void Reset(printer* Pr, FILE* File) {
   Pr->File = File;
 }
 
-error ReadFile(cstr FileName, buffer* Buf) {
+error<> ReadFile(cstr FileName, buffer* Buf) {
   mg_Assert((Buf->Data && Buf->Bytes) || (!Buf->Data && !Buf->Bytes));
 
   FILE* Fp = fopen(FileName, "rb");
   mg_CleanUp(0, if (Fp) fclose(Fp));
   if (!Fp)
-    return mg_Error(FileOpenFailed, "%s", FileName);
+    return mg_Error(err_code::FileOpenFailed, "%s", FileName);
 
   /* Determine the file size */
   if (mg_FSeek(Fp, 0, SEEK_END))
-    return mg_Error(FileSeekFailed, "%s", FileName);
+    return mg_Error(err_code::FileSeekFailed, "%s", FileName);
   i64 Size = 0;
   if ((Size = mg_FTell(Fp)) == -1)
-    return mg_Error(FileTellFailed, "%s", FileName);
+    return mg_Error(err_code::FileTellFailed, "%s", FileName);
   if (mg_FSeek(Fp, 0, SEEK_SET))
-    return mg_Error(FileSeekFailed, "%s", FileName);
+    return mg_Error(err_code::FileSeekFailed, "%s", FileName);
   if (Buf->Bytes < Size)
     AllocateBuffer(Buf, Size);
 
   /* Read file contents */
   mg_CleanUp(1, DeallocateBuffer(Buf));
   if (fread(Buf->Data, Size, 1, Fp) != 1)
-    return mg_Error(FileReadFailed, "%s", FileName);
+    return mg_Error(err_code::FileReadFailed, "%s", FileName);
 
   mg_DismissCleanUp(1);
-  return mg_Error(NoError);
+  return mg_Error(err_code::NoError);
 }
 
-error WriteFile(cstr FileName, const buffer& Buf) {
+error<> WriteFile(cstr FileName, const buffer& Buf) {
   mg_Assert(Buf.Data && Buf.Bytes);
 
   FILE* Fp = fopen(FileName, "wb");
   mg_CleanUp(0, if (Fp) fclose(Fp));
   if (!Fp)
-    return mg_Error(FileCreateFailed, "%s", FileName);
+    return mg_Error(err_code::FileCreateFailed, "%s", FileName);
 
   /* Read file contents */
   if (fwrite(Buf.Data, Buf.Bytes, 1, Fp) != 1)
-    return mg_Error(FileWriteFailed, "%s", FileName);
-  return mg_Error(NoError);
+    return mg_Error(err_code::FileWriteFailed, "%s", FileName);
+  return mg_Error(err_code::NoError);
 }
 
 } // namespace mg

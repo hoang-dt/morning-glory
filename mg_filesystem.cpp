@@ -53,13 +53,13 @@ string_ref GetDirName(string_ref Path) {
 }
 
 str ToString(const path& Path) {
-  printer Pr(ScratchBuffer, sizeof(ScratchBuffer));
+  printer Pr(ScratchBuf, sizeof(ScratchBuf));
   for (int I = 0; I < Path.NumComponents; ++I) {
     mg_Print(&Pr, "%.*s", Path.Components[I].Size, Path.Components[I].Ptr);
     if (I + 1 < Path.NumComponents)
       mg_Print(&Pr, "/");
   }
-  return ScratchBuffer;
+  return ScratchBuf;
 }
 
 bool IsRelative(string_ref Path) {

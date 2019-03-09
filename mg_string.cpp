@@ -17,10 +17,10 @@ char string_ref::operator[](int Idx) const { mg_Assert(Idx < Size); return Ptr[I
 string_ref::operator bool() const { return Ptr != nullptr; }
 
 str ToString(string_ref Str) {
-  mg_Assert(Str.Size < (int)sizeof(ScratchBuffer));
-  if (Str.Ptr != ScratchBuffer)
-    snprintf(ScratchBuffer, sizeof(ScratchBuffer), "%.*s", Str.Size, Str.Ptr);
-  return ScratchBuffer;
+  mg_Assert(Str.Size < (int)sizeof(ScratchBuf));
+  if (Str.Ptr != ScratchBuf)
+    snprintf(ScratchBuf, sizeof(ScratchBuf), "%.*s", Str.Size, Str.Ptr);
+  return ScratchBuf;
 }
 str Begin(string_ref Str) { return Str.Ptr; }
 cstr ConstBegin(string_ref Str) { return Str.ConstPtr; }
