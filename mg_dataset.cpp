@@ -23,7 +23,7 @@ cstr ToString(const metadata& Meta) {
 error<> ReadMetadata(cstr FileName, metadata* Meta) {
   buffer Buf;
   error Ok = ReadFile(FileName, &Buf);
-  if (!Ok) return Ok;
+  if (Ok.ErrCode != err_code::NoError) return Ok;
   mg_CleanUp(0, DeallocateBuffer(&Buf));
   string_ref Str((cstr)Buf.Data, (int)Buf.Bytes);
   tokenizer TkLine(Str, "\r\n");
@@ -50,13 +50,13 @@ error<> ReadMetadata(cstr FileName, metadata* Meta) {
         if (!ToInt(Dim, &Meta->Dims[D]))
           return mg_Error(err_code::ParseFailed, "File %s", FileName);
       }
-      if (D >= 4) 
+      if (D >= 4)
         return mg_Error(err_code::DimensionsTooMany, "File %s", FileName);
       if (D <= 2) Meta->Dims[2] = 1;
       if (D <= 1) Meta->Dims[1] = 1;
     } else if (Attr == "data type") {
-      if ((Meta->DataType = StringTo<data_type>()(Value)) == 
-          data_type::__Invalid__) 
+      if ((Meta->DataType = StringTo<data_type>()(Value)) ==
+          data_type::__Invalid__)
       {
         return mg_Error(err_code::TypeNotSupported, "File %s", FileName);
       }

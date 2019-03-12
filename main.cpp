@@ -49,6 +49,7 @@ void TestLinkedList() {
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
+
   SetHandleAbortSignals();
   timer Timer; StartTimer(&Timer);
   /* Read the original data from a file */
@@ -58,13 +59,13 @@ int main(int Argc, const char** Argv) {
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &NLevels), "Provide --nlevels");
   metadata Meta;
   error Ok = ReadMetadata(DataFile, &Meta);
-  mg_AbortIf(!Ok, "%s", ToString(Ok));
+  mg_AbortIf(Ok.ErrCode != err_code::NoError, "%s", ToString(Ok));
   i64 NumSamples = Prod<i64>(Meta.Dims);
   volume OriginalF; // original function
   AllocateBuffer(&OriginalF.Buffer, SizeOf(Meta.DataType) * NumSamples);
   mg_CleanUp(0, DeallocateBuffer(&OriginalF.Buffer));
   Ok = ReadVolume(Meta.File, Meta.Dims, Meta.DataType, &OriginalF);
-  mg_AbortIf(!Ok, "%s", ToString(Ok));
+  mg_AbortIf(Ok.ErrCode != err_code::NoError, "%s", ToString(Ok));
   /* Extrapolate the volume to 2^N+1 in each dimension */
   sub_volume ExpandedF;
   v3i BigDims(NextPow2(Meta.Dims.X) + 1, NextPow2(Meta.Dims.Y) + 1, NextPow2(Meta.Dims.Z) + 1);
