@@ -98,15 +98,20 @@ void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subband
   for (int I = 0; I < NLevels; ++I) {
     v3i P((M.X + 1) >> 1, (M.Y + 1) >> 1, (M.Z + 1) >> 1);
     for (int J = (1 << NDims) - 1; J > 0; --J) {
-      u8 Z = Order[J] & 1u, Y = (Order[J] >> 1) & 1u, X = (Order[J] >> 2) & 1u;
+      u8 Z = Order[J] & 1u,
+         Y = (Order[J] >> (NDims - 2)) & 1u,
+         X = (Order[J] >> (NDims - 1)) & 1u;
       v3i Sm((X == 0) ? P.X : M.X - P.X,
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
-      if (Prod<i64>(Sm) != 0) // child exists
+      if (NDims == 3 && Sm.X != 0 && Sm.Y != 0 && Sm.Z != 0) // child exists
         PushBack(Subbands, extent(v3i(X, Y, Z) * P, Sm));
+      else if (NDims == 2 && Sm.X != 0 && Sm.Y != 0)
+        PushBack(Subbands, extent(v3i(X * P.X, Y * P.Y, 0), v3i(Sm.X, Sm.Y, 1)));
     }
     M = P;
   }
+  if (NDims == 2) mg_Assert(M.Z == 1);
   PushBack(Subbands, extent(v3i(0, 0, 0), M));
   Reverse(Begin(*Subbands), End(*Subbands));
 }

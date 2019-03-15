@@ -125,7 +125,7 @@ void WriteTile(const file_format& Fd, tile_data* Td) {
       if (Bp == Fd.Precision) {
         CopyBlockForward<t>(Fd, Td, Block, K);
         Td->EMaxes[Bi] = (i16)Quantize((byte*)&Td->Floats[K], Prod(ZfpBlockDims),
-                                       Fd.Precision - 1, (byte*)&Td->Ints[K], 
+                                       Fd.Precision - 1, (byte*)&Td->Ints[K],
                                        Fd.Volume.Type);
         WriteEMax(Td->EMaxes[Bi], Exponent(Fd.Tolerance), &Td->Bs);
         ForwardBlockTransform(&Td->Ints[K]);
@@ -139,7 +139,7 @@ void WriteTile(const file_format& Fd, tile_data* Td) {
       do {
         if (DoEncode) {
           FullyEncoded = EncodeBlock(&Td->UInts[K], Bp, Fd.ChunkBytes * 8,
-                                     Td->Ns[Bi], Td->Ms[Bi], 
+                                     Td->Ns[Bi], Td->Ms[Bi],
                                      Td->InnerLoops[Bi], &Td->Bs);
         }
         bool ChunkComplete = Size(Td->Bs) >= Fd.ChunkBytes;
@@ -259,7 +259,7 @@ file_format_err Encode(file_format* Fd) {
 }
 
 /* Read the next chunk from disk */
-file_format_err ReadNextChunk(file_format* Fd, tile_data* Td, buffer* ChunkBuf) 
+file_format_err ReadNextChunk(file_format* Fd, tile_data* Td, buffer* ChunkBuf)
 {
   mg_Assert(ChunkBuf->Bytes == Fd->ChunkBytes);
   auto& ChunkList = Fd->Chunks[Td->Subband][Td->IdGlobal];
@@ -283,7 +283,7 @@ file_format_err ReadNextChunk(file_format* Fd, tile_data* Td, buffer* ChunkBuf)
       auto ChunkIt = PushBack(&ChunkList, *ChunkBuf);
       InitRead(&Td->Bs, *ChunkIt);
     } else { // cannot read the chunk in the file
-      return mg_Error(file_format_err_code::FileReadFailed); 
+      return mg_Error(file_format_err_code::FileReadFailed);
     }
   } else { // the chunk does not exist
     return mg_Error(file_format_err_code::ChunkReadFailed);
@@ -304,23 +304,23 @@ void DecompressTile(file_format* Fd, tile_data* Td) {
       if (Bp == Fd->Precision)
         DoDecode = ReadEMax(&Td->Bs, Exponent(Fd->Tolerance), &Td->EMaxes[Bi]);
       int K = XyzToI(Td->NumBlocks, Block / ZfpBlockDims) * Prod(ZfpBlockDims);
-      bool DoDecode = Fd->Precision - Bp <= 
+      bool DoDecode = Fd->Precision - Bp <=
                       Td->EMaxes[Bi] - Exponent(Fd->Tolerance) + 1;
-      bool FulllyDecoded = false;
+      bool FullyDecoded = false;
       bool LastChunk = (*ChunkIt) == ConstEnd(ChunkList);
       bool ExhaustedBits = BitSize(Td->Bs) >= file_format::ChunkSize;
-      while (DoDecode && !FulllyDecoded && !LastChunk) {
-        FulllyDecoded = DecodeBlock(&Td->UInts[K], Bp, Fd->ChunkBytes * 8,
-                                    Td->Ns[Bi], Td->Ms[Bi], 
-                                    Td->InnerLoops[Bi], &Td->Bs);
+      while (DoDecode && !FullyDecoded && !LastChunk) {
+        FullyDecoded = DecodeBlock(&Td->UInts[K], Bp, Fd->ChunkBytes * 8,
+                                   Td->Ns[Bi], Td->Ms[Bi],
+                                   Td->InnerLoops[Bi], &Td->Bs);
         ExhaustedBits = BitSize(Td->Bs) >= file_format::ChunkSize;
         if (ExhaustedBits) {
-          ++(*ChunkIt); 
+          ++(*ChunkIt);
           LastChunk = (*ChunkIt) == ConstEnd(ChunkList);
           if (!LastChunk)
             InitRead(&Td->Bs, **ChunkIt);
         } else {
-          mg_Assert(FulllyDecoded);
+          mg_Assert(FullyDecoded);
         }
       }
 
@@ -328,7 +328,7 @@ void DecompressTile(file_format* Fd, tile_data* Td) {
         InverseShuffle(Td->UInts.Data, Td->Ints.Data);
         InverseBlockTransform(Td->Ints.Data);
         Dequantize((byte*)Td->Ints.Data, Prod(ZfpBlockDims),
-                   Td->EMaxes[Bi], Fd->Precision - 1, 
+                   Td->EMaxes[Bi], Fd->Precision - 1,
                    (byte*)Td->Floats.Data, Fd->Volume.Type);
         CopyBlockInverse<t>(Fd, Td, Block, K);
       }

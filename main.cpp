@@ -49,7 +49,6 @@ void TestLinkedList() {
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
-
   SetHandleAbortSignals();
   timer Timer; StartTimer(&Timer);
   /* Read the original data from a file */
