@@ -88,10 +88,8 @@ array<u8, 8> SubbandOrders[4] = {
 };
 
 /* Here we assume the wavelet transform is done in X, then Y, then Z */
-void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subbands) {
-  mg_Assert(NDims <= 3);
-  mg_Assert(N.Z == 1 || NDims == 3);
-  mg_Assert(N.Y == 1 || NDims >= 2);
+void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
+  int NDims = NumDims(N);
   const array<u8, 8>& Order = SubbandOrders[NDims];
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
   v3i M = N;

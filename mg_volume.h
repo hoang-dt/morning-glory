@@ -43,6 +43,9 @@ void Clone(sub_volume* Dst, const sub_volume& Src, allocator* Alloc = &Mallocato
 /* Split a volume into 8 parts: 1 voxel, 3 lines, 3 faces, and one sub volume */
 array<extent, 8> Split3D(v3i Dims);
 
+/* Return the number of dimensions, given a volume size */
+int NumDims(v3i N);
+
 bool IsPoint(extent Ext);
 /* Note: must test for IsPoint() first */
 bool IsLine(extent Ext);

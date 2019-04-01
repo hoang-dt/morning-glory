@@ -46,4 +46,8 @@ mg_ForceInline v3i IToXyz(i64 I, v3i N) {
   return v3i(X, Y, Z);
 }
 
+mg_ForceInline int NumDims(v3i N) {
+  return (N.X > 1) + (N.Y > 1) + (N.Z > 1);
+}
+
 } // namespace mg

@@ -220,8 +220,7 @@ void SetExtrapolation(file_format* Fd, bool DoExtrapolation) {
 file_format_err Finalize(file_format* Fd, file_format::mode Mode) {
   // TODO: add more checking
   v3i Dims = Extract3Ints(Fd->Volume.DimsCompact);
-  int NDims = (Dims.X > 1) + (Dims.Y > 1) + (Dims.Z > 1);
-  BuildSubbands(NDims, Dims, Fd->NumLevels, &Fd->Subbands);
+  BuildSubbands(Dims, Fd->NumLevels, &Fd->Subbands);
   // TODO: use i64 for NTilesTotal
   int NTilesTotal = GetNumTilesInPrevSubbands(*Fd, Size(Fd->Subbands));
   AllocateTypedBufferZero(&Fd->TileHeaders, NTilesTotal + 1);

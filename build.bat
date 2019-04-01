@@ -22,7 +22,7 @@ set COMMON_CFLAGS= -Xclang -flto-visibility-public-std -std=gnu++2a ^
   -g -gcodeview -gno-column-info
 if %1==Release (set CFLAGS= -O2 -DNDEBUG -ftree-vectorize -march=native)
 if %1==FastDebug (set CFLAGS= -Og -DNDEBUG -ftree-vectorize -march=native)
-if %1==Debug (set CFLAGS= -O0 -D_DEBUG -MTd)
+if %1==Debug (set CFLAGS= -O0 -D_DEBUG)
 
 set COMMON_CDEFS= -D_CRT_SECURE_NO_WARNINGS
 if %1==Release (set CDEFS= )

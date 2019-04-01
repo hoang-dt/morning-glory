@@ -30,7 +30,7 @@ void Cdf53InverseExtrapolate(sub_volume* Vol);
 template <typename t>
 struct dynamic_array;
 struct extent;
-void BuildSubbands(int NDims, v3i N, int NLevels, dynamic_array<extent>* Subbands);
+void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands);
 
 /* Utilities */
 
