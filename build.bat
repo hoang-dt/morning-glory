@@ -16,59 +16,39 @@ set "PATH=%LLVMPath%\bin;%VSBasePath%\bin\Hostx64\x64;%PATH%"
 :: Compiler flags
 :: TODO: add different build configurations (release, debug, etc)
 set CFLAGS="Please provide a build config: Debug, FastDebug, Release"
-if %1==Release (set CFLAGS= ^
-  -Xclang -flto-visibility-public-std -std=gnu++2a^
-  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
-  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors^
-  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
-  -g -gcodeview -gno-column-info -O2 -DNDEBUG -ftree-vectorize -march=native)
-if %1==FastDebug (set CFLAGS= ^
-  -Xclang -flto-visibility-public-std -std=gnu++2a^
-  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
-  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors^
-  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
-  -g -gcodeview -gno-column-info -Og -DNDEBUG -ftree-vectorize -march=native)
-if %1==Debug (set CFLAGS= ^
-  -Xclang -flto-visibility-public-std -std=gnu++2a^
-  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd^
-  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors^
-  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces^
-  -g -gcodeview -gno-column-info -O0 -D_DEBUG -MTd)
+set COMMON_CFLAGS= -Xclang -flto-visibility-public-std -std=gnu++2a ^
+  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd ^
+  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces ^
+  -g -gcodeview -gno-column-info
+if %1==Release (set CFLAGS= -O2 -DNDEBUG -ftree-vectorize -march=native)
+if %1==FastDebug (set CFLAGS= -Og -DNDEBUG -ftree-vectorize -march=native)
+if %1==Debug (set CFLAGS= -O0 -D_DEBUG -MTd)
 
-if %1==Release (set CDEFS= -D_CRT_SECURE_NO_WARNINGS -Dmg_Verbose=1)
-if %1==FastDebug (set CDEFS= -D_CRT_SECURE_NO_WARNINGS -Dmg_Slow=1)
-if %1==Debug (set CDEFS= -D_CRT_SECURE_NO_WARNINGS -Dmg_Slow=1 -Dmg_Verbose=1)
+set COMMON_CDEFS= -D_CRT_SECURE_NO_WARNINGS
+if %1==Release (set CDEFS= )
+if %1==FastDebug (set CDEFS= -Dmg_Slow=1 -Dmg_Verbose=1)
+if %1==Debug (set CDEFS= -Dmg_Slow=1 -Dmg_Verbose=1)
 
 :: Linker flags
-if %1==Release (set LDFLAGS= ^
-  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
-if %1==FastDebug (set LDFLAGS= ^
-  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
-if %1==Debug (set LDFLAGS= ^
-  -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf)
+set COMMON_LDFLAGS= -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf
+if %1==Release (set LDFLAGS= )
+if %1==FastDebug (set LDFLAGS= )
+if %1==Debug (set LDFLAGS= )
 
 :: Linked libs
-if %1==Release (set LDLIBS= ^
-  -libpath:"%VSBasePath%\lib\x64" ^
+set COMMON_LDLIBS= -libpath:"%VSBasePath%\lib\x64" ^
   -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\ucrt\x64" ^
   -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\um\x64" ^
-  -libpath:"%LLVMPath%\lib" ^
+  -libpath:"%LLVMPath%\lib"
+if %1==Release (set LDLIBS= ^
   libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib kernel32.lib User32.lib ^
   legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
   libomp.lib dbghelp.lib)
 if %1==FastDebug (set LDLIBS= ^
-  -libpath:"%VSBasePath%\lib\x64" ^
-  -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\ucrt\x64" ^
-  -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\um\x64" ^
-  -libpath:"%LLVMPath%\lib" ^
   libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib kernel32.lib User32.lib ^
   legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
   libomp.lib dbghelp.lib)
 if %1==Debug (set LDLIBS= ^
-  -libpath:"%VSBasePath%\lib\x64" ^
-  -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\ucrt\x64" ^
-  -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\um\x64" ^
-  -libpath:"%LLVMPath%\lib" ^
   libucrtd.lib libvcruntimed.lib libcmtd.lib libcpmtd.lib kernel32.lib User32.lib ^
   legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
   libomp.lib dbghelp.lib)
@@ -78,7 +58,7 @@ if %1==Debug (set LDLIBS= ^
 ::@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
 md bin
 cd bin
-clang++.exe "../build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
+clang++.exe "../build.cpp" -o "build.o" -c %COMMON_CFLAGS% %CFLAGS% %COMMON_CDEFS% %CDEFS%
 
 :: Linking
 ::@set "LINK_FILES="
@@ -87,7 +67,7 @@ clang++.exe "../build.cpp" -o "build.o" -c %CFLAGS% %CDEFS%
 ::lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
 ::lld-link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
-link.exe "build.o" /DEBUG -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
+link.exe "build.o" /DEBUG -out:"%OUTPUT%" %COMMON_LDFLAGS% %LDFLAGS% %COMMON_LDLIBS% %LDLIBS%
 del "build.o"
 cd ..
 
