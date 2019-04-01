@@ -29,9 +29,9 @@ u32 DecodeMorton3Z(u32 Code);
 u32 EncodeMorton3(u32 X, u32 Y, u32 Z);
 
 /* Stuff three 21-bit uints into one 64-bit uint */
-u64 Stuff3Ints(v3i V);
+u64 Stuff3Ints64(v3i V);
 /* The inverse of Stuff3Ints */
-v3i Extract3Ints(u64 V);
+v3i Extract3Ints64(u64 V);
 
 } // namespace mg
 

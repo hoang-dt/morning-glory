@@ -12,7 +12,7 @@ linked_list<t>::linked_list(allocator* Alloc) : Alloc(Alloc) {}
 template <typename t> 
 linked_list_iterator<t> Insert(linked_list<t>* List, linked_list_iterator<t> Where, const t& Payload) {
   buffer Buf;
-  List->Alloc->Allocate(&Buf, sizeof(linked_list_node<t>));
+  List->Alloc->Alloc(&Buf, sizeof(linked_list_node<t>));
   linked_list_node<t>* NewNode = (linked_list_node<t>*)Buf.Data;
   NewNode->Payload = Payload;
   NewNode->Next = nullptr;
@@ -45,7 +45,7 @@ void Deallocate(linked_list<t>* List) {
   while (Node) {
     buffer Buf((byte*)Node, sizeof(linked_list_node<t>), List->Alloc);
     Node = Node->Next;
-    List->Alloc->Deallocate(&Buf);
+    List->Alloc->Dealloc(&Buf);
   }
   List->Head = nullptr;
   List->Size = 0;

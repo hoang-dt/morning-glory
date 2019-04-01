@@ -12,20 +12,21 @@
 
 namespace mg {
 
-thread_local char ScratchBuf[1024]; // General purpose buffer for string-related operations
+/* General purpose buffer for string-related operations */
+thread_local char ScratchBuf[1024];
 
-/* Quickly declare a heap-allocated array which deallocates itself at the end of scope */
-/* return a typed_buffer */
+/* Quickly declare a heap-allocated array which deallocates itself at the end of
+ * scope return a typed_buffer */
 #define mg_HeapArray(Name, Type, Size)
-#define mg_HeapArrayZero(Name, Type, Size)
+#define mg_HeapArray0(Name, Type, Size)
 /* return an array of typed_buffer */
-#define mg_StackArrayOfHeapArrays(Name, Type, StackArraySize, HeapArraySize)
-#define mg_HeapArrayOfHeapArrays(Name, Type, SizeOuter, SizeInner)
+#define mg_StackHeapArrays(Name, Type, StackArraySize, HeapArraySize)
+#define mg_HeapHeapArrays(Name, Type, SizeOuter, SizeInner)
 
 struct allocator {
-  virtual bool Allocate(buffer* Buf, i64 Bytes) = 0;
-  virtual void Deallocate(buffer* Buf) = 0;
-  virtual void DeallocateAll() = 0;
+  virtual bool Alloc(buffer* Buf, i64 Bytes) = 0;
+  virtual void Dealloc(buffer* Buf) = 0;
+  virtual void DeallocAll() = 0;
 };
 
 /* Allocators that know if they own an address/buffer */
@@ -39,17 +40,18 @@ struct linear_allocator;
 /* A linear allocator that uses stack storage. */
 template <int Capacity>
 struct stack_linear_allocator;
-/* Whenever an allocation of a size in a specific range is made, return the block immediately
-from the head of a linked list. Otherwise forward the allocation to some Parent allocator. */
+/* Whenever an allocation of a size in a specific range is made, return the
+ * block immediately from the head of a linked list. Otherwise forward the
+ * allocation to some Parent allocator. */
 struct free_list_allocator;
-/* Try to allocate using one allocator first (the Primary), then if that fails, use another
-allocator (the Secondary). */
+/* Try to allocate using one allocator first (the Primary), then if that fails,
+ * use another allocator (the Secondary). */
 struct fallback_allocator;
 
 struct mallocator : public allocator {
-  bool Allocate(buffer* Buf, i64 Bytes) override;
-  void Deallocate(buffer* Buf) override;
-  void DeallocateAll() override;
+  bool Alloc(buffer* Buf, i64 Bytes) override;
+  void Dealloc(buffer* Buf) override;
+  void DeallocAll() override;
 };
 
 struct linear_allocator : public owning_allocator {
@@ -57,9 +59,9 @@ struct linear_allocator : public owning_allocator {
   i64 CurrentBytes = 0;
   linear_allocator();
   linear_allocator(buffer Buf);
-  bool Allocate(buffer* Buf, i64 Bytes) override;
-  void Deallocate(buffer* Buf) override;
-  void DeallocateAll() override;
+  bool Alloc(buffer* Buf, i64 Bytes) override;
+  void Dealloc(buffer* Buf) override;
+  void DeallocAll() override;
   bool Own(buffer Buf) override;
 };
 
@@ -77,9 +79,9 @@ struct free_list_allocator : public allocator {
   allocator* Parent = nullptr;
   free_list_allocator();
   free_list_allocator(i64 MinBytes, i64 MaxBytes, allocator* Parent = nullptr);
-  bool Allocate(buffer* Buf, i64 Bytes) override;
-  void Deallocate(buffer* Buf) override;
-  void DeallocateAll() override;
+  bool Alloc(buffer* Buf, i64 Bytes) override;
+  void Dealloc(buffer* Buf) override;
+  void DeallocAll() override;
 };
 
 struct fallback_allocator : public allocator {
@@ -87,9 +89,9 @@ struct fallback_allocator : public allocator {
   allocator* Secondary = nullptr;
   fallback_allocator();
   fallback_allocator(owning_allocator* Primary, allocator* Secondary);
-  bool Allocate(buffer* Buf, i64 Bytes) override;
-  void Deallocate(buffer* Buf) override;
-  void DeallocateAll() override;
+  bool Alloc(buffer* Buf, i64 Bytes) override;
+  void Dealloc(buffer* Buf) override;
+  void DeallocAll() override;
 };
 
 static mallocator& Mallocator() {
@@ -100,18 +102,18 @@ static mallocator& Mallocator() {
 void Clone(buffer* Dst, buffer Src, allocator* Alloc = &Mallocator());
 
 /* Abstract away memory allocations/deallocations */
-void AllocateBuffer(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
-void AllocateBufferZero(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
-void DeallocateBuffer(buffer* Buf);
+void AllocBuf(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
+void AllocBuf0(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
+void DeallocBuf(buffer* Buf);
 template <typename t>
-void AllocateTypedBuffer(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
+void AllocBufT(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
 template <typename t>
-void AllocateTypedBufferZero(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
+void AllocBufT0(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
 template <typename t>
-void DeallocateTypedBuffer(typed_buffer<t>* Buf);
+void DeallocBufT(typed_buffer<t>* Buf);
 
-void ZeroBuffer(buffer* Buf);
-template <typename t> void ZeroTypedBuffer(typed_buffer<t>* Buf);
+void ZeroBuf(buffer* Buf);
+template <typename t> void ZeroBufT(typed_buffer<t>* Buf);
 void MemCopy(buffer* Dst, const buffer& Src);
 
 

@@ -47,74 +47,68 @@ void TestLinkedList() {
   Deallocate(&List);
 }
 
+struct params {
+  cstr DataFile = nullptr;
+  cstr OutFile = nullptr;
+  int NLevels = 0;
+  int NBitPlanes = 0;
+  v3i TileDims = v3i(0, 0, 0);
+  int ChunkBytes = 0;
+  f64 Tolerance = 0;
+  metadata Meta;
+};
+
+params ParseParams(int Argc, const char** Argv) {
+  params P;
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--dataset", &P.DataFile),
+    "Provide --dataset");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &P.NLevels),
+    "Provide --nlevels");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--tiledims", &P.TileDims),
+    "Provide --tiledims");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunkbytes", &P.TileDims),
+    "Provide --chunkbytes");
+  error Ok = ReadMetadata(P.DataFile, &P.Meta);
+  mg_AbortIf(Ok.ErrCode != err_code::NoError, "%s", ToString(Ok));
+  mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
+    "Data dimensions too big");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &P.OutFile),
+    "Provide --output");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--nbits", &P.NBitPlanes),
+    "Provide --nbits");
+  mg_AbortIf(P.NBitPlanes <= BitSizeOf(P.Meta.DataType),
+    "--nbits too large");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
+    "Provide --tolerance");
+  return P;
+}
+
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
   SetHandleAbortSignals();
-  timer Timer; StartTimer(&Timer);
-  /* Read the original data from a file */
-  cstr DataFile = nullptr;
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--dataset", &DataFile), "Provide --dataset");
-  int NLevels = 0;
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &NLevels), "Provide --nlevels");
-  metadata Meta;
-  error Ok = ReadMetadata(DataFile, &Meta);
-  mg_AbortIf(Ok.ErrCode != err_code::NoError, "%s", ToString(Ok));
-  i64 NumSamples = Prod<i64>(Meta.Dims);
-  volume OriginalF; // original function
-  AllocateBuffer(&OriginalF.Buffer, SizeOf(Meta.DataType) * NumSamples);
-  mg_CleanUp(0, DeallocateBuffer(&OriginalF.Buffer));
-  Ok = ReadVolume(Meta.File, Meta.Dims, Meta.DataType, &OriginalF);
-  mg_AbortIf(Ok.ErrCode != err_code::NoError, "%s", ToString(Ok));
-  /* Extrapolate the volume to 2^N+1 in each dimension */
-  sub_volume ExpandedF;
-  v3i BigDims(NextPow2(Meta.Dims.X) + 1, NextPow2(Meta.Dims.Y) + 1, NextPow2(Meta.Dims.Z) + 1);
-  int MaxDim = Max(Max(BigDims.X, BigDims.Y), BigDims.Z);
-  BigDims = v3i(MaxDim, Meta.Dims.Y > 1 ? MaxDim : 1, Meta.Dims.Z > 1 ? MaxDim : 1);
-  mg_Log(stderr, "Big dims: %d %d %d\n", BigDims.X, BigDims.Y, BigDims.Z);
-  ExpandedF.DimsCompact = Stuff3Ints(BigDims);
-  ExpandedF.Extent = extent(Meta.Dims);
-  ExpandedF.Type = OriginalF.Type;
-  i64 NumSamplesBig = Prod<i64>(Extract3Ints(ExpandedF.DimsCompact));
-  AllocateBufferZero(&ExpandedF.Buffer, SizeOf(ExpandedF.Type) * NumSamplesBig);
-  mg_CleanUp(1, DeallocateBuffer(&ExpandedF.Buffer));
-  Copy(&ExpandedF, sub_volume(OriginalF));
-  //Cdf53ForwardExtrapolate(&ExpandedF, ExpandedF.Type);
-  //Cdf53InverseExtrapolate(&ExpandedF, ExpandedF.Type);
-  //sub_volume ExpandedFCopy;
-  //Clone(&ExpandedFCopy, ExpandedF);
-  volume OriginalFCopy;
-  Clone(&OriginalFCopy, OriginalF);
-  /* Compute the wavelet transform */
-  cstr OutFile = nullptr;
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &OutFile), "Provide --output");
-  int NBitplanes = 63;
-  GetOptionValue(Argc, Argv, "--nbits", &NBitplanes);
-  f64 Tolerance = 0;
-  GetOptionValue(Argc, Argv, "--tolerance", &Tolerance);
-  /* Compress and write output files */
-  dynamic_array<extent> Subbands;
-  puts("Begin to encode");
-  file_format FileData;
-  SetVolume(&FileData, OriginalF.Buffer.Data, Extract3Ints(OriginalF.DimsCompact), OriginalF.Type);
-  SetWaveletTransform(&FileData, NLevels);
-  SetPrecision(&FileData, NBitplanes);
-  SetTolerance(&FileData, Tolerance);
-  SetFileName(&FileData, OutFile);
-  Finalize(&FileData, file_format::mode::Write);
-  Encode(&FileData);
-  puts("Done encoding");
-  CleanUp(&FileData);
-  mg_Assert(_CrtCheckMemory());
-  //Cdf53Inverse(&ExpandedF, NLevels, ExpandedF.Type);
-  //Cdf53Inverse(&OriginalF, NLevels);
-  //f64 Psnr = PSNR(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
-                  //data_type::float64);
-  //f64 Rmse = RMSError(ExpandedF.Buffer.Data, ExpandedFCopy.Buffer.Data, ExpandedF.Dims,
-                      //data_type::float64);
-  //f64 Psnr = PSNR(OriginalF.Buffer.Data, OriginalFCopy.Buffer.Data, Prod<i64>(Meta.Dims),
-                  //data_type::float64);
-  //f64 Rmse = RMSError(OriginalF.Buffer.Data, OriginalFCopy.Buffer.Data, Prod<i64>(Meta.Dims),
-                      //data_type::float64);
-  //printf("RMSE = %17g PSNR = %f\n", Rmse, Psnr);
+  params P = ParseParams(Argc, Argv);
+  /* Read the original function */
+  volume F;
+  AllocBuf(&F.Buffer, SizeOf(P.Meta.DataType) * Prod(P.Meta.Dims));
+  mg_CleanUp(0, DeallocBuf(&F.Buffer));
+  error Err = ReadVolume(P.Meta.File, P.Meta.Dims, P.Meta.DataType, &F);
+  mg_AbortIf(Err.ErrCode != err_code::NoError, "%s", ToString(Err));
+  volume FCopy;
+  Clone(&FCopy, F);
+  /* Encode */
+  file_format Ff;
+  SetVolume(&Ff, F.Buffer.Data, Extract3Ints64(F.DimsCompact), F.Type);
+  SetWaveletTransform(&Ff, P.NLevels);
+  SetTileDims(&Ff, P.TileDims);
+  SetChunkBytes(&Ff, P.ChunkBytes);
+  SetPrecision(&Ff, P.NBitPlanes);
+  SetTolerance(&Ff, P.Tolerance);
+  SetFileName(&Ff, P.OutFile);
+  file_format_err FErr = Finalize(&Ff, file_format::mode::Write);
+  mg_AbortIf(FErr.ErrCode != file_format_err_code::NoError, "%s", ToString(FErr));
+  FErr = Encode(&Ff);
+  mg_AbortIf(FErr.ErrCode != file_format_err_code::NoError, "%s", ToString(FErr));
+  CleanUp(&Ff);
+  //mg_Assert(_CrtCheckMemory());
   return 0;
 }

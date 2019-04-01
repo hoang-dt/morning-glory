@@ -6,26 +6,26 @@
 namespace mg {
 
 template <typename t>
-void AllocateTypedBuffer(typed_buffer<t>* Buf, i64 Size, allocator* Alloc) {
+void AllocBufT(typed_buffer<t>* Buf, i64 Size, allocator* Alloc) {
   buffer RawBuf;
-  AllocateBuffer(&RawBuf, i64(Size * sizeof(t)), Alloc);
+  AllocBuf(&RawBuf, i64(Size * sizeof(t)), Alloc);
   Buf->Data = (t*)RawBuf.Data;
   Buf->Size = Size;
   Buf->Alloc = Alloc;
 }
 template <typename t>
-void AllocateTypedBufferZero(typed_buffer<t>* Buf, i64 Size, allocator* Alloc) {
+void AllocBufT0(typed_buffer<t>* Buf, i64 Size, allocator* Alloc) {
   buffer RawBuf;
-  AllocateBufferZero(&RawBuf, i64(Size * sizeof(t)), Alloc);
+  AllocBuf0(&RawBuf, i64(Size * sizeof(t)), Alloc);
   Buf->Data = (t*)RawBuf.Data;
   Buf->Size = Size;
   Buf->Alloc = Alloc;
 }
 
 template <typename t>
-void DeallocateTypedBuffer(typed_buffer<t>* Buf) {
+void DeallocBufT(typed_buffer<t>* Buf) {
   buffer RawBuf{(byte*)Buf->Data, i64(Buf->Size * sizeof(t)), Buf->Alloc};
-  DeallocateBuffer(&RawBuf);
+  DeallocBuf(&RawBuf);
 }
 
 } // namespace mg
@@ -34,32 +34,33 @@ void DeallocateTypedBuffer(typed_buffer<t>* Buf) {
 #define mg_HeapArray(Name, Type, Size)\
   using namespace mg;\
   typed_buffer<Type> Name;\
-  AllocateTypedBuffer(&Name, (Size));\
-  mg_CleanUp(__LINE__, DeallocateTypedBuffer(&Name))
+  AllocBufT(&Name, (Size));\
+  mg_CleanUp(__LINE__, DeallocBufT(&Name))
 
-#undef mg_HeapArrayZero
-#define mg_HeapArrayZero(Name, Type, Size)\
+#undef mg_HeapArray0
+#define mg_HeapArray0(Name, Type, Size)\
   using namespace mg;\
   typed_buffer<Type> Name;\
-  AllocateTypedBufferZero(&Name, (Size));\
-  mg_CleanUp(__LINE__, DeallocateTypedBuffer(&Name))
+  AllocBufT0(&Name, (Size));\
+  mg_CleanUp(__LINE__, DeallocBufT(&Name))
 
-#undef mg_StackArrayOfHeapArrays
-#define mg_StackArrayOfHeapArrays(Name, Type, StackArraySize, HeapArraySize)\
+#undef mg_StackHeapArrays
+#define mg_StackHeapArrays(Name, Type, StackArraySize, HeapArraySize)\
   using namespace mg;\
   typed_buffer<Type> Name[StackArraySize] = {}; \
   for (int I = 0; I < (StackArraySize); ++I)\
-    AllocateTypedBuffer(&Name[I], (HeapArraySize));\
-  mg_CleanUp(__LINE__, { for (int I = 0; I < (StackArraySize); ++I) DeallocateTypedBuffer(&Name[I]); })
+    AllocBufT(&Name[I], (HeapArraySize));\
+  mg_CleanUp(__LINE__, {\
+    for (int I = 0; I < (StackArraySize); ++I) DeallocBufT(&Name[I]); })
 
-#undef mg_HeapArrayOfHeapArrays
-#define mg_HeapArrayOfHeapArrays(Name, Type, SizeOuter, SizeInner)\
+#undef mg_HeapHeapArrays
+#define mg_HeapHeapArrays(Name, Type, SizeOuter, SizeInner)\
   using namespace mg;\
   typed_buffer<typed_buffer<Type>> Name;\
-  AllocateTypedBuffer(&Name, (SizeOuter));\
+  AllocBufT(&Name, (SizeOuter));\
   for (int I = 0; I < (SizeOuter); ++I) \
-    AllocateTypedBuffer(&Name[I], (SizeInner));\
+    AllocBufT(&Name[I], (SizeInner));\
   mg_CleanUp(__LINE__, {\
-    for (int I = 0; I < (SizeOuter); ++I) DeallocateTypedBuffer(&Name[I]);\
-    DeallocateTypedBuffer(&Name);\
+    for (int I = 0; I < (SizeOuter); ++I) DeallocBufT(&Name[I]);\
+    DeallocBufT(&Name);\
   })

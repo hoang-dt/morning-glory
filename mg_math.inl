@@ -40,9 +40,9 @@ int Exponent(t Val) {
     int E;
     frexp(Val, &E);
     /* clamp exponent in case Val is denormal */
-    return Max(E, 1 - Traits<t>::ExponentBias);
+    return Max(E, 1 - Traits<t>::ExpBias);
   }
-  return -Traits<t>::ExponentBias;
+  return -Traits<t>::ExpBias;
 }
 
 template <typename t = int, typename u> mg_ForceInline
@@ -101,6 +101,16 @@ bool operator<=(v3<t> Lhs, v3<t> Rhs) {
 }
 
 template <typename t> mg_ForceInline
+bool operator<(v3<t> Lhs, v3<t> Rhs) {
+  return Lhs.X < Rhs.X && Lhs.Y < Rhs.Y && Lhs.Z < Rhs.Z;
+}
+
+template <typename t> mg_ForceInline
+bool operator>=(v3<t> Lhs, v3<t> Rhs) {
+  return Lhs.X >= Rhs.X && Lhs.Y >= Rhs.Y && Lhs.Z >= Rhs.Z;
+}
+
+template <typename t> mg_ForceInline
 v3<t> Min(v3<t> Lhs, v3<t> Rhs) {
   return v3<t>(Min(Lhs.X, Rhs.X), Min(Lhs.Y, Rhs.Y), Min(Lhs.Z, Rhs.Z));
 }
@@ -109,8 +119,6 @@ template <typename t> mg_ForceInline
 v3<t> Max(v3<t> Lhs, v3<t> Rhs) {
   return v3<t>(Max(Lhs.X, Rhs.X), Max(Lhs.Y, Rhs.Y), Max(Lhs.Z, Rhs.Z));
 }
-
-template <typename t> v3<t> Max(v3<t> Lhs, v3<t> Rhs);
 
 mg_ForceInline
 i8 Log2Floor(int Val) {

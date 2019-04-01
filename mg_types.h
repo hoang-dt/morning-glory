@@ -40,8 +40,8 @@ struct Traits {
   // using unsigned_t =
   // using integral_t =
   // static constexpr uint NegabinaryMask =
-  // static constexpr int ExponentBits
-  // static constexpr int ExponentBias
+  // static constexpr int ExpBits
+  // static constexpr int ExpBias
 };
 
 template <typename T1, typename T2>

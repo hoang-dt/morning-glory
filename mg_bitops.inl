@@ -108,12 +108,22 @@ u32 EncodeMorton3(u32 X, u32 Y, u32 Z) {
 }
 
 mg_ForceInline
-u64 Stuff3Ints(v3i V) {
+u32 Stuff3Ints32(v3i V) {
+  return u32(V.X) + (u32(V.Y) << 10) + (u32(V.Z) << 20);
+}
+
+mg_ForceInline
+v3i Extract3Ints32(u32 V) {
+  return v3i(V & 0x3FF, (V & 0xFFC00) >> 10, (V & 0x3FFFFC00) >> 20);
+}
+
+mg_ForceInline
+u64 Stuff3Ints64(v3i V) {
   return u64(V.X) + (u64(V.Y) << 21) + (u64(V.Z) << 42);
 }
 
 mg_ForceInline
-v3i Extract3Ints(u64 V) {
+v3i Extract3Ints64(u64 V) {
   return v3i(V & 0x1FFFFF, (V & 0x3FFFFE00000) >> 21, (V & 0x7FFFFC0000000000ull) >> 42);
 }
 

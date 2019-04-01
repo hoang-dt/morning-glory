@@ -14,7 +14,7 @@ error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
   error Ok = ReadFile(FileName, &Volume->Buffer);
   if (Ok.ErrCode != err_code::NoError)
     return Ok;
-  Volume->DimsCompact = Stuff3Ints(Dims);
+  Volume->DimsCompact = Stuff3Ints64(Dims);
   Volume->Type = Type;
   return mg_Error(err_code::NoError);
 }
@@ -26,11 +26,11 @@ void Copy(sub_volume* Dst, const sub_volume& Src) {
   mg_Assert(Dst->Type == Src.Type);\
   type* DstBuf = (type*)Dst->Buffer.Data;\
   const type* SrcBuf = (const type*)Src.Buffer.Data;\
-  v3i StartSrc = Extract3Ints(Src.Extent.PosCompact);\
-  v3i StartDst = Extract3Ints(Dst->Extent.PosCompact);\
-  v3i Dims = Extract3Ints(Src.Extent.DimsCompact);\
-  v3i BigDimsSrc = Extract3Ints(Src.DimsCompact);\
-  v3i BigDimsDst = Extract3Ints(Dst->DimsCompact);\
+  v3i StartSrc = Extract3Ints64(Src.Extent.PosCompact);\
+  v3i StartDst = Extract3Ints64(Dst->Extent.PosCompact);\
+  v3i Dims = Extract3Ints64(Src.Extent.DimsCompact);\
+  v3i BigDimsSrc = Extract3Ints64(Src.DimsCompact);\
+  v3i BigDimsDst = Extract3Ints64(Dst->DimsCompact);\
   v3i PosSrc = StartSrc;\
   v3i PosDst = StartDst;\
   for (PosSrc.Z = StartSrc.Z, PosDst.Z = StartDst.Z;\

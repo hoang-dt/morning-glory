@@ -23,6 +23,17 @@ bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, int* Value) {
   return false;
 }
 
+bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, v3i* Value) {
+  for (int I = 0; I + 3 < NumArgs; ++I) {
+    if (strncmp(Args[I], Option, 32) == 0) {
+      return ToInt(Args[I + 1], &Value->X) &&
+             ToInt(Args[I + 2], &Value->Y) &&
+             ToInt(Args[I + 3], &Value->Z);
+    }
+  }
+  return false;
+}
+
 bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, f64* Value) {
   for (int I = 0; I + 1 < NumArgs; ++I) {
     if (strncmp(Args[I], Option, 32) == 0)

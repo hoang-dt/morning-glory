@@ -234,13 +234,13 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   mg_Assert(BlockDims <= TileDims);
   const v3i NumBlocks(2, 2, 2);
   bitstream Bs;
-  buffer Buf; AllocateBuffer(&Buf, sizeof(u64) * Prod<i64>(Dims));
+  buffer Buf; AllocBuf(&Buf, sizeof(u64) * Prod<i64>(Dims));
   InitWrite(&Bs, Buf);
   int NumBlocksEncoded = 0;
   int ToleranceExp = Exponent(Tolerance);
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = Extract3Ints(Subbands[S].PosCompact);
-    v3i SubbandDims = Extract3Ints(Subbands[S].DimsCompact);
+    v3i SubbandPos = Extract3Ints64(Subbands[S].PosCompact);
+    v3i SubbandDims = Extract3Ints64(Subbands[S].DimsCompact);
     mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
@@ -249,16 +249,16 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
       // TODO: can we move the following arrays to the outer scope?
       int NLevels = NumLevels(Prod<int>(BlockDims)) - 1;
       int OctreeSize = BeginIndex(NLevels);
-      mg_StackArrayOfHeapArrays(Octree, u8, 8, OctreeSize);
-      mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize);
-      mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
-      mg_StackArrayOfHeapArrays(BlockData, f64, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(Octree, u8, 8, OctreeSize);
+      mg_StackHeapArrays(PrevOctree, u8, 8, OctreeSize);
+      mg_StackHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(BlockData, f64, 8, Prod<int>(BlockDims));
       for (int I = 0; I < 8; ++I) {
         memset(Octree[I].Data, 0, OctreeSize * sizeof(u8));
         memset(PrevOctree[I].Data, 0, OctreeSize * sizeof(u8));
       }
       int EMaxes[8];
-      mg_StackArrayOfHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
       /* loop through the bit planes */
       for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
         /* loop through the blocks */
@@ -271,10 +271,10 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
             int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B,
                          BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
             EMaxes[BI] = EMax;
-            // Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
+            // Write(&Bs, EMax + Traits<f64>::ExpBias, Traits<f64>::ExpBits);
             if (Bits - Bitplane <= EMaxes[BI] - ToleranceExp + 1) {
               Write(&Bs, 1);
-              Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
+              Write(&Bs, EMax + Traits<f64>::ExpBias, Traits<f64>::ExpBits);
             } else {
               Write(&Bs, 0);
             }
@@ -311,8 +311,8 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   int NumBlocksDecoded = 0;
   int ToleranceExp = Exponent(Tolerance);
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = Extract3Ints(Subbands[S].PosCompact);
-    v3i SubbandDims = Extract3Ints(Subbands[S].DimsCompact);
+    v3i SubbandPos = Extract3Ints64(Subbands[S].PosCompact);
+    v3i SubbandDims = Extract3Ints64(Subbands[S].DimsCompact);
     mg_Assert(TileDims.X <= SubbandDims.X &&
               TileDims.Y <= SubbandDims.Y &&
               TileDims.Z <= SubbandDims.Z);
@@ -322,15 +322,15 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
     for (int TX = SubbandPos.X; TX < SubbandPos.X + SubbandDims.X; TX += TileDims.X) {
       int NLevels = NumLevels(Prod<int>(BlockDims)) - 1;
       int OctreeSize = BeginIndex(NLevels);
-      mg_StackArrayOfHeapArrays(Octree, u8, 8, OctreeSize);
-      mg_StackArrayOfHeapArrays(PrevOctree, u8, 8, OctreeSize);
-      mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(Octree, u8, 8, OctreeSize);
+      mg_StackHeapArrays(PrevOctree, u8, 8, OctreeSize);
+      mg_StackHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
       for (int I = 0; I < 8; ++I) {
         memset(Octree[I].Data, 0, OctreeSize * sizeof(u8));
         memset(PrevOctree[I].Data, 0, OctreeSize * sizeof(u8));
         memset(Block[I].Data, 0, Prod<int>(BlockDims) * sizeof(u64));
       }
-      mg_StackArrayOfHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
       int EMaxes[8];
       /* loop through the blocks */
       for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
@@ -340,10 +340,10 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
                 DecodeMorton3Z(BI) * BlockDims.Z + TZ);
           ++NumBlocksDecoded;
           if (Bitplane == Bits) {
-            // EMaxes[BI] = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
+            // EMaxes[BI] = Read(&Bs, Traits<f64>::ExpBits) - Traits<f64>::ExpBias;
             bool IsBlockSignificant = Read(&Bs);
             if (IsBlockSignificant)
-              EMaxes[BI] = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
+              EMaxes[BI] = Read(&Bs, Traits<f64>::ExpBits) - Traits<f64>::ExpBias;
             else
               EMaxes[BI] = ToleranceExp - 2;
           }
@@ -372,12 +372,12 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
   mg_Assert(BlockDims <= TileDims);
   const v3i NumBlocks(2, 2, 2);
   bitstream Bs;
-  buffer Buf; AllocateBuffer(&Buf, sizeof(u64) * Prod<i64>(Dims));
+  buffer Buf; AllocBuf(&Buf, sizeof(u64) * Prod<i64>(Dims));
   InitWrite(&Bs, Buf);
   int NumBlocksEncoded = 0;
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = Extract3Ints(Subbands[S].PosCompact);
-    v3i SubbandDims = Extract3Ints(Subbands[S].DimsCompact);
+    v3i SubbandPos = Extract3Ints64(Subbands[S].PosCompact);
+    v3i SubbandDims = Extract3Ints64(Subbands[S].DimsCompact);
     mg_Assert(TileDims <= SubbandDims);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
@@ -385,10 +385,10 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
     for (int TX = SubbandPos.X; TX < SubbandPos.X + SubbandDims.X; TX += TileDims.X) {
       int NLevels = NumLevels(Prod<int>(BlockDims)) - 1;
       int OctreeSize = BeginIndex(NLevels);
-      mg_StackArrayOfHeapArrays(Octree, u8, 8, OctreeSize);
-      mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
-      mg_StackArrayOfHeapArrays(BlockData, f64, 8, Prod<int>(BlockDims));
-      mg_StackArrayOfHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(Octree, u8, 8, OctreeSize);
+      mg_StackHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(BlockData, f64, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(MsbTable, i8, 8, Prod<int>(BlockDims));
       /* loop through the bit planes */
       for (int Bitplane = Bits; Bitplane >= 0; --Bitplane) {
         /* loop through the blocks */
@@ -400,7 +400,7 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
           if (Bitplane == Bits) { // only do this once
             int EMax = CopyBlockSamplesMorton(Data, Dims, Bits - 1, BlockDims, B,
                          BlockData[BI].Data, Block[BI].Data, MsbTable[BI].Data);
-            Write(&Bs, EMax + Traits<f64>::ExponentBias, Traits<f64>::ExponentBits);
+            Write(&Bs, EMax + Traits<f64>::ExpBias, Traits<f64>::ExpBits);
           }
           if (Bitplane == Bits) {
             BuildSignificanceOctree(MsbTable[BI].Data, BlockDims, Bitplane, Octree[BI].Data);
@@ -442,15 +442,15 @@ void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits,
   InitRead(&Bs, Buf);
   int NumBlocksDecoded = 0;
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = Extract3Ints(Subbands[S].PosCompact);
-    v3i SubbandDims = Extract3Ints(Subbands[S].DimsCompact);
+    v3i SubbandPos = Extract3Ints64(Subbands[S].PosCompact);
+    v3i SubbandDims = Extract3Ints64(Subbands[S].DimsCompact);
     mg_Assert(TileDims <= SubbandDims);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
     for (int TY = SubbandPos.Y; TY < SubbandPos.Y + SubbandDims.Y; TY += TileDims.Y) {
     for (int TX = SubbandPos.X; TX < SubbandPos.X + SubbandDims.X; TX += TileDims.X) {
       int EMaxes[8];
-      mg_StackArrayOfHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
+      mg_StackHeapArrays(Block, u64, 8, Prod<int>(BlockDims));
       for (int I = 0; I < 8; ++I)
         memset(Block[I].Data, 0, Prod<int>(BlockDims) * sizeof(u64));
       /* loop through the blocks */
@@ -461,7 +461,7 @@ void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits,
                 DecodeMorton3Z(BI) * BlockDims.Z + TZ);
           ++NumBlocksDecoded;
           if (Bitplane == Bits)
-            EMaxes[BI] = Read(&Bs, Traits<f64>::ExponentBits) - Traits<f64>::ExponentBias;
+            EMaxes[BI] = Read(&Bs, Traits<f64>::ExpBits) - Traits<f64>::ExpBias;
           for (int I = 0; I < Prod<int>(BlockDims); ++I) {
             //u64 X = Read(&Bs, 64);
             //for (int J = 0; J < 64; ++J)

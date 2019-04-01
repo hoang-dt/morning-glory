@@ -40,10 +40,10 @@ error<> ReadFile(cstr FileName, buffer* Buf) {
   if (mg_FSeek(Fp, 0, SEEK_SET))
     return mg_Error(err_code::FileSeekFailed, "%s", FileName);
   if (Buf->Bytes < Size)
-    AllocateBuffer(Buf, Size);
+    AllocBuf(Buf, Size);
 
   /* Read file contents */
-  mg_CleanUp(1, DeallocateBuffer(Buf));
+  mg_CleanUp(1, DeallocBuf(Buf));
   if (fread(Buf->Data, Size, 1, Fp) != 1)
     return mg_Error(err_code::FileReadFailed, "%s", FileName);
 

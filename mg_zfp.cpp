@@ -4,7 +4,7 @@
 
 namespace mg {
 
-const v3i ZfpBlockDims(4, 4, 4);
+const v3i ZBlkDims(4, 4, 4);
 
 /* Only return true if the block is fully encoded */
 bool EncodeBlock(const u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,

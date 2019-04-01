@@ -1,9 +1,10 @@
 #include "mg_assert.h"
 #include "mg_common_types.h"
+#include "mg_macros.h"
 
 namespace mg {
 
-int SizeOf(data_type Type) {
+mg_ForceInline int SizeOf(data_type Type) {
   switch (Type) {
     case data_type::int8   : return 1;
     case data_type::uint8  : return 1;
@@ -20,7 +21,11 @@ int SizeOf(data_type Type) {
   return 0;
 }
 
-data_type IntType(data_type Type) {
+mg_ForceInline int BitSizeOf(data_type Type) {
+  return 8 * SizeOf(Type);
+}
+
+mg_ForceInline data_type IntType(data_type Type) {
   switch (Type) {
     case data_type::int8   : return Type;
     case data_type::uint8  : return Type;

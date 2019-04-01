@@ -78,7 +78,7 @@ const t* ConstEnd(const dynamic_array<t>& Array) { return (t*)Array.Buffer.Data 
 template <typename t>
 void MoveToNewBuffer(dynamic_array<t>* Array, buffer Buf) {
   MemCopy(&Buf, Array->Buffer);
-  Array->Alloc->Deallocate(&Array->Buffer);
+  Array->Alloc->Dealloc(&Array->Buffer);
   Array->Buffer = Buf;
   Array->Capacity = Buf.Bytes / sizeof(t);
   mg_Assert(Array->Size <= Array->Capacity);
@@ -90,7 +90,7 @@ void IncreaseCapacity(dynamic_array<t>* Array, i64 NewCapacity) {
     NewCapacity = Array->Capacity * 3 / 2 + 8;
   if (Array->Capacity < NewCapacity) {
     buffer Buf;
-    Array->Alloc->Allocate(&Buf, NewCapacity * sizeof(t));
+    Array->Alloc->Alloc(&Buf, NewCapacity * sizeof(t));
     MoveToNewBuffer(Array, Buf);
     Array->Capacity = NewCapacity;
   }
