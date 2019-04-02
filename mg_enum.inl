@@ -12,7 +12,7 @@
 #define mg_Enum(enum_name, type, ...)\
 namespace mg {\
 enum class enum_name : type { __VA_ARGS__, __Invalid__ };\
-struct enum_name##_s {\
+struct mg_Cat(enum_name, _s) {\
   enum_name Val;\
   struct enum_item {\
     string_ref Name;\
@@ -21,7 +21,7 @@ struct enum_name##_s {\
   using name_map = array<enum_item, mg_NumArgs(__VA_ARGS__)>;\
   inline static name_map NameMap = []() {\
     name_map NameMap;\
-    tokenizer Tk1(#__VA_ARGS__, ",");\
+    tokenizer Tk1(mg_Str(__VA_ARGS__), ",");\
     type CurrentVal = 0;\
     for (int I = 0; ; ++I, ++CurrentVal) {\
       string_ref Token = Next(&Tk1);\
@@ -47,8 +47,8 @@ struct enum_name##_s {\
     return NameMap;\
   }();\
   \
-  enum_name##_s() : enum_name##_s(enum_name::__Invalid__) {}\
-  enum_name##_s(enum_name Val) {\
+  mg_Cat(enum_name, _s)() : mg_Cat(enum_name, _s)(enum_name::__Invalid__) {}\
+  mg_Cat(enum_name, _s)(enum_name Val) {\
     const auto* It = ConstBegin(NameMap);\
     while (It != ConstEnd(NameMap)) {\
       if (It->Val == Val)\
@@ -57,7 +57,7 @@ struct enum_name##_s {\
     }\
     this->Val = (It != ConstEnd(NameMap)) ? It->Val : enum_name::__Invalid__;\
   }\
-  explicit enum_name##_s(string_ref Name) {\
+  explicit mg_Cat(enum_name, _s)(string_ref Name) {\
     const auto* It = ConstBegin(NameMap);\
     while (It != ConstEnd(NameMap)) {\
       if (It->Name == Name)\
@@ -70,7 +70,7 @@ struct enum_name##_s {\
 }; /* struct enum_name */\
 \
 inline string_ref ToString(enum_name Enum) {\
-  enum_name##_s EnumS(Enum);\
+  mg_Cat(enum_name, _s) EnumS(Enum);\
   const auto* It = ConstBegin(EnumS.NameMap);\
   while (It != ConstEnd(EnumS.NameMap)) {\
     if (It->Val == EnumS.Val)\
@@ -84,7 +84,7 @@ inline string_ref ToString(enum_name Enum) {\
 template <>\
 struct StringTo<enum_name> {\
   enum_name operator()(string_ref Name) {\
-    enum_name##_s EnumS(Name);\
+    mg_Cat(enum_name, _s) EnumS(Name);\
     return EnumS.Val;\
   }\
 };\

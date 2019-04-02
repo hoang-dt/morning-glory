@@ -15,7 +15,7 @@ cstr ToString(const metadata& Meta) {
   mg_Print(&Pr, "name = %s\n", Meta.Name);
   mg_Print(&Pr, "field = %s\n", Meta.Field);
   mg_Print(&Pr, "dimensions = %d %d %d\n", Meta.Dims.X, Meta.Dims.Y, Meta.Dims.Z);
-  string_ref TypeStr = ToString(Meta.DataType);
+  string_ref TypeStr = ToString(Meta.Type);
   mg_Print(&Pr, "data type = %.*s", TypeStr.Size, TypeStr.Ptr);
   return Meta.String;
 }
@@ -54,8 +54,8 @@ error<> ReadMetadata(cstr FileName, metadata* Meta) {
         return mg_Error(err_code::DimensionsTooMany, "File %s", FileName);
       if (D <= 2) Meta->Dims[2] = 1;
       if (D <= 1) Meta->Dims[1] = 1;
-    } else if (Attr == "data type") {
-      if ((Meta->DataType = StringTo<data_type>()(Value)) ==
+    } else if (Attr == "type") {
+      if ((Meta->Type = StringTo<data_type>()(Value)) ==
           data_type::__Invalid__)
       {
         return mg_Error(err_code::TypeNotSupported, "File %s", FileName);

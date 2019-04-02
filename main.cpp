@@ -47,7 +47,10 @@ void TestLinkedList() {
   Deallocate(&List);
 }
 
+mg_Enum(action, int, Encode, Decode)
+
 struct params {
+  action Action = action::Encode;
   cstr DataFile = nullptr;
   cstr OutFile = nullptr;
   int NLevels = 0;
@@ -60,23 +63,31 @@ struct params {
 
 params ParseParams(int Argc, const char** Argv) {
   params P;
+  if (OptionExists(Argc, Argv, "--encode"))
+    P.Action = action::Encode;
+  else if (OptionExists(Argc, Argv, "--decode"))
+    P.Action = action::Decode;
+  else
+    mg_Abort("Provide either --encode or --decode");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--dataset", &P.DataFile),
     "Provide --dataset");
+  error Ok = ReadMetadata(P.DataFile, &P.Meta);
+  mg_AbortIf(Ok.ErrCode != err_code::NoError, "%s", ToString(Ok));
+  mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
+    "Data dimensions too big");
+  mg_AbortIf(P.Meta.Type != data_type::float32 &&
+             P.Meta.Type != data_type::float64, "Data type not supported");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &P.NLevels),
     "Provide --nlevels");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--tiledims", &P.TileDims),
     "Provide --tiledims");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunkbytes", &P.TileDims),
     "Provide --chunkbytes");
-  error Ok = ReadMetadata(P.DataFile, &P.Meta);
-  mg_AbortIf(Ok.ErrCode != err_code::NoError, "%s", ToString(Ok));
-  mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
-    "Data dimensions too big");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &P.OutFile),
     "Provide --output");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nbits", &P.NBitPlanes),
     "Provide --nbits");
-  mg_AbortIf(P.NBitPlanes <= BitSizeOf(P.Meta.DataType),
+  mg_AbortIf(P.NBitPlanes <= BitSizeOf(P.Meta.Type),
     "--nbits too large");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
     "Provide --tolerance");
@@ -89,9 +100,9 @@ int main(int Argc, const char** Argv) {
   params P = ParseParams(Argc, Argv);
   /* Read the original function */
   volume F;
-  AllocBuf(&F.Buffer, SizeOf(P.Meta.DataType) * Prod(P.Meta.Dims));
+  AllocBuf(&F.Buffer, SizeOf(P.Meta.Type) * Prod(P.Meta.Dims));
   mg_CleanUp(0, DeallocBuf(&F.Buffer));
-  error Err = ReadVolume(P.Meta.File, P.Meta.Dims, P.Meta.DataType, &F);
+  error Err = ReadVolume(P.Meta.File, P.Meta.Dims, P.Meta.Type, &F);
   mg_AbortIf(Err.ErrCode != err_code::NoError, "%s", ToString(Err));
   volume FCopy;
   Clone(&FCopy, F);
