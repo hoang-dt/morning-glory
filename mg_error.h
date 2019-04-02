@@ -28,6 +28,7 @@ struct error {
   t ErrCode;
   i8 StackIdx = 0;
   bool StrGenerated = false;
+  error();
   error(t ErrCode, bool StrGenerated = false, cstr Msg = "");
   inline thread_local static cstr Files[64]; // Store file names up the stack
   inline thread_local static i16 Lines[64]; // Store line numbers up the stack
@@ -35,9 +36,13 @@ struct error {
 
 template <typename t>
 cstr ToString(const error<t>& Err, bool Force = false);
+
 struct printer;
 template <typename t>
 void PrintStacktrace(printer* Pr, const error<t>& Err);
+
+template <typename t>
+bool ErrorOccurred(const error<t>& Err);
 
 } // namespace mg
 

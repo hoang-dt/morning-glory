@@ -103,7 +103,7 @@ int main(int Argc, const char** Argv) {
   AllocBuf(&F.Buffer, SizeOf(P.Meta.Type) * Prod(P.Meta.Dims));
   mg_CleanUp(0, DeallocBuf(&F.Buffer));
   error Err = ReadVolume(P.Meta.File, P.Meta.Dims, P.Meta.Type, &F);
-  mg_AbortIf(Err.ErrCode != err_code::NoError, "%s", ToString(Err));
+  mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
   volume FCopy;
   Clone(&FCopy, F);
   /* Encode */
@@ -115,10 +115,13 @@ int main(int Argc, const char** Argv) {
   SetPrecision(&Ff, P.NBitPlanes);
   SetTolerance(&Ff, P.Tolerance);
   SetFileName(&Ff, P.OutFile);
-  file_format_err FErr = Finalize(&Ff, file_format::mode::Write);
-  mg_AbortIf(FErr.ErrCode != file_format_err_code::NoError, "%s", ToString(FErr));
-  FErr = Encode(&Ff);
-  mg_AbortIf(FErr.ErrCode != file_format_err_code::NoError, "%s", ToString(FErr));
+  ff_err FfErr;
+  if (P.Action == action::Encode) {
+    FfErr = Encode(&Ff);
+  } else {
+    FfErr = Decode(&Ff);
+  }
+  mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
   CleanUp(&Ff);
   //mg_Assert(_CrtCheckMemory());
   return 0;

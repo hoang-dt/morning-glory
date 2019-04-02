@@ -12,8 +12,11 @@
 namespace mg {
 
 template <typename t>
-error<t>::error(t ErrCode, bool StrGenerated, cstr Msg) : 
-  Msg(Msg), ErrCode(ErrCode), StackIdx(0), 
+error<t>::error() {}
+
+template <typename t>
+error<t>::error(t ErrCode, bool StrGenerated, cstr Msg) :
+  Msg(Msg), ErrCode(ErrCode), StackIdx(0),
   StrGenerated(StrGenerated) {}
 
 template <typename t>
@@ -31,6 +34,11 @@ void PrintStacktrace(printer* Pr, const error<t>& Err) {
   mg_Print(Pr, "Stack trace:\n");
   for (i8 I = 0; I < Err.StackIdx; ++I)
     mg_Print(Pr, "File %s, line %d\n", Err.Files[I], Err.Lines[I]);
+}
+
+template <typename t>
+bool ErrorOccurred(const error<t>& Err) {
+  return Err.ErrCode != t::NoError;
 }
 
 } // namespace mg

@@ -6,13 +6,14 @@
 #include "mg_volume.h"
 #include "mg_types.h"
 
-mg_Enum(file_format_err_code, int, mg_CommonErrs,
+mg_Enum(ff_err_code, int, mg_CommonErrs,
   InvalidTileDims, InvalidChunkSize, ChunkReadFailed)
 
 namespace mg {
 
-using file_format_err = error<file_format_err_code>;
+using ff_err = error<ff_err_code>;
 
+// TODO: save some of these parameters to the file itself
 struct file_format {
   enum class mode : bool { Write, Read };
   /* First index is by subband, second index is by tiles within each subband */
@@ -35,24 +36,21 @@ struct file_format {
 /* Must call */
 void SetFileName(file_format* Ff, cstr FileName);
 void SetVolume(file_format* Ff, byte* Data, v3i Dims, data_type Type);
-file_format_err Finalize(file_format* Ff, file_format::mode Mode);
-file_format_err Encode(file_format* Ff);
-void CleanUp(file_format* Ff);
-/* Optional */
 void SetTileDims(file_format* Ff, v3i TileDims);
 void SetTolerance(file_format* Ff, f64 Tolerance);
 /* Precision = 64 means that the values in a zfp block are quantized to 64-bit
  * integers (63-bit two-complement and 64-bit negabinary) */
 void SetPrecision(file_format* Ff, int Precision);
-/* NLevels = 3 means performing the wavelet transform 3 times in each dimension */
 void SetChunkBytes(file_format* Ff, int ChunkBytes);
-/* Pointer to the data, type and and size of the data */
 void SetWaveletTransform(file_format* Ff, int NLevels);
 void SetExtrapolation(file_format* Ff, bool DoExtrapolation);
+ff_err Encode(file_format* Ff);
+ff_err Decode(file_format* Ff);
+void CleanUp(file_format* Ff);
 /* Output should be an array large enough to hold a tile. Return the actual
  * dimensions of the tile. The coarsest subband is at level (0, 0, 0). Assuming
  * the wavelet transform is done in X, Y, then Z, the order of subbands is:
  * (0, 0, 0), (0, 0, 1), (0, 1, 0), (1, 0, 0), (1, 1, 1), ... */
-v3i GetNextChunk(file_format* Ff, v3i Level, v3i Tile, byte* Output);
+//v3i GetNextChunk(file_format* Ff, v3i Level, v3i Tile, byte* Output);
 
 } // namespace mg
