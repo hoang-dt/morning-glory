@@ -224,6 +224,8 @@ file_format_err Finalize(file_format* Ff, file_format::mode Mode) {
   {
     return mg_Error(file_format_err_code::TypeNotSupported);
   }
+  v3i Dims = Extract3Ints64(Ff->Volume.DimsCompact);
+  BuildSubbands(Dims, Ff->NLevels, &Ff->Subbands);
   /* Tile dims must be at least block dims, and at most the dims of the coarsest
   subband */
   v3i Sb0Dims = Extract3Ints64(Ff->Subbands[0].DimsCompact);
@@ -231,14 +233,12 @@ file_format_err Finalize(file_format* Ff, file_format::mode Mode) {
     return mg_Error(file_format_err_code::InvalidTileDims);
   /* Chunk size must be large enough to store all the EMaxes in a tile */
   if (Ff->Volume.Type == data_type::float32) {
-    if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims) * Traits<f32>::ExpBits)
+    if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims / ZBlkDims) * Traits<f32>::ExpBits)
       return mg_Error(file_format_err_code::InvalidChunkSize);
   } else if (Ff->Volume.Type == data_type::float64) {
-    if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims) * Traits<f64>::ExpBits)
+    if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims / ZBlkDims) * Traits<f64>::ExpBits)
       return mg_Error(file_format_err_code::InvalidChunkSize);
   }
-  v3i Dims = Extract3Ints64(Ff->Volume.DimsCompact);
-  BuildSubbands(Dims, Ff->NLevels, &Ff->Subbands);
   i64 NTiles = NTilesInSubbands(*Ff, 0, Size(Ff->Subbands));
   AllocBufT0(&Ff->TileHeaders, NTiles + 1);
   if (Mode == file_format::mode::Read) {

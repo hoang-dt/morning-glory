@@ -81,13 +81,13 @@ params ParseParams(int Argc, const char** Argv) {
     "Provide --nlevels");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--tiledims", &P.TileDims),
     "Provide --tiledims");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunkbytes", &P.TileDims),
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunkbytes", &P.ChunkBytes),
     "Provide --chunkbytes");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &P.OutFile),
     "Provide --output");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--nbits", &P.NBitPlanes),
     "Provide --nbits");
-  mg_AbortIf(P.NBitPlanes <= BitSizeOf(P.Meta.Type),
+  mg_AbortIf(P.NBitPlanes > BitSizeOf(P.Meta.Type),
     "--nbits too large");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
     "Provide --tolerance");

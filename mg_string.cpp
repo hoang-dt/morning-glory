@@ -101,7 +101,7 @@ bool ToDouble(string_ref Str, f64* Result) {
   *Result = strtod(Str.ConstPtr, &EndPtr);
   bool Failure = errno == ERANGE || EndPtr == Str.ConstPtr || !EndPtr ||
                  !(isspace(*EndPtr) || ispunct(*EndPtr) || (*EndPtr) == 0);
-  return Failure;
+  return !Failure;
 }
 
 /* tokenizer stuff */
