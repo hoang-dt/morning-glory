@@ -7,6 +7,12 @@
 #include "mg_wavelet.h"
 #include "mg_zfp.h"
 
+// TODO: add the variable-size chunk mode
+// TODO: zip each chunk
+// TODO: measure the wasted space in each chunk
+// TODO: make sure that incomplete chunks can be decoded correctly
+// TODO: add an option to "pack" the chunks after encoding
+
 namespace mg {
 
 struct tile_data {
@@ -107,6 +113,8 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Td, int Ci) {
   return mg_Error(ff_err_code::NoError);
 }
 
+int NumChunks = 0;
+int NumCompleteChunks = 0;
 // TODO: error handling
 // TODO: minimize file opening
 // TODO: the tile size should depend on the precision at some level, to reduce
@@ -141,8 +149,14 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
                         Tl->Ms[Bi], Tl->InnerLoops[Bi], &Tl->Bs);
         }
         bool ChunkComplete = Size(Tl->Bs) >= Ff.ChunkBytes;
-        if (ChunkComplete || LastChunk)
+        if (Size(Tl->Bs) > 0 && (ChunkComplete || LastChunk)) {
           WriteChunk(Ff, Tl, Ci++);
+#if defined(mg_CollectStats)
+          tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
+          Ts.LocalId = Tl->LocalId;
+          PushBack(&(Ts.CkStats), chunk_stats{(int)Size(Tl->Bs)});
+#endif
+        }
       } while (!FullyEncoded);
     } mg_EndFor3
   }
@@ -158,6 +172,10 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
   v3i SbPos3 = Extract3Ints64(Ff.Subbands[Sb].PosCompact);
   v3i SbDims = Extract3Ints64(Ff.Subbands[Sb].DimsCompact);
   v3i Tile;
+#if defined(mg_CollectStats)
+  FStats.SbStats[Sb].NumTiles3 = (SbDims + Ff.TileDims - 1) / Ff.TileDims;
+  Resize(&FStats.SbStats[Sb].TlStats, Prod(FStats.SbStats[Sb].NumTiles3));
+#endif
   mg_BeginFor3(Tile, SbPos3, SbPos3 + SbDims, Ff.TileDims) {
     v3i NTilesInSb = (SbDims + Ff.TileDims - 1) / Ff.TileDims;
     tile_data Tl;
@@ -187,34 +205,6 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
       return Err;
   } mg_EndFor3
   return mg_Error(ff_err_code::NoError);
-}
-
-void SetTileDims(file_format* Ff, v3i TileDims) {
-  Ff->TileDims = TileDims;
-}
-void SetChunkBytes(file_format* Ff, int ChunkBytes) {
-  Ff->ChunkBytes = ChunkBytes;
-}
-void SetFileName(file_format* Ff, cstr FileName) {
-  Ff->FileName = FileName;
-}
-void SetTolerance(file_format* Ff, f64 Tolerance) {
-  Ff->Tolerance = Tolerance;
-}
-void SetPrecision(file_format* Ff, int Precision) {
-  Ff->Prec = Precision;
-}
-void SetVolume(file_format* Ff, byte* Data, v3i Dims, data_type Type) {
-  Ff->Volume.Buffer.Data = Data;
-  Ff->Volume.Buffer.Bytes = SizeOf(Type) * Prod<i64>(Dims);
-  Ff->Volume.DimsCompact = Stuff3Ints64(Dims);
-  Ff->Volume.Type = Type;
-}
-void SetWaveletTransform(file_format* Ff, int NLevels) {
-  Ff->NLevels = NLevels;
-}
-void SetExtrapolation(file_format* Ff, bool DoExtrapolation) {
-  Ff->DoExtrapolation = DoExtrapolation;
 }
 
 // TODO: change Dims to NSamples3
@@ -268,6 +258,9 @@ ff_err Encode(file_format* Ff) {
   }
   if (Ff->NLevels > 0)
     Cdf53Forward(&(Ff->Volume), Ff->NLevels);
+#if defined(mg_CollectStats)
+  Resize(&FStats.SbStats, Size(Ff->Subbands));
+#endif
   for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
     if (Ff->Volume.Type == data_type::float64) {
       if (ErrorOccurred(Err = WriteSubband<f64>(*Ff, Sb)))
@@ -280,6 +273,34 @@ ff_err Encode(file_format* Ff) {
     }
   }
   return mg_Error(ff_err_code::NoError);
+}
+
+void SetTileDims(file_format* Ff, v3i TileDims) {
+  Ff->TileDims = TileDims;
+}
+void SetChunkBytes(file_format* Ff, int ChunkBytes) {
+  Ff->ChunkBytes = ChunkBytes;
+}
+void SetFileName(file_format* Ff, cstr FileName) {
+  Ff->FileName = FileName;
+}
+void SetTolerance(file_format* Ff, f64 Tolerance) {
+  Ff->Tolerance = Tolerance;
+}
+void SetPrecision(file_format* Ff, int Precision) {
+  Ff->Prec = Precision;
+}
+void SetVolume(file_format* Ff, byte* Data, v3i Dims, data_type Type) {
+  Ff->Volume.Buffer.Data = Data;
+  Ff->Volume.Buffer.Bytes = SizeOf(Type) * Prod<i64>(Dims);
+  Ff->Volume.DimsCompact = Stuff3Ints64(Dims);
+  Ff->Volume.Type = Type;
+}
+void SetWaveletTransform(file_format* Ff, int NLevels) {
+  Ff->NLevels = NLevels;
+}
+void SetExtrapolation(file_format* Ff, bool DoExtrapolation) {
+  Ff->DoExtrapolation = DoExtrapolation;
 }
 
 /* Read the next chunk from disk */

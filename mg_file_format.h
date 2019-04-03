@@ -11,6 +11,25 @@ mg_Enum(ff_err_code, int, mg_CommonErrs,
 
 namespace mg {
 
+#if defined(mg_CollectStats)
+struct chunk_stats {
+  int ActualSize;
+};
+struct tile_stats {
+  int LocalId;
+  dynamic_array<chunk_stats> CkStats;
+};
+struct subband_stats {
+  int Sb;
+  v3i NumTiles3;
+  dynamic_array<tile_stats> TlStats;
+};
+struct file_stats {
+  dynamic_array<subband_stats> SbStats;
+};
+inline file_stats FStats;
+#endif
+
 using ff_err = error<ff_err_code>;
 
 // TODO: save some of these parameters to the file itself

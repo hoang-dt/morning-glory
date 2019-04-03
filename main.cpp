@@ -118,6 +118,7 @@ int main(int Argc, const char** Argv) {
   ff_err FfErr;
   if (P.Action == action::Encode) {
     FfErr = Encode(&Ff);
+    mg_Log(stdout, "Num chunks (complete): %d (%d)\n", NumChunks, NumCompleteChunks);
   } else {
     FfErr = Decode(&Ff);
   }
