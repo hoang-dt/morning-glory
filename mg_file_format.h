@@ -28,6 +28,7 @@ struct file_stats {
   dynamic_array<subband_stats> SbStats;
 };
 inline file_stats FStats;
+void Log(cstr FileName);
 #endif
 
 using ff_err = error<ff_err_code>;

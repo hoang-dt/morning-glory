@@ -14,16 +14,16 @@ struct enum_name {\
   enum_name();\
   enum_name(type Val);\
   enum_name& operator=(type Val);\
-  explicit enum_name(string_ref Name);\
+  explicit enum_name(str_ref Name);\
   explicit operator bool() const;\
 }; /* struct enum_name */\
 \
-string_ref ToString(enum_name Enum);\
+str_ref ToString(enum_name Enum);\
 } // namespace mg
 
 namespace mg {
 template <typename t>
-struct StringTo { t operator()(string_ref Name); };
+struct StringTo { t operator()(str_ref Name); };
 }
 
 

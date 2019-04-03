@@ -24,32 +24,34 @@ namespace mg {
 
 path::path() = default;
 
-path::path(string_ref Str) {
+path::path(str_ref Str) {
   Init(this, Str);
 }
 
-void Init(path* Path, string_ref Str) {
+void Init(path* Path, str_ref Str) {
   Path->Components[0] = Str;
   Path->NumComponents = 1;
 }
 
-void Append(path* Path, string_ref Component) {
+void Append(path* Path, str_ref Component) {
   mg_Assert(Path->NumComponents < Path->NumComponentsMax, "too many path components");
   Path->Components[Path->NumComponents++] = Component;
 }
 
-string_ref GetFileName(string_ref Path) {
+str_ref GetFileName(str_ref Path) {
+  mg_Assert(!Contains(Path, '\\'));
   cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
   if (LastSlash != ConstReverseEnd(Path))
-    return SubString(Path, LastSlash - ConstBegin(Path) + 1, Path.Size - (LastSlash - ConstBegin(Path)));
-  return string_ref();
+    return SubString(Path, LastSlash - ConstBegin(Path) + 1,
+                     Path.Size - (LastSlash - ConstBegin(Path)));
+  return str_ref();
 }
 
-string_ref GetDirName(string_ref Path) {
+str_ref GetDirName(str_ref Path) {
   cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
   if (LastSlash != ConstReverseEnd(Path))
     return SubString(Path, 0, LastSlash - ConstBegin(Path));
-  return string_ref();
+  return str_ref();
 }
 
 str ToString(const path& Path) {
@@ -62,7 +64,7 @@ str ToString(const path& Path) {
   return ScratchBuf;
 }
 
-bool IsRelative(string_ref Path) {
+bool IsRelative(str_ref Path) {
   if (Path.Size > 0 && Path[0] == '/')  // e.g. /usr/local
     return false;
   if (Path.Size > 2 && Path[1] == ':' && Path[2] == '/')  // e.g. C:/Users
@@ -70,7 +72,7 @@ bool IsRelative(string_ref Path) {
   return true;
 }
 
-bool CreateFullDir(string_ref Path) {
+bool CreateFullDir(str_ref Path) {
   str PathCopy = ToString(Path);
   int Error = 0;
   str P = PathCopy;
@@ -83,7 +85,7 @@ bool CreateFullDir(string_ref Path) {
   return (Error == 0);
 }
 
-bool DirExists(string_ref Path) {
+bool DirExists(str_ref Path) {
   str PathCopy = ToString(Path);
   return Access(PathCopy) == 0;
 }

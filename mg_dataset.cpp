@@ -6,6 +6,8 @@
 #include "mg_string.h"
 #include "mg_types.h"
 #include "mg_stacktrace.h"
+#include <stdio.h>
+#include <ctype.h>
 
 namespace mg {
 
@@ -15,22 +17,43 @@ cstr ToString(const metadata& Meta) {
   mg_Print(&Pr, "name = %s\n", Meta.Name);
   mg_Print(&Pr, "field = %s\n", Meta.Field);
   mg_Print(&Pr, "dimensions = %d %d %d\n", Meta.Dims.X, Meta.Dims.Y, Meta.Dims.Z);
-  string_ref TypeStr = ToString(Meta.Type);
+  str_ref TypeStr = ToString(Meta.Type);
   mg_Print(&Pr, "data type = %.*s", TypeStr.Size, TypeStr.Ptr);
   return Meta.String;
 }
 
-error<> ReadMetadata(cstr FileName, metadata* Meta) {
+/* MIRANDA-DENSITY-[96-96-96]-Float64.raw */
+error<> ParseMeta(str_ref FilePath, metadata* Meta) {
+  str_ref FileName = GetFileName(FilePath);
+  char Type[8];
+  if (6 == sscanf(FileName.ConstPtr, "%[^-]-%[^-]-[%d-%d-%d]-%[^.]", Meta->Name,
+                  Meta->Field, &Meta->Dims.X, &Meta->Dims.Y, &Meta->Dims.Z, Type))
+  {
+    Type[0] = tolower(Type[0]);
+    Meta->Type = StringTo<data_type>()(str_ref(Type));
+    Copy(mg_StringRef(Meta->File), FilePath);
+    return mg_Error(err_code::NoError);
+  }
+  return mg_Error(err_code::ParseFailed);
+}
+
+/* file = MIRANDA-DENSITY-[96-96-96]-Float64.raw
+ * name = MIRANDA
+ * field = DATA
+ * dimensions = 96 96 96
+ * type = float64
+ */
+error<> ReadMeta(cstr FileName, metadata* Meta) {
   buffer Buf;
   error Ok = ReadFile(FileName, &Buf);
   if (Ok.Code != err_code::NoError) return Ok;
   mg_CleanUp(0, DeallocBuf(&Buf));
-  string_ref Str((cstr)Buf.Data, (int)Buf.Bytes);
+  str_ref Str((cstr)Buf.Data, (int)Buf.Bytes);
   tokenizer TkLine(Str, "\r\n");
-  for (string_ref Line = Next(&TkLine); Line; Line = Next(&TkLine)) {
+  for (str_ref Line = Next(&TkLine); Line; Line = Next(&TkLine)) {
     tokenizer TkEq(Line, "=");
-    string_ref Attr = Trim(Next(&TkEq));
-    string_ref Value = Trim(Next(&TkEq));
+    str_ref Attr = Trim(Next(&TkEq));
+    str_ref Value = Trim(Next(&TkEq));
     if (!Attr || !Value)
       return mg_Error(err_code::ParseFailed, "File %s", FileName);
 
@@ -45,7 +68,7 @@ error<> ReadMetadata(cstr FileName, metadata* Meta) {
     } else if (Attr == "dimensions") {
       tokenizer TkSpace(Value, " ");
       int D = 0;
-      for (string_ref Dim = Next(&TkSpace); Dim && D < 4;
+      for (str_ref Dim = Next(&TkSpace); Dim && D < 4;
            Dim = Next(&TkSpace), ++D) {
         if (!ToInt(Dim, &Meta->Dims[D]))
           return mg_Error(err_code::ParseFailed, "File %s", FileName);

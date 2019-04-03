@@ -15,7 +15,7 @@ enum class enum_name : type { __VA_ARGS__, __Invalid__ };\
 struct mg_Cat(enum_name, _s) {\
   enum_name Val;\
   struct enum_item {\
-    string_ref Name;\
+    str_ref Name;\
     enum_name Val;\
   };\
   using name_map = array<enum_item, mg_NumArgs(__VA_ARGS__)>;\
@@ -24,11 +24,11 @@ struct mg_Cat(enum_name, _s) {\
     tokenizer Tk1(mg_Str(__VA_ARGS__), ",");\
     type CurrentVal = 0;\
     for (int I = 0; ; ++I, ++CurrentVal) {\
-      string_ref Token = Next(&Tk1);\
+      str_ref Token = Next(&Tk1);\
       if (!Token) break;\
       tokenizer Tk2(Token, " =");\
-      string_ref EnumStr = Next(&Tk2);\
-      string_ref EnumVal = Next(&Tk2);\
+      str_ref EnumStr = Next(&Tk2);\
+      str_ref EnumVal = Next(&Tk2);\
       if (EnumVal) {\
         char* EndPtr = nullptr;\
         errno = 0;\
@@ -57,7 +57,7 @@ struct mg_Cat(enum_name, _s) {\
     }\
     this->Val = (It != ConstEnd(NameMap)) ? It->Val : enum_name::__Invalid__;\
   }\
-  explicit mg_Cat(enum_name, _s)(string_ref Name) {\
+  explicit mg_Cat(enum_name, _s)(str_ref Name) {\
     const auto* It = ConstBegin(NameMap);\
     while (It != ConstEnd(NameMap)) {\
       if (It->Name == Name)\
@@ -69,7 +69,7 @@ struct mg_Cat(enum_name, _s) {\
   explicit operator bool() const { return Val != enum_name::__Invalid__; }\
 }; /* struct enum_name */\
 \
-inline string_ref ToString(enum_name Enum) {\
+inline str_ref ToString(enum_name Enum) {\
   mg_Cat(enum_name, _s) EnumS(Enum);\
   const auto* It = ConstBegin(EnumS.NameMap);\
   while (It != ConstEnd(EnumS.NameMap)) {\
@@ -83,7 +83,7 @@ inline string_ref ToString(enum_name Enum) {\
 \
 template <>\
 struct StringTo<enum_name> {\
-  enum_name operator()(string_ref Name) {\
+  enum_name operator()(str_ref Name) {\
     mg_Cat(enum_name, _s) EnumS(Name);\
     return EnumS.Val;\
   }\

@@ -9,29 +9,29 @@
 
 namespace mg {
 
-string_ref::string_ref() = default;
-string_ref::string_ref(cstr Ptr, int Size) : ConstPtr(Ptr), Size(Size) {}
-string_ref::string_ref(cstr Ptr) : ConstPtr(Ptr), Size(strlen(Ptr)) {}
-char& string_ref::operator[](int Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
-char string_ref::operator[](int Idx) const { mg_Assert(Idx < Size); return Ptr[Idx]; }
-string_ref::operator bool() const { return Ptr != nullptr; }
+str_ref::str_ref() = default;
+str_ref::str_ref(cstr Ptr, int Size) : ConstPtr(Ptr), Size(Size) {}
+str_ref::str_ref(cstr Ptr) : ConstPtr(Ptr), Size(strlen(Ptr)) {}
+char& str_ref::operator[](int Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
+char str_ref::operator[](int Idx) const { mg_Assert(Idx < Size); return Ptr[Idx]; }
+str_ref::operator bool() const { return Ptr != nullptr; }
 
-str ToString(string_ref Str) {
+str ToString(str_ref Str) {
   mg_Assert(Str.Size < (int)sizeof(ScratchBuf));
   if (Str.Ptr != ScratchBuf)
     snprintf(ScratchBuf, sizeof(ScratchBuf), "%.*s", Str.Size, Str.Ptr);
   return ScratchBuf;
 }
-str Begin(string_ref Str) { return Str.Ptr; }
-cstr ConstBegin(string_ref Str) { return Str.ConstPtr; }
-str End(string_ref Str) { return Str.Ptr + Str.Size; }
-cstr ConstEnd(string_ref Str) { return Str.ConstPtr + Str.Size; }
-str ReverseBegin(string_ref Str) { return Str.Ptr + Str.Size - 1; }
-cstr ConstReverseBegin(string_ref Str) { return Str.ConstPtr + Str.Size - 1; }
-str ReverseEnd(string_ref Str) { return Str.Ptr - 1; }
-cstr ConstReverseEnd(string_ref Str) { return Str.ConstPtr - 1; }
+str Begin(str_ref Str) { return Str.Ptr; }
+cstr ConstBegin(str_ref Str) { return Str.ConstPtr; }
+str End(str_ref Str) { return Str.Ptr + Str.Size; }
+cstr ConstEnd(str_ref Str) { return Str.ConstPtr + Str.Size; }
+str ReverseBegin(str_ref Str) { return Str.Ptr + Str.Size - 1; }
+cstr ConstReverseBegin(str_ref Str) { return Str.ConstPtr + Str.Size - 1; }
+str ReverseEnd(str_ref Str) { return Str.Ptr - 1; }
+cstr ConstReverseEnd(str_ref Str) { return Str.ConstPtr - 1; }
 
-bool operator==(string_ref Lhs, string_ref Rhs) {
+bool operator==(str_ref Lhs, str_ref Rhs) {
   if (Lhs.Size != Rhs.Size)
     return false;
   for (int I = 0; I < Lhs.Size; ++I) {
@@ -41,8 +41,8 @@ bool operator==(string_ref Lhs, string_ref Rhs) {
   return true;
 }
 
-string_ref TrimLeft(string_ref Str) {
-  string_ref StrOut = Str;
+str_ref TrimLeft(str_ref Str) {
+  str_ref StrOut = Str;
   while (StrOut.Size && isspace(*StrOut.Ptr)) {
     ++StrOut.Ptr;
     --StrOut.Size;
@@ -50,31 +50,31 @@ string_ref TrimLeft(string_ref Str) {
   return StrOut;
 }
 
-string_ref TrimRight(string_ref Str) {
-  string_ref StrOut = Str;
+str_ref TrimRight(str_ref Str) {
+  str_ref StrOut = Str;
   while (StrOut.Size && isspace(StrOut[StrOut.Size - 1]))
     --StrOut.Size;
   return StrOut;
 }
 
-string_ref Trim(string_ref Str) {
+str_ref Trim(str_ref Str) {
   return TrimLeft(TrimRight(Str));
 }
 
-string_ref SubString(string_ref Str, int Begin, int Size) {
+str_ref SubString(str_ref Str, int Begin, int Size) {
   if (!Str || Begin >= Str.Size)
-    return string_ref();
-  return string_ref(Str.Ptr + Begin, Min(Size, Str.Size));
+    return str_ref();
+  return str_ref(Str.Ptr + Begin, Min(Size, Str.Size));
 }
 
-void Copy(string_ref Dst, string_ref Src, bool AddNull) {
+void Copy(str_ref Dst, str_ref Src, bool AddNull) {
   int NumBytes = Min(Dst.Size, Src.Size);
   memcpy(Dst.Ptr, Src.Ptr, NumBytes);
   if (AddNull)
     Dst.Ptr[NumBytes] = 0;
 }
 
-bool ToInt(string_ref Str, int* Result) {
+bool ToInt(str_ref Str, int* Result) {
   if (!Str || Str.Size <= 0)
     return false;
 
@@ -94,7 +94,7 @@ bool ToInt(string_ref Str, int* Result) {
   return true;
 }
 
-bool ToDouble(string_ref Str, f64* Result) {
+bool ToDouble(str_ref Str, f64* Result) {
   if (!Str || Str.Size <= 0)
     return false;
   char* EndPtr = nullptr;
@@ -107,16 +107,16 @@ bool ToDouble(string_ref Str, f64* Result) {
 /* tokenizer stuff */
 
 tokenizer::tokenizer() = default;
-tokenizer::tokenizer(string_ref Input, string_ref Delims)
+tokenizer::tokenizer(str_ref Input, str_ref Delims)
   : Input(Input), Delims(Delims), Pos(0) {}
 
-void Init(tokenizer* Tk, string_ref Input, string_ref Delims) {
+void Init(tokenizer* Tk, str_ref Input, str_ref Delims) {
   Tk->Input = Input;
   Tk->Delims = Delims;
   Tk->Pos = 0;
 }
 
-string_ref Next(tokenizer* Tk) {
+str_ref Next(tokenizer* Tk) {
   while (Tk->Pos < Tk->Input.Size && Contains(Tk->Delims, Tk->Input[Tk->Pos]))
     ++Tk->Pos;
 
@@ -128,7 +128,7 @@ string_ref Next(tokenizer* Tk) {
     }
     return SubString(Tk->Input, Tk->Pos - Length, Length);
   }
-  return string_ref();
+  return str_ref();
 }
 
 void Reset(tokenizer* Tk) {

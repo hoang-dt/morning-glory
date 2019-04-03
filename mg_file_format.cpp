@@ -15,6 +15,24 @@
 
 namespace mg {
 
+#if defined(mg_CollectStats)
+void Log(cstr FileName) {
+  FILE* Fp = fopen(FileName, "w");
+  for (int Sb = 0; Sb < Size(FStats.SbStats); ++Sb) {
+    fprintf(Fp, "Subband %d ----------------\n", Sb);
+    const subband_stats& SbStats = FStats.SbStats[Sb];
+    for (int Tl = 0; Tl < Size(SbStats.TlStats); ++Tl) {
+      fprintf(Fp, "    Tile %d++++++++++++++++\n", Tl);
+      const tile_stats& TlStats = SbStats.TlStats[Tl];
+      for (int Ck = 0; Ck < Size(TlStats.CkStats); ++Ck) {
+        fprintf(Fp, "        Chunk %d: %d\n", Ck, TlStats.CkStats[Ck].ActualSize);
+      }
+    }
+  }
+  fclose(Fp);
+}
+#endif
+
 struct tile_data {
   bitstream Bs;
   v3i Tile;
@@ -150,12 +168,12 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
         }
         bool ChunkComplete = Size(Tl->Bs) >= Ff.ChunkBytes;
         if (Size(Tl->Bs) > 0 && (ChunkComplete || LastChunk)) {
-          WriteChunk(Ff, Tl, Ci++);
 #if defined(mg_CollectStats)
           tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
           Ts.LocalId = Tl->LocalId;
           PushBack(&(Ts.CkStats), chunk_stats{(int)Size(Tl->Bs)});
 #endif
+          WriteChunk(Ff, Tl, Ci++);
         }
       } while (!FullyEncoded);
     } mg_EndFor3
@@ -184,6 +202,7 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
     Tl.LocalId = XyzToI(NTilesInSb, (Tile - SbPos3) / Ff.TileDims);
     Tl.GlobalId = NTilesInSubbands(Ff, 0, Sb) + Tl.LocalId;
     Tl.NBlocksInTile = ((Tl.RealDims + ZBlkDims) - 1) / ZBlkDims;
+    Tl.Subband = Sb;
     AllocBufT(&Tl.Floats, Prod(Ff.TileDims));
     AllocBufT(&Tl.Ints, Prod(Ff.TileDims));
     AllocBufT(&Tl.UInts, Prod(Ff.TileDims));
@@ -324,6 +343,11 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
     if (fread(ChunkBuf->Data, ChunkBuf->Bytes, 1, Fp) == 1) {
       auto ChunkIt = PushBack(&ChunkList, *ChunkBuf);
       InitRead(&Tl->Bs, *ChunkIt);
+#if defined(mg_CollectStats)
+      tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
+      Ts.LocalId = Tl->LocalId;
+      PushBack(&(Ts.CkStats), chunk_stats{(int)ChunkBuf->Bytes});
+#endif
     } else { // cannot read the chunk in the file
       return mg_Error(ff_err_code::FileReadFailed);
     }
@@ -339,6 +363,10 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
   v3i SbPos3 = Extract3Ints64(Ff->Subbands[Sb].PosCompact);
   v3i SbDims = Extract3Ints64(Ff->Subbands[Sb].DimsCompact);
   v3i Tile;
+#if defined(mg_CollectStats)
+  FStats.SbStats[Sb].NumTiles3 = (SbDims + Ff->TileDims - 1) / Ff->TileDims;
+  Resize(&FStats.SbStats[Sb].TlStats, Prod(FStats.SbStats[Sb].NumTiles3));
+#endif
   mg_BeginFor3(Tile, SbPos3, SbPos3 + SbDims, Ff->TileDims) {
     v3i NTilesInSb3 = (SbDims + Ff->TileDims - 1) / Ff->TileDims;
     tile_data Tl;
@@ -347,6 +375,7 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
     Tl.LocalId = XyzToI(NTilesInSb3, (Tile - SbPos3) / Ff->TileDims);
     Tl.GlobalId = NTilesInSubbands(*Ff, 0, Sb) + Tl.LocalId;
     Tl.NBlocksInTile = ((Tl.RealDims + ZBlkDims) - 1) / ZBlkDims;
+    Tl.Subband = Sb;
     AllocBufT(&Tl.Floats, Prod(Ff->TileDims));
     AllocBufT(&Tl.Ints, Prod(Ff->TileDims));
     AllocBufT(&Tl.UInts, Prod(Ff->TileDims));
@@ -382,6 +411,9 @@ ff_err Decode(file_format* Ff) {
   ff_err Err = Finalize(Ff, file_format::mode::Read);
   if (ErrorOccurred(Err))
     return Err;
+#if defined(mg_CollectStats)
+  Resize(&FStats.SbStats, Size(Ff->Subbands));
+#endif
   for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
     if (Ff->Volume.Type == data_type::float64) {
       if (ErrorOccurred(Err = ReadSubband<f64>(Ff, Sb)))

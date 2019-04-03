@@ -71,7 +71,7 @@ params ParseParams(int Argc, const char** Argv) {
     mg_Abort("Provide either --encode or --decode");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--dataset", &P.DataFile),
     "Provide --dataset");
-  error Err = ReadMetadata(P.DataFile, &P.Meta);
+  error Err = ParseMeta(P.DataFile, &P.Meta);
   mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
   mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
     "Data dimensions too big");
@@ -118,9 +118,14 @@ int main(int Argc, const char** Argv) {
   ff_err FfErr;
   if (P.Action == action::Encode) {
     FfErr = Encode(&Ff);
-    mg_Log(stdout, "Num chunks (complete): %d (%d)\n", NumChunks, NumCompleteChunks);
+#if defined(mg_CollectStats)
+    Log("stats_encode.txt");
+#endif
   } else {
     FfErr = Decode(&Ff);
+#if defined(mg_CollectStats)
+    Log("stats_decode.txt");
+#endif
   }
   mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
   CleanUp(&Ff);

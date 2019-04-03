@@ -1,6 +1,6 @@
 bin\main^
   --encode^
-  --dataset D:/Datasets/3D/Small/MIRANDA-DENSITY-[96-96-96]-Float64.txt^
+  --dataset D:/Datasets/3D/Small/MIRANDA-DENSITY-[96-96-96]-Float64.raw^
   --nlevels 2^
   --nbits 64^
   --tiledims 12 12 12^
