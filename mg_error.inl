@@ -15,16 +15,16 @@ template <typename t>
 error<t>::error() {}
 
 template <typename t>
-error<t>::error(t ErrCode, bool StrGenerated, cstr Msg) :
-  Msg(Msg), ErrCode(ErrCode), StackIdx(0),
+error<t>::error(t Code, bool StrGenerated, cstr Msg) :
+  Msg(Msg), Code(Code), StackIdx(0),
   StrGenerated(StrGenerated) {}
 
 template <typename t>
 cstr ToString(const error<t>& Err, bool Force) {
   if (Force || !Err.StrGenerated) {
-    auto ErrStr = ToString(Err.ErrCode);
+    auto ErrStr = ToString(Err.Code);
     snprintf(ScratchBuf, sizeof(ScratchBuf), "%.*s (file: %s, line %d): %s",
-      ErrStr.Size, ErrStr.Ptr, Err.Files[0], Err.Lines[0], Err.Msg);
+             ErrStr.Size, ErrStr.Ptr, Err.Files[0], Err.Lines[0], Err.Msg);
   }
   return ScratchBuf;
 }
@@ -38,7 +38,7 @@ void PrintStacktrace(printer* Pr, const error<t>& Err) {
 
 template <typename t>
 bool ErrorOccurred(const error<t>& Err) {
-  return Err.ErrCode != t::NoError;
+  return Err.Code != t::NoError;
 }
 
 } // namespace mg
@@ -50,20 +50,19 @@ bool ErrorOccurred(const error<t>& Err) {
 #define mg_ExtractFirst(X, ...) X
 
 #undef mg_Error
-#define mg_Error(ErrorCode, ...)\
+#define mg_Error(ErrCode, ...)\
   [&]() {\
     if (mg_NumArgs(__VA_ARGS__) > 0) {\
-      mg::error Err(ErrorCode, true __VA_OPT__(,) mg_ExtractFirst(__VA_ARGS__));\
+      mg::error Err(ErrCode, true __VA_OPT__(,) mg_ExtractFirst(__VA_ARGS__));\
       Err.Files[0] = __FILE__;\
       Err.Lines[0] = __LINE__;\
-      auto ErrStr = ToString(Err.ErrCode);\
-      int L = snprintf(\
-        ScratchBuf, sizeof(ScratchBuf), "%.*s (file %s, line %d): ",\
-        ErrStr.Size, ErrStr.Ptr, __FILE__, __LINE__);\
+      auto ErrStr = ToString(Err.Code);\
+      int L = snprintf(ScratchBuf, sizeof(ScratchBuf), "%.*s (file %s, line %d): ",\
+                       ErrStr.Size, ErrStr.Ptr, __FILE__, __LINE__);\
       mg_TempSprintHelper(__VA_ARGS__);\
       return Err;\
     }\
-    mg::error Err(ErrorCode);\
+    mg::error Err(ErrCode);\
     Err.Files[0] = __FILE__;\
     Err.Lines[0] = __LINE__;\
     return Err;\

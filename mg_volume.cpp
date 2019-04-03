@@ -12,7 +12,7 @@ namespace mg {
 
 error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
   error Ok = ReadFile(FileName, &Volume->Buffer);
-  if (Ok.ErrCode != err_code::NoError)
+  if (Ok.Code != err_code::NoError)
     return Ok;
   Volume->DimsCompact = Stuff3Ints64(Dims);
   Volume->Type = Type;

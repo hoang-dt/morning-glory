@@ -71,8 +71,8 @@ params ParseParams(int Argc, const char** Argv) {
     mg_Abort("Provide either --encode or --decode");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--dataset", &P.DataFile),
     "Provide --dataset");
-  error Ok = ReadMetadata(P.DataFile, &P.Meta);
-  mg_AbortIf(Ok.ErrCode != err_code::NoError, "%s", ToString(Ok));
+  error Err = ReadMetadata(P.DataFile, &P.Meta);
+  mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
   mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
     "Data dimensions too big");
   mg_AbortIf(P.Meta.Type != data_type::float32 &&

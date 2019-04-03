@@ -218,8 +218,6 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   }
   v3i Dims = Extract3Ints64(Ff->Volume.DimsCompact);
   BuildSubbands(Dims, Ff->NLevels, &Ff->Subbands);
-  /* Tile dims must be at least block dims, and at most the dims of the coarsest
-  subband */
   v3i Sb0Dims = Extract3Ints64(Ff->Subbands[0].DimsCompact);
   if (!(Ff->TileDims >= ZBlkDims || Sb0Dims >= Ff->TileDims))
     return mg_Error(ff_err_code::InvalidTileDims);
@@ -304,8 +302,7 @@ void SetExtrapolation(file_format* Ff, bool DoExtrapolation) {
 }
 
 /* Read the next chunk from disk */
-ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf)
-{
+ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
   mg_Assert(ChunkBuf->Bytes == Ff->ChunkBytes);
   auto& ChunkList = Ff->Chunks[Tl->Subband][Tl->GlobalId];
   int ChunkId = int(Size(ChunkList));
@@ -368,10 +365,15 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
     mg_CleanUp(7, DeallocBuf(&Tl.Bs.Stream));
     buffer ChunkBuf;
     AllocBuf(&ChunkBuf, Ff->ChunkBytes);
-    ff_err Err = ReadNextChunk(Ff, &Tl, &ChunkBuf);
-    if (ErrorOccurred(Err) && Err.ErrCode != ff_err_code::ChunkReadFailed)
-      return Err;
-    DecompressTile<t>(Ff, &Tl);
+    ff_err Err(ff_err_code::NoError);
+    while (true) {
+      ff_err Err = ReadNextChunk(Ff, &Tl, &ChunkBuf);
+      if (ErrorOccurred(Err) && Err.Code != ff_err_code::ChunkReadFailed)
+        return Err;
+      if (Err.Code == ff_err_code::ChunkReadFailed)
+        break;
+      DecompressTile<t>(Ff, &Tl);
+    }
   } mg_EndFor3
   return mg_Error(ff_err_code::NoError);
 }
