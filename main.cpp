@@ -52,7 +52,7 @@ mg_Enum(action, int, Encode, Decode)
 struct params {
   action Action = action::Encode;
   cstr DataFile = nullptr;
-  cstr OutFile = nullptr;
+  cstr CompressedFile = nullptr;
   int NLevels = 0;
   int NBitPlanes = 0;
   v3i TileDims = v3i(0, 0, 0);
@@ -69,26 +69,26 @@ params ParseParams(int Argc, const char** Argv) {
     P.Action = action::Decode;
   else
     mg_Abort("Provide either --encode or --decode");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--dataset", &P.DataFile),
-    "Provide --dataset");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--raw_file", &P.DataFile),
+    "Provide --raw_file");
   error Err = ParseMeta(P.DataFile, &P.Meta);
   mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
   mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
     "Data dimensions too big");
   mg_AbortIf(P.Meta.Type != data_type::float32 &&
              P.Meta.Type != data_type::float64, "Data type not supported");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--nlevels", &P.NLevels),
-    "Provide --nlevels");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--tiledims", &P.TileDims),
-    "Provide --tiledims");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunkbytes", &P.ChunkBytes),
-    "Provide --chunkbytes");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--output", &P.OutFile),
-    "Provide --output");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--nbits", &P.NBitPlanes),
-    "Provide --nbits");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--num_levels", &P.NLevels),
+    "Provide --num_levels");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--tile_dims", &P.TileDims),
+    "Provide --tile_dims");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunk_bytes", &P.ChunkBytes),
+    "Provide --chunk_bytes");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--compressed_file", &P.CompressedFile),
+    "Provide --compressed_files");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--precision", &P.NBitPlanes),
+    "Provide --precision");
   mg_AbortIf(P.NBitPlanes > BitSizeOf(P.Meta.Type),
-    "--nbits too large");
+    "precision too high");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
     "Provide --tolerance");
   return P;
@@ -98,36 +98,32 @@ params ParseParams(int Argc, const char** Argv) {
 int main(int Argc, const char** Argv) {
   SetHandleAbortSignals();
   params P = ParseParams(Argc, Argv);
-  /* Read the original function */
-  volume F;
-  AllocBuf(&F.Buffer, SizeOf(P.Meta.Type) * Prod(P.Meta.Dims));
-  mg_CleanUp(0, DeallocBuf(&F.Buffer));
-  error Err = ReadVolume(P.Meta.File, P.Meta.Dims, P.Meta.Type, &F);
-  mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
-  volume FCopy;
-  Clone(&FCopy, F);
-  /* Encode */
   file_format Ff;
-  SetVolume(&Ff, F.Buffer.Data, Extract3Ints64(F.DimsCompact), F.Type);
   SetWaveletTransform(&Ff, P.NLevels);
   SetTileDims(&Ff, P.TileDims);
   SetChunkBytes(&Ff, P.ChunkBytes);
   SetPrecision(&Ff, P.NBitPlanes);
   SetTolerance(&Ff, P.Tolerance);
-  SetFileName(&Ff, P.OutFile);
-  ff_err FfErr;
+  SetFileName(&Ff, P.CompressedFile);
   if (P.Action == action::Encode) {
-    FfErr = Encode(&Ff);
+    volume F;
+    AllocBuf(&F.Buffer, SizeOf(P.Meta.Type) * Prod(P.Meta.Dims));
+    mg_CleanUp(0, DeallocBuf(&F.Buffer));
+    error Err = ReadVolume(P.Meta.File, P.Meta.Dims, P.Meta.Type, &F);
+    mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
+    SetVolume(&Ff, F.Buffer.Data, Extract3Ints64(F.DimsCompact), F.Type);
+    ff_err FfErr = Encode(&Ff, P.Meta);
+    mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
 #if defined(mg_CollectStats)
     Log("stats_encode.txt");
 #endif
   } else {
-    FfErr = Decode(&Ff);
+    ff_err FfErr = Decode(&Ff);
+    mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
 #if defined(mg_CollectStats)
     Log("stats_decode.txt");
 #endif
   }
-  mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
   CleanUp(&Ff);
   //mg_Assert(_CrtCheckMemory());
   return 0;

@@ -44,14 +44,15 @@ str_ref GetFileName(str_ref Path) {
   if (LastSlash != ConstReverseEnd(Path))
     return SubString(Path, LastSlash - ConstBegin(Path) + 1,
                      Path.Size - (LastSlash - ConstBegin(Path)));
-  return str_ref();
+  return Path;
 }
 
 str_ref GetDirName(str_ref Path) {
+  mg_Assert(!Contains(Path, '\\'));
   cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
   if (LastSlash != ConstReverseEnd(Path))
     return SubString(Path, 0, LastSlash - ConstBegin(Path));
-  return str_ref();
+  return Path;
 }
 
 str ToString(const path& Path) {

@@ -6,6 +6,7 @@
 #include "mg_signal_processing.h"
 #include "mg_wavelet.h"
 #include "mg_zfp.h"
+#include <stdio.h>
 
 // TODO: add the variable-size chunk mode
 // TODO: zip each chunk
@@ -115,8 +116,10 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Td, int Ci) {
   char FileNameBuf[256];
   snprintf(FileNameBuf, sizeof(FileNameBuf), "%s%d", Ff.FileName, Ci);
   FILE* Fp = fopen(FileNameBuf, "r+b");
+  mg_CleanUp(0, if (Fp) fclose(Fp));
   if (!Fp) { // if the file is not present, create it
     Fp = fopen(FileNameBuf, "wb");
+    fwrite(Ff.Meta, Ff.MetaBytes, 1, Fp);
     fwrite(Ff.TileHeaders.Data, Bytes(Ff.TileHeaders), 1, Fp);
   } else { // file exists, go to the end
     mg_FSeek(Fp, 0, SEEK_END); // TODO: this prevents parallelization in file I/O
@@ -125,14 +128,11 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Td, int Ci) {
   InitWrite(&Td->Bs, Td->Bs.Stream);
   u64 Where = mg_FTell(Fp);
   fwrite(Td->Bs.Stream.Data, Ff.ChunkBytes, 1, Fp);
-  mg_FSeek(Fp, sizeof(u64) * Td->GlobalId, SEEK_SET);
+  mg_FSeek(Fp, Ff.MetaBytes + sizeof(u64) * Td->GlobalId, SEEK_SET);
   fwrite(&Where, sizeof(Where), 1, Fp);
-  fclose(Fp);
   return mg_Error(ff_err_code::NoError);
 }
 
-int NumChunks = 0;
-int NumCompleteChunks = 0;
 // TODO: error handling
 // TODO: minimize file opening
 // TODO: the tile size should depend on the precision at some level, to reduce
@@ -226,7 +226,6 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
   return mg_Error(ff_err_code::NoError);
 }
 
-// TODO: change Dims to NSamples3
 // TODO: change AllocateTypedBuffer to AllocTypedBuf
 ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   /* Only support float32 and float64 for now */
@@ -264,9 +263,37 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   return mg_Error(ff_err_code::NoError);
 }
 
-// TODO: error checking
+// TODO: think of a name for the file format
+// TODO: set the compressed_file by default to the name of the input file
+// TODO: add an (optional) post-processing step to merge all compressed files
+// TODO: study the sqlite format
+// TODO: write a special lifting procedure that takes into account the box
+//       containing changed coefficients only
+// TODO: provide more context info for returned errors
+
+/* Write meta data (and the tile headers) to the first file */
+int FormatMeta(file_format* Ff, const metadata& Meta) {
+  auto N = snprintf(Ff->Meta, sizeof(Ff->Meta), "WZ %d.%d\n", 0, 1); // version 0.1
+  N += snprintf(Ff->Meta + N, sizeof(Ff->Meta) - N, "000 bytes\n"); // header size
+  N += snprintf(Ff->Meta + N, sizeof(Ff->Meta) - N, "name = %s\n", Meta.Name);
+  N += snprintf(Ff->Meta + N, sizeof(Ff->Meta) - N, "field = %s\n", Meta.Field);
+  N += snprintf(Ff->Meta + N, sizeof(Ff->Meta) - N, "dimensions = %d %d %d\n",
+                Meta.Dims.X, Meta.Dims.Y, Meta.Dims.Z);
+  N += snprintf(Ff->Meta + N, sizeof(Ff->Meta) - N, "type = %s\n", ToString(Meta.Type).Ptr);
+  // Second pass
+  auto M = snprintf(Ff->Meta, sizeof(Ff->Meta), "WZ %d.%d\n", 0, 1); // TODO: replace with variables
+  M += snprintf(Ff->Meta + M, sizeof(Ff->Meta) - M, "%03d bytes\n", N);
+  M += snprintf(Ff->Meta + M, sizeof(Ff->Meta) - M, "name = %s\n", Meta.Name);
+  M += snprintf(Ff->Meta + M, sizeof(Ff->Meta) - M, "field = %s\n", Meta.Field);
+  M += snprintf(Ff->Meta + M, sizeof(Ff->Meta) - M, "dimensions = %d %d %d\n",
+                Meta.Dims.X, Meta.Dims.Y, Meta.Dims.Z);
+  M += snprintf(Ff->Meta + M, sizeof(Ff->Meta) - M, "type = %s\n", ToString(Meta.Type).Ptr);
+  mg_Assert(M == N);
+  return N;
+}
+
 // TODO: write to an existing file
-ff_err Encode(file_format* Ff) {
+ff_err Encode(file_format* Ff, const metadata& Meta) {
   ff_err Err = Finalize(Ff, file_format::mode::Write);
   if (ErrorOccurred(Err))
     return Err;
@@ -278,6 +305,8 @@ ff_err Encode(file_format* Ff) {
 #if defined(mg_CollectStats)
   Resize(&FStats.SbStats, Size(Ff->Subbands));
 #endif
+  Ff->MetaBytes = FormatMeta(Ff, Meta) + 1;
+  mg_Assert(Ff->MetaBytes == 1 + (int)strnlen(Ff->Meta, sizeof(Ff->Meta)));
   for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
     if (Ff->Volume.Type == data_type::float64) {
       if (ErrorOccurred(Err = WriteSubband<f64>(*Ff, Sb)))

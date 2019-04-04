@@ -49,9 +49,11 @@ struct file_format {
   int ChunkBytes = 4096;
   bool DoExtrapolation = false;
   mode Mode = mode::Write;
-  //TODO: add a flag to signify the file_format has been "finalized"
+  int MetaBytes = 0;
+  char Meta[512] = "";
 };
 
+// TODO: add a "ReadNextChunk" public API of some sort (lowest-level API for reading)
 /* API to use the file format */
 /* Must call */
 void SetFileName(file_format* Ff, cstr FileName);
