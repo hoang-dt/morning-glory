@@ -20,8 +20,8 @@ struct linked_list {
 };
 
 template <typename t>
-struct linked_list_iterator { 
-  linked_list_node<t>* Node = nullptr; 
+struct linked_list_iterator {
+  linked_list_node<t>* Node = nullptr;
   linked_list_iterator& operator++();
   linked_list_node<t>* operator->();
   t& operator*();

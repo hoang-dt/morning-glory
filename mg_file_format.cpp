@@ -60,6 +60,7 @@ i64 NTilesInSubbands(const file_format& Ff, int FromSb, int ToSb) {
   return NTiles;
 }
 
+// TODO: refactor to separate the copying of tile data from the encoding
 template <typename t>
 void CopyBlockForward(const file_format& Ff, tile_data* Tl, v3i Block, int K) {
   v3i Dims = Extract3Ints64(Ff.Volume.DimsCompact);
@@ -76,6 +77,7 @@ void CopyBlockForward(const file_format& Ff, tile_data* Tl, v3i Block, int K) {
   PadBlock(Tl->Floats.Data, RealBlockDims.Z, 16);
 }
 
+// TODO: refactor to separate the copying from the decoding
 template <typename t>
 void CopyBlockInverse(file_format* Ff, tile_data* Tl, v3i Block, int K) {
   v3i Dims = Extract3Ints64(Ff->Volume.DimsCompact);
@@ -227,6 +229,9 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
   return mg_Error(ff_err_code::NoError);
 }
 
+// TODO: separate the reading of meta data from the decoding so that the client
+// can manage their own memory
+
 // TODO: change AllocateTypedBuffer to AllocTypedBuf
 ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   /* Only support float32 and float64 for now */
@@ -258,6 +263,7 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
       for (i64 Ti = 0; Ti < Size(Ff->Chunks[Sb]); ++Ti)
         new (&Ff->Chunks[Sb][Ti]) linked_list<buffer>;
     }
+    AllocBuf(&Ff->Volume.Buffer, Prod<i64>(Dims) * SizeOf(Ff->Volume.Type));
   }
   return mg_Error(ff_err_code::NoError);
 }
@@ -399,7 +405,7 @@ void SetExtrapolation(file_format* Ff, bool DoExtrapolation) {
 /* Read the next chunk from disk */
 ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
   mg_Assert(ChunkBuf->Bytes == Ff->ChunkBytes);
-  auto& ChunkList = Ff->Chunks[Tl->Subband][Tl->GlobalId];
+  auto& ChunkList = Ff->Chunks[Tl->Subband][Tl->LocalId];
   int ChunkId = int(Size(ChunkList));
   char FileNameBuf[256];
   snprintf(FileNameBuf, sizeof(FileNameBuf), "%s%d", Ff->FileName, ChunkId);
@@ -408,7 +414,7 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
   /* Read the chunk header */
   u64 Where = 0;
   if (Fp) {
-    mg_FSeek(Fp, sizeof(u64) * Tl->GlobalId, SEEK_SET);
+    mg_FSeek(Fp, Ff->MetaBytes + sizeof(u64) * Tl->GlobalId, SEEK_SET);
     if (fread(&Where, sizeof(u64), 1, Fp) != 1)
       return mg_Error(ff_err_code::FileReadFailed);
   } else {
@@ -473,9 +479,11 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
     ff_err Err(ff_err_code::NoError);
     while (true) {
       ff_err Err = ReadNextChunk(Ff, &Tl, &ChunkBuf);
-      if (ErrorOccurred(Err) && Err.Code != ff_err_code::ChunkReadFailed)
+      if (ErrorOccurred(Err) && Err.Code != ff_err_code::ChunkReadFailed &&
+                                Err.Code != ff_err_code::FileOpenFailed)
         return Err;
-      if (Err.Code == ff_err_code::ChunkReadFailed)
+      if (Err.Code == ff_err_code::ChunkReadFailed ||
+          Err.Code == ff_err_code::FileOpenFailed)
         break;
       DecompressTile<t>(Ff, &Tl);
     }
@@ -503,6 +511,10 @@ ff_err Decode(file_format* Ff, metadata* Meta) {
   return mg_Error(ff_err_code::NoError);
 }
 
+// TODO: add an API function called ImproveTile that uses ReadNextChunk and
+// DecompressTile
+
+// TODO: add an "incremental" mode where the returned values are deltas
 template <typename t>
 void DecompressTile(file_format* Ff, tile_data* Tl) {
   InitRead(&Tl->Bs, Tl->Bs.Stream);

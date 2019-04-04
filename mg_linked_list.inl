@@ -9,7 +9,7 @@ namespace mg {
 template <typename t> mg_ForceInline
 linked_list<t>::linked_list(allocator* Alloc) : Alloc(Alloc) {}
 
-template <typename t> 
+template <typename t>
 linked_list_iterator<t> Insert(linked_list<t>* List, linked_list_iterator<t> Where, const t& Payload) {
   buffer Buf;
   List->Alloc->Alloc(&Buf, sizeof(linked_list_node<t>));
@@ -35,7 +35,6 @@ linked_list_iterator<t> PushBack(linked_list<t>* List, const t& Payload) {
   auto NewNode = Insert(List, linked_list_iterator<t>{Prev}, Payload);
   if (!Prev) // this new node is the first node in the list
     List->Head = NewNode.Node;
-  ++List->Size;
   return NewNode;
 }
 
@@ -61,7 +60,7 @@ linked_list_iterator<t>& linked_list_iterator<t>::operator++() {
   mg_Assert(Node);
   Node = Node->Next;
   return *this;
-} 
+}
 
 template <typename t> mg_ForceInline
 linked_list_node<t>* linked_list_iterator<t>::operator->() {
