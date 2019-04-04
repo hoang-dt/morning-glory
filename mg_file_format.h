@@ -13,10 +13,12 @@ namespace mg {
 
 #if defined(mg_CollectStats)
 struct chunk_stats {
+  int Where;
   int ActualSize;
 };
 struct tile_stats {
   int LocalId;
+  dynamic_array<i16> EMaxes;
   dynamic_array<chunk_stats> CkStats;
 };
 struct subband_stats {

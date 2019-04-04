@@ -8,7 +8,7 @@ const v3i ZDims(4, 4, 4);
 
 /* Only return true if the block is fully encoded */
 bool EncodeBlock(const u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,
-                 bool& InnerLoop, bitstream* Bs) 
+                 bool& InnerLoop, bitstream* Bs)
 {
   /* extract bit plane Bitplane to X */
   mg_Assert(N <= 64);

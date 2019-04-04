@@ -25,8 +25,13 @@ void Log(cstr FileName) {
     for (int Tl = 0; Tl < Size(SbStats.TlStats); ++Tl) {
       fprintf(Fp, "    Tile %d++++++++++++++++\n", Tl);
       const tile_stats& TlStats = SbStats.TlStats[Tl];
+      for (int I = 0; I < Size(TlStats.EMaxes); ++I) {
+        fprintf(Fp, "%d ", TlStats.EMaxes[I]);
+      }
+      fprintf(Fp, "\n");
       for (int Ck = 0; Ck < Size(TlStats.CkStats); ++Ck) {
-        fprintf(Fp, "        Chunk %d: %d\n", Ck, TlStats.CkStats[Ck].ActualSize);
+        fprintf(Fp, "        Chunk %d: %d %d\n",
+                Ck, TlStats.CkStats[Ck].Where, TlStats.CkStats[Ck].ActualSize);
       }
     }
   }
@@ -113,8 +118,8 @@ bool ReadEMax(bitstream* Bs, int ToleranceExp, i16* EMax) {
 
 // TODO: error handling
 // TODO: minimize fopen calls
-ff_err WriteChunk(const file_format& Ff, tile_data* Td, int Ci) {
-  mg_Assert(Size(Td->Bs) > 0);
+ff_err WriteChunk(const file_format& Ff, tile_data* Tl, int Ci) {
+  mg_Assert(Size(Tl->Bs) > 0);
   // TODO: cache the file names if the formatting turns out to be slow
   char FileNameBuf[256];
   snprintf(FileNameBuf, sizeof(FileNameBuf), "%s%d", Ff.FileName, Ci);
@@ -127,11 +132,16 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Td, int Ci) {
   } else { // file exists, go to the end
     mg_FSeek(Fp, 0, SEEK_END); // TODO: this prevents parallelization in file I/O
   }
-  Flush(&Td->Bs);
-  InitWrite(&Td->Bs, Td->Bs.Stream);
+  Flush(&Tl->Bs);
+  InitWrite(&Tl->Bs, Tl->Bs.Stream);
   u64 Where = mg_FTell(Fp);
-  fwrite(Td->Bs.Stream.Data, Ff.ChunkBytes, 1, Fp);
-  mg_FSeek(Fp, Ff.MetaBytes + sizeof(u64) * Td->GlobalId, SEEK_SET);
+#if defined(mg_CollectStats)
+  tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
+  chunk_stats& Cs = Back(Ts.CkStats);
+  Cs.Where = Where;
+#endif
+  fwrite(Tl->Bs.Stream.Data, Ff.ChunkBytes, 1, Fp);
+  mg_FSeek(Fp, Ff.MetaBytes + sizeof(u64) * Tl->GlobalId, SEEK_SET);
   fwrite(&Where, sizeof(Where), 1, Fp);
   return mg_Error(ff_err_code::NoError);
 }
@@ -142,6 +152,10 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Td, int Ci) {
 // internal fragmentation
 template <typename t>
 ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
+#if defined(mg_CollectStats)
+  tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
+  Ts.LocalId = Tl->LocalId;
+#endif
   int Ci = 0; // chunk id
   InitWrite(&Tl->Bs, Tl->Bs.Stream);
   for (int Bp = Ff.Prec; Bp >= 0; --Bp) {
@@ -155,6 +169,9 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
         Tl->EMaxes[Bi] =
           (i16)Quantize((byte*)&Tl->Floats[K], Prod(ZDims),
                         Ff.Prec - 2, (byte*)&Tl->Ints[K], Ff.Volume.Type);
+#if defined(mg_CollectStats)
+        PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
+#endif
         WriteEMax(Tl->EMaxes[Bi], Exponent(Ff.Tolerance), &Tl->Bs);
         ForwardBlockTransform(&Tl->Ints[K]);
         ForwardShuffle(&Tl->Ints[K], &Tl->UInts[K]);
@@ -172,9 +189,7 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
         bool ChunkComplete = Size(Tl->Bs) >= Ff.ChunkBytes;
         if (Size(Tl->Bs) > 0 && (ChunkComplete || LastChunk)) {
 #if defined(mg_CollectStats)
-          tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
-          Ts.LocalId = Tl->LocalId;
-          PushBack(&(Ts.CkStats), chunk_stats{(int)Size(Tl->Bs)});
+          PushBack(&(Ts.CkStats), chunk_stats{0, (int)Size(Tl->Bs)});
 #endif
           WriteChunk(Ff, Tl, Ci++);
         }
@@ -425,11 +440,6 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
     if (fread(ChunkBuf->Data, ChunkBuf->Bytes, 1, Fp) == 1) {
       auto ChunkIt = PushBack(&ChunkList, *ChunkBuf);
       InitRead(&Tl->Bs, *ChunkIt);
-#if defined(mg_CollectStats)
-      tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
-      Ts.LocalId = Tl->LocalId;
-      PushBack(&(Ts.CkStats), chunk_stats{(int)ChunkBuf->Bytes});
-#endif
     } else { // cannot read the chunk in the file
       return mg_Error(ff_err_code::FileReadFailed);
     }
@@ -517,6 +527,10 @@ ff_err Decode(file_format* Ff, metadata* Meta) {
 // TODO: add an "incremental" mode where the returned values are deltas
 template <typename t>
 void DecompressTile(file_format* Ff, tile_data* Tl) {
+#if defined(mg_CollectStats)
+  tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
+  Ts.LocalId = Tl->LocalId;
+#endif
   InitRead(&Tl->Bs, Tl->Bs.Stream);
   const auto & ChunkList = Ff->Chunks[Tl->Subband][Tl->LocalId];
   auto ChunkIt = ConstBegin(ChunkList);
@@ -525,18 +539,26 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
       int Bi = XyzToI(Tl->NBlocksInTile, Block / ZDims);
       bool DoDecode = false;
-      if (Bp == Ff->Prec)
+      if (Bp == Ff->Prec) {
         DoDecode = ReadEMax(&Tl->Bs, Exponent(Ff->Tolerance), &Tl->EMaxes[Bi]);
+#if defined(mg_CollectStats)
+        PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
+#endif
+      }
       int K = XyzToI(Tl->NBlocksInTile, Block / ZDims) * Prod(ZDims);
       DoDecode &= Ff->Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff->Tolerance) + 1;
       bool FullyDecoded = false;
       bool LastChunk = ChunkIt == ConstEnd(ChunkList);
-      bool ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes;
+      bool ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
       while (DoDecode && !FullyDecoded && !LastChunk) {
         FullyDecoded =
           DecodeBlock(&Tl->UInts[K], Bp, Ff->ChunkBytes * 8, Tl->Ns[Bi],
                       Tl->Ms[Bi], Tl->InnerLoops[Bi], &Tl->Bs);
-        ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes;
+        ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
+#if defined(mg_CollectStats)
+        if (FullyDecoded || ExhaustedBits)
+          PushBack(&(Ts.CkStats), chunk_stats{0, (int)Size(Tl->Bs)});
+#endif
         if (ExhaustedBits) {
           ++ChunkIt;
           LastChunk = ChunkIt == ConstEnd(ChunkList);
