@@ -61,6 +61,9 @@ struct params {
   metadata Meta;
 };
 
+// TODO: when decoding, construct the raw file name from info embedded inside
+// the compressed file
+// TODO: add --precision for decoding
 params ParseParams(int Argc, const char** Argv) {
   params P;
   if (OptionExists(Argc, Argv, "--encode"))
@@ -69,28 +72,30 @@ params ParseParams(int Argc, const char** Argv) {
     P.Action = action::Decode;
   else
     mg_Abort("Provide either --encode or --decode");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--raw_file", &P.DataFile),
-    "Provide --raw_file");
-  error Err = ParseMeta(P.DataFile, &P.Meta);
-  mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
-  mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
-    "Data dimensions too big");
-  mg_AbortIf(P.Meta.Type != data_type::float32 &&
-             P.Meta.Type != data_type::float64, "Data type not supported");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--num_levels", &P.NLevels),
-    "Provide --num_levels");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--tile_dims", &P.TileDims),
-    "Provide --tile_dims");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunk_bytes", &P.ChunkBytes),
-    "Provide --chunk_bytes");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--compressed_file", &P.CompressedFile),
     "Provide --compressed_files");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--precision", &P.NBitPlanes),
-    "Provide --precision");
-  mg_AbortIf(P.NBitPlanes > BitSizeOf(P.Meta.Type),
-    "precision too high");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
-    "Provide --tolerance");
+  mg_AbortIf(!GetOptionValue(Argc, Argv, "--raw_file", &P.DataFile),
+    "Provide --raw_file");
+  if (P.Action == action::Encode) {
+    error Err = ParseMeta(P.DataFile, &P.Meta);
+    mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
+    mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
+      "Data dimensions too big");
+    mg_AbortIf(P.Meta.Type != data_type::float32 &&
+               P.Meta.Type != data_type::float64, "Data type not supported");
+    mg_AbortIf(!GetOptionValue(Argc, Argv, "--num_levels", &P.NLevels),
+      "Provide --num_levels");
+    mg_AbortIf(!GetOptionValue(Argc, Argv, "--tile_dims", &P.TileDims),
+      "Provide --tile_dims");
+    mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunk_bytes", &P.ChunkBytes),
+      "Provide --chunk_bytes");
+    mg_AbortIf(!GetOptionValue(Argc, Argv, "--precision", &P.NBitPlanes),
+      "Provide --precision");
+    mg_AbortIf(P.NBitPlanes > BitSizeOf(P.Meta.Type),
+      "precision too high");
+    mg_AbortIf(!GetOptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
+      "Provide --tolerance");
+  }
   return P;
 }
 
@@ -118,7 +123,7 @@ int main(int Argc, const char** Argv) {
     Log("stats_encode.txt");
 #endif
   } else {
-    ff_err FfErr = Decode(&Ff);
+    ff_err FfErr = Decode(&Ff, &P.Meta);
     mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
 #if defined(mg_CollectStats)
     Log("stats_decode.txt");

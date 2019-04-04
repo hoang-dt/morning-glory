@@ -7,7 +7,7 @@
 
 namespace mg {
 
-extern const v3i ZBlkDims;
+extern const v3i ZDims;
 
 template <typename t>
 void ForwardLift(t* P, int S);

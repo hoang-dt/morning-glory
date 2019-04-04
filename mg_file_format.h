@@ -35,6 +35,8 @@ using ff_err = error<ff_err_code>;
 
 // TODO: save some of these parameters to the file itself
 struct file_format {
+  int Major = 0;
+  int Minor = 1;
   enum class mode : bool { Write, Read };
   /* First index is by subband, second index is by tiles within each subband */
   volume Volume;
@@ -44,7 +46,7 @@ struct file_format {
   v3i TileDims = v3i(32, 32, 32);
   cstr FileName = nullptr;
   f64 Tolerance = 0;
-  int Prec = 64; /* [0, 63] for double */
+  int Prec = 64; /* [0, 64] for double, [0, 32] for float */
   int NLevels = 0;
   int ChunkBytes = 4096;
   bool DoExtrapolation = false;
