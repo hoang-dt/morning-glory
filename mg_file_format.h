@@ -43,7 +43,7 @@ struct file_format {
   enum class mode : bool { Write, Read };
   /* First index is by subband, second index is by tiles within each subband */
   volume Volume;
-  typed_buffer<typed_buffer<linked_list<buffer>>> Chunks;
+  typed_buffer<typed_buffer<list<buffer>>> Chunks;
   dynamic_array<extent> Subbands;
   typed_buffer<u64> TileHeaders;
   v3i TileDims = v3i(32, 32, 32);

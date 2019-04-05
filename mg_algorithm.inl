@@ -105,4 +105,14 @@ void Reverse(i Begin, i End) {
   }
 }
 
+template <typename i>
+int ForwardDistance(i Begin, i End) {
+  int Dist = 0;
+  while (Begin != End) {
+    ++Dist;
+    ++Begin;
+  }
+  return Dist;
+}
+
 } // namespace mg

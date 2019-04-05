@@ -40,6 +40,9 @@ void Fill(i Begin, i End, const t& Val);
 template <typename i>
 void Reverse(i Begin, i End);
 
+template <typename i>
+int ForwardDistance(i Begin, i End);
+
 } // namespace mg
 
 #include "mg_algorithm.inl"

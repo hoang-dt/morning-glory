@@ -283,7 +283,7 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
       v3i NTiles3 = (SbDims3 + Ff->TileDims - 1) / Ff->TileDims;
       AllocBufT(&Ff->Chunks[Sb], Prod<i64>(NTiles3));
       for (i64 Ti = 0; Ti < Size(Ff->Chunks[Sb]); ++Ti)
-        new (&Ff->Chunks[Sb][Ti]) linked_list<buffer>;
+        new (&Ff->Chunks[Sb][Ti]) list<buffer>;
     }
     AllocBuf(&Ff->Volume.Buffer, Prod<i64>(Dims) * SizeOf(Ff->Volume.Type));
   }
@@ -571,8 +571,10 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
                       Tl->Ms[Bi], Tl->InnerLoops[Bi], &Tl->Bs);
         ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
 #if defined(mg_CollectStats)
-        //if (FullyDecoded || ExhaustedBits)
-        //  PushBack(&(Ts.CkStats), chunk_stats{0, (int)Size(Tl->Bs)});
+        if (FullyDecoded || ExhaustedBits) {
+          int I = ForwardDistance(ConstBegin(ChunkList), ChunkIt);
+          Ts.CkStats[I].ActualSize = (int)Size(Tl->Bs);
+        }
 #endif
         if (ExhaustedBits) {
           ++ChunkIt;

@@ -32,7 +32,7 @@ using namespace mg;
 // TODO: memory out-of-bound/leak detection
 
 void TestLinkedList() {
-  linked_list<int> List;
+  list<int> List;
   auto Where1 = PushBack(&List, 1);
   auto Where2 = PushBack(&List, 2);
   auto Where3 = PushBack(&List, 3);

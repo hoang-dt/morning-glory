@@ -7,13 +7,13 @@
 namespace mg {
 
 template <typename t> mg_ForceInline
-linked_list<t>::linked_list(allocator* Alloc) : Alloc(Alloc) {}
+list<t>::list(allocator* Alloc) : Alloc(Alloc) {}
 
 template <typename t>
-linked_list_iterator<t> Insert(linked_list<t>* List, linked_list_iterator<t> Where, const t& Payload) {
+list_iterator<t> Insert(list<t>* List, list_iterator<t> Where, const t& Payload) {
   buffer Buf;
-  List->Alloc->Alloc(&Buf, sizeof(linked_list_node<t>));
-  linked_list_node<t>* NewNode = (linked_list_node<t>*)Buf.Data;
+  List->Alloc->Alloc(&Buf, sizeof(list_node<t>));
+  list_node<t>* NewNode = (list_node<t>*)Buf.Data;
   NewNode->Payload = Payload;
   NewNode->Next = nullptr;
   if (Where.Node) {
@@ -21,28 +21,28 @@ linked_list_iterator<t> Insert(linked_list<t>* List, linked_list_iterator<t> Whe
     Where->Next = NewNode;
   }
   ++List->Size;
-  return linked_list_iterator<t>{NewNode};
+  return list_iterator<t>{NewNode};
 }
 
 template <typename t>
-linked_list_iterator<t> PushBack(linked_list<t>* List, const t& Payload) {
+list_iterator<t> PushBack(list<t>* List, const t& Payload) {
   auto Node = List->Head;
-  linked_list_node<t>* Prev = nullptr;
+  list_node<t>* Prev = nullptr;
   while (Node) {
     Prev = Node;
     Node = Node->Next;
   }
-  auto NewNode = Insert(List, linked_list_iterator<t>{Prev}, Payload);
+  auto NewNode = Insert(List, list_iterator<t>{Prev}, Payload);
   if (!Prev) // this new node is the first node in the list
     List->Head = NewNode.Node;
   return NewNode;
 }
 
 template <typename t>
-void Deallocate(linked_list<t>* List) {
+void Deallocate(list<t>* List) {
   auto Node = List->Head;
   while (Node) {
-    buffer Buf((byte*)Node, sizeof(linked_list_node<t>), List->Alloc);
+    buffer Buf((byte*)Node, sizeof(list_node<t>), List->Alloc);
     Node = Node->Next;
     List->Alloc->Dealloc(&Buf);
   }
@@ -51,55 +51,55 @@ void Deallocate(linked_list<t>* List) {
 }
 
 template <typename t> mg_ForceInline
-i64 Size(const linked_list<t>& List) {
+i64 Size(const list<t>& List) {
   return List.Size;
 }
 
 template <typename t> mg_ForceInline
-linked_list_iterator<t>& linked_list_iterator<t>::operator++() {
+list_iterator<t>& list_iterator<t>::operator++() {
   mg_Assert(Node);
   Node = Node->Next;
   return *this;
 }
 
 template <typename t> mg_ForceInline
-linked_list_node<t>* linked_list_iterator<t>::operator->() {
+list_node<t>* list_iterator<t>::operator->() {
   mg_Assert(Node);
   return Node;
 }
 
 template <typename t> mg_ForceInline
-t& linked_list_iterator<t>::operator*() {
+t& list_iterator<t>::operator*() {
   mg_Assert(Node);
   return Node->Payload;
 }
 
 template <typename t> mg_ForceInline
-bool linked_list_iterator<t>::operator!=(linked_list_iterator<t> Other) const {
+bool list_iterator<t>::operator!=(list_iterator<t> Other) const {
   return Node != Other.Node;
 }
 template <typename t> mg_ForceInline
-bool linked_list_iterator<t>::operator==(linked_list_iterator<t> Other) const {
+bool list_iterator<t>::operator==(list_iterator<t> Other) const {
   return Node == Other.Node;
 }
 
 template <typename t> mg_ForceInline
-linked_list_iterator<t> Begin(linked_list<t>& List) {
-  return linked_list_iterator<t>{List.Head};
+list_iterator<t> Begin(list<t>& List) {
+  return list_iterator<t>{List.Head};
 }
 template <typename t> mg_ForceInline
-linked_list_iterator<t> End(linked_list<t>& List) {
+list_iterator<t> End(list<t>& List) {
   (void)List;
-  return linked_list_iterator<t>();
+  return list_iterator<t>();
 }
 template <typename t> mg_ForceInline
-const linked_list_iterator<t> ConstBegin(const linked_list<t>& List) {
-  return linked_list_iterator<t>{List.Head};
+const list_iterator<t> ConstBegin(const list<t>& List) {
+  return list_iterator<t>{List.Head};
 }
 template <typename t> mg_ForceInline
-const linked_list_iterator<t> ConstEnd(const linked_list<t>& List) {
+const list_iterator<t> ConstEnd(const list<t>& List) {
   (void)List;
-  return linked_list_iterator<t>();
+  return list_iterator<t>();
 }
 
 } // namespace mg
