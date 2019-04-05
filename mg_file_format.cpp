@@ -132,17 +132,16 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Tl, int Ci) {
   } else { // file exists, go to the end
     mg_FSeek(Fp, 0, SEEK_END); // TODO: this prevents parallelization in file I/O
   }
-  Flush(&Tl->Bs);
-  InitWrite(&Tl->Bs, Tl->Bs.Stream);
   u64 Where = mg_FTell(Fp);
 #if defined(mg_CollectStats)
   tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
-  chunk_stats& Cs = Back(Ts.CkStats);
-  Cs.Where = Where;
+  PushBack(&(Ts.CkStats), chunk_stats{(int)Where, (int)Size(Tl->Bs)});
 #endif
   fwrite(Tl->Bs.Stream.Data, Ff.ChunkBytes, 1, Fp);
   mg_FSeek(Fp, Ff.MetaBytes + sizeof(u64) * Tl->GlobalId, SEEK_SET);
   fwrite(&Where, sizeof(Where), 1, Fp);
+  Flush(&Tl->Bs);
+  InitWrite(&Tl->Bs, Tl->Bs.Stream);
   return mg_Error(ff_err_code::NoError);
 }
 
@@ -188,9 +187,6 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
         }
         bool ChunkComplete = Size(Tl->Bs) >= Ff.ChunkBytes;
         if (Size(Tl->Bs) > 0 && (ChunkComplete || LastChunk)) {
-#if defined(mg_CollectStats)
-          PushBack(&(Ts.CkStats), chunk_stats{0, (int)Size(Tl->Bs)});
-#endif
           WriteChunk(Ff, Tl, Ci++);
         }
       } while (!FullyEncoded);
@@ -314,10 +310,10 @@ int FormatMeta(file_format* Ff, const metadata& Meta) {
                   Ff->Tolerance);
     return N;
   };
-  int M = Lambda(N);
+  int M = Lambda(N) + 1; // + 1 for the NULL char at the end
   N = snprintf(Ff->Meta, sizeof(Ff->Meta), "WZ %d.%d\n", Ff->Major, Ff->Minor);
   N += snprintf(Ff->Meta + N, sizeof(Ff->Meta) - N, "%03d bytes\n", M);
-  N = Lambda(N);
+  N = Lambda(N) + 1;
   mg_Assert(M == N);
   return N;
 }
@@ -373,7 +369,7 @@ ff_err Encode(file_format* Ff, const metadata& Meta) {
 #if defined(mg_CollectStats)
   Resize(&FStats.SbStats, Size(Ff->Subbands));
 #endif
-  Ff->MetaBytes = FormatMeta(Ff, Meta) + 1;
+  Ff->MetaBytes = FormatMeta(Ff, Meta);
   mg_Assert(Ff->MetaBytes == 1 + (int)strnlen(Ff->Meta, sizeof(Ff->Meta)));
   for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
     if (Ff->Volume.Type == data_type::float64) {
@@ -437,6 +433,11 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
   }
   /* Read the chunk data */
   if (Where > 0) {
+#if defined(mg_CollectStats)
+    tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
+    PushBack(&(Ts.CkStats), chunk_stats{(int)Where, 0});
+#endif
+    mg_FSeek(Fp, Where, SEEK_SET);
     if (fread(ChunkBuf->Data, ChunkBuf->Bytes, 1, Fp) == 1) {
       auto ChunkIt = PushBack(&ChunkList, *ChunkBuf);
       InitRead(&Tl->Bs, *ChunkIt);
@@ -495,8 +496,8 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
       if (Err.Code == ff_err_code::ChunkReadFailed ||
           Err.Code == ff_err_code::FileOpenFailed)
         break;
-      DecompressTile<t>(Ff, &Tl);
     }
+    DecompressTile<t>(Ff, &Tl);
   } mg_EndFor3
   return mg_Error(ff_err_code::NoError);
 }
@@ -556,8 +557,8 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
                       Tl->Ms[Bi], Tl->InnerLoops[Bi], &Tl->Bs);
         ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
 #if defined(mg_CollectStats)
-        if (FullyDecoded || ExhaustedBits)
-          PushBack(&(Ts.CkStats), chunk_stats{0, (int)Size(Tl->Bs)});
+        //if (FullyDecoded || ExhaustedBits)
+        //  PushBack(&(Ts.CkStats), chunk_stats{0, (int)Size(Tl->Bs)});
 #endif
         if (ExhaustedBits) {
           ++ChunkIt;
