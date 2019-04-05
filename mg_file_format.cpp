@@ -99,14 +99,16 @@ void CopyBlockInverse(file_format* Ff, tile_data* Tl, v3i Block, int K) {
 }
 
 template <typename t>
-void WriteEMax(int EMax, int ToleranceExp, bitstream* Bs) {
+bool WriteEMax(int EMax, int ToleranceExp, bitstream* Bs) {
   if (0 <= EMax - ToleranceExp + 1) {
     Write(Bs, 1);
     // TODO: for now we don't care if the exponent is 2047 which represents Inf
     // or NaN
     Write(Bs, EMax + Traits<t>::ExpBias, Traits<t>::ExpBits);
+    return true;
   } else {
     Write(Bs, 0);
+    return false;
   }
 }
 
@@ -167,21 +169,25 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
       int Bi = XyzToI(Tl->NBlocksInTile, Block / ZDims);
       int K = XyzToI(Tl->NBlocksInTile, Block / ZDims) * Prod(ZDims);
+      bool DoEncode = false;
       /* Copy the block data into the tile's buffer */
       if (Bp == Ff.Prec) {
         CopyBlockForward<t>(Ff, Tl, Block, K);
         Tl->EMaxes[Bi] =
           (i16)Quantize((byte*)&Tl->Floats[K], Prod(ZDims),
                         Ff.Prec - 2, (byte*)&Tl->Ints[K], Ff.Volume.Type);
+        DoEncode = WriteEMax<t>(Tl->EMaxes[Bi], Exponent(Ff.Tolerance), &Tl->Bs);
 #if defined(mg_CollectStats)
-        PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
+        if (DoEncode)
+          PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
+        else
+          PushBack(&(Ts.EMaxes), i16(Exponent(Ff.Tolerance) - 2));
 #endif
-        WriteEMax<t>(Tl->EMaxes[Bi], Exponent(Ff.Tolerance), &Tl->Bs);
         ForwardBlockTransform(&Tl->Ints[K]);
         ForwardShuffle(&Tl->Ints[K], &Tl->UInts[K]);
       }
       /* Encode and write chunks */
-      bool DoEncode = Ff.Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff.Tolerance) + 1;
+      DoEncode = Ff.Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff.Tolerance) + 1;
       bool LastChunk = (Bp == 0) && (Bi + 1 == Prod(Tl->NBlocksInTile));
       bool FullyEncoded = true;
       do {
@@ -555,7 +561,7 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
 #endif
       }
       int K = XyzToI(Tl->NBlocksInTile, Block / ZDims) * Prod(ZDims);
-      DoDecode &= Ff->Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff->Tolerance) + 1;
+      DoDecode = Ff->Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff->Tolerance) + 1;
       bool FullyDecoded = false;
       bool LastChunk = ChunkIt == ConstEnd(ChunkList);
       bool ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
