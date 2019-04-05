@@ -14,6 +14,7 @@ namespace mg {
 #if defined(mg_CollectStats)
 struct chunk_stats {
   int Where;
+  u64 FirstEightBytes;
   int ActualSize;
 };
 struct tile_stats {

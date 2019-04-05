@@ -30,8 +30,10 @@ void Log(cstr FileName) {
       }
       fprintf(Fp, "\n");
       for (int Ck = 0; Ck < Size(TlStats.CkStats); ++Ck) {
-        fprintf(Fp, "        Chunk %d: %d %d\n",
-                Ck, TlStats.CkStats[Ck].Where, TlStats.CkStats[Ck].ActualSize);
+        fprintf(Fp, "        Chunk %d: %d 0x%016llx %d\n",
+                Ck, TlStats.CkStats[Ck].Where,
+                    TlStats.CkStats[Ck].FirstEightBytes,
+                    TlStats.CkStats[Ck].ActualSize);
       }
     }
   }
@@ -96,23 +98,25 @@ void CopyBlockInverse(file_format* Ff, tile_data* Tl, v3i Block, int K) {
   } mg_EndFor3
 }
 
+template <typename t>
 void WriteEMax(int EMax, int ToleranceExp, bitstream* Bs) {
   if (0 <= EMax - ToleranceExp + 1) {
     Write(Bs, 1);
     // TODO: for now we don't care if the exponent is 2047 which represents Inf
     // or NaN
-    Write(Bs, EMax + Traits<f64>::ExpBias, Traits<f64>::ExpBits);
+    Write(Bs, EMax + Traits<t>::ExpBias, Traits<t>::ExpBits);
   } else {
     Write(Bs, 0);
   }
 }
 
+template <typename t>
 bool ReadEMax(bitstream* Bs, int ToleranceExp, i16* EMax) {
   if (Read(Bs)) {// significant
-    *EMax = (i16)Read(Bs, Traits<f64>::ExpBits) - Traits<f64>::ExpBias;
+    *EMax = i16(Read(Bs, Traits<t>::ExpBits) - Traits<t>::ExpBias);
     return true;
   }
-  *EMax = (i16)(ToleranceExp - 2);
+  *EMax = i16(ToleranceExp - 2);
   return false;
 }
 
@@ -133,14 +137,15 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Tl, int Ci) {
     mg_FSeek(Fp, 0, SEEK_END); // TODO: this prevents parallelization in file I/O
   }
   u64 Where = mg_FTell(Fp);
+  Flush(&Tl->Bs);
 #if defined(mg_CollectStats)
   tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
-  PushBack(&(Ts.CkStats), chunk_stats{(int)Where, (int)Size(Tl->Bs)});
+  const u64* U64Ptr = (u64*)(Tl->Bs.Stream.Data);
+  PushBack(&(Ts.CkStats), chunk_stats{(int)Where, *U64Ptr, (int)Size(Tl->Bs)});
 #endif
   fwrite(Tl->Bs.Stream.Data, Ff.ChunkBytes, 1, Fp);
   mg_FSeek(Fp, Ff.MetaBytes + sizeof(u64) * Tl->GlobalId, SEEK_SET);
   fwrite(&Where, sizeof(Where), 1, Fp);
-  Flush(&Tl->Bs);
   InitWrite(&Tl->Bs, Tl->Bs.Stream);
   return mg_Error(ff_err_code::NoError);
 }
@@ -171,7 +176,7 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
 #if defined(mg_CollectStats)
         PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
 #endif
-        WriteEMax(Tl->EMaxes[Bi], Exponent(Ff.Tolerance), &Tl->Bs);
+        WriteEMax<t>(Tl->EMaxes[Bi], Exponent(Ff.Tolerance), &Tl->Bs);
         ForwardBlockTransform(&Tl->Ints[K]);
         ForwardShuffle(&Tl->Ints[K], &Tl->UInts[K]);
       }
@@ -224,7 +229,7 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
     AllocBufT0(&Tl.Ns, Prod(Tl.NBlocksInTile));
     AllocBufT0(&Tl.Ms, Prod(Tl.NBlocksInTile));
     AllocBufT0(&Tl.InnerLoops, Prod(Tl.NBlocksInTile));
-    AllocBuf(&Tl.Bs.Stream, Ff.ChunkBytes + BufferSize(Tl.Bs));
+    AllocBuf0(&Tl.Bs.Stream, Ff.ChunkBytes + BufferSize(Tl.Bs));
     mg_CleanUp(0, DeallocBufT(&Tl.Floats);
                   DeallocBufT(&Tl.Ints);
                   DeallocBufT(&Tl.UInts);
@@ -433,14 +438,15 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
   }
   /* Read the chunk data */
   if (Where > 0) {
-#if defined(mg_CollectStats)
-    tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
-    PushBack(&(Ts.CkStats), chunk_stats{(int)Where, 0});
-#endif
     mg_FSeek(Fp, Where, SEEK_SET);
     if (fread(ChunkBuf->Data, ChunkBuf->Bytes, 1, Fp) == 1) {
       auto ChunkIt = PushBack(&ChunkList, *ChunkBuf);
       InitRead(&Tl->Bs, *ChunkIt);
+#if defined(mg_CollectStats)
+      tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
+      const u64* U64Ptr = (u64*)((*ChunkIt).Data);
+      PushBack(&(Ts.CkStats), chunk_stats{(int)Where, *U64Ptr, 0});
+#endif
     } else { // cannot read the chunk in the file
       return mg_Error(ff_err_code::FileReadFailed);
     }
@@ -476,7 +482,7 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
     AllocBufT0(&Tl.Ns, Prod(Tl.NBlocksInTile));
     AllocBufT0(&Tl.Ms, Prod(Tl.NBlocksInTile));
     AllocBufT0(&Tl.InnerLoops, Prod(Tl.NBlocksInTile));
-    AllocBuf(&Tl.Bs.Stream, Ff->ChunkBytes + BufferSize(Tl.Bs));
+    AllocBuf0(&Tl.Bs.Stream, Ff->ChunkBytes + BufferSize(Tl.Bs));
     mg_CleanUp(0, DeallocBufT(&Tl.Floats);
                   DeallocBufT(&Tl.Ints);
                   DeallocBufT(&Tl.UInts);
@@ -485,17 +491,19 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
                   DeallocBufT(&Tl.Ms);
                   DeallocBufT(&Tl.InnerLoops);
                   DeallocBuf(&Tl.Bs.Stream));
-    buffer ChunkBuf;
-    AllocBuf(&ChunkBuf, Ff->ChunkBytes);
     ff_err Err(ff_err_code::NoError);
     while (true) {
+      buffer ChunkBuf;
+      AllocBuf(&ChunkBuf, Ff->ChunkBytes);
+      mg_CleanUp(1, DeallocBuf(&ChunkBuf));
       ff_err Err = ReadNextChunk(Ff, &Tl, &ChunkBuf);
       if (ErrorOccurred(Err) && Err.Code != ff_err_code::ChunkReadFailed &&
-                                Err.Code != ff_err_code::FileOpenFailed)
+          Err.Code != ff_err_code::FileOpenFailed)
         return Err;
       if (Err.Code == ff_err_code::ChunkReadFailed ||
           Err.Code == ff_err_code::FileOpenFailed)
         break;
+      mg_DismissCleanUp(1);
     }
     DecompressTile<t>(Ff, &Tl);
   } mg_EndFor3
@@ -532,16 +540,16 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
   tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
   Ts.LocalId = Tl->LocalId;
 #endif
-  InitRead(&Tl->Bs, Tl->Bs.Stream);
   const auto & ChunkList = Ff->Chunks[Tl->Subband][Tl->LocalId];
   auto ChunkIt = ConstBegin(ChunkList);
+  InitRead(&Tl->Bs, *ChunkIt);
   for (int Bp = Ff->Prec; Bp >= 0; --Bp) {
     v3i Block;
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
       int Bi = XyzToI(Tl->NBlocksInTile, Block / ZDims);
       bool DoDecode = false;
       if (Bp == Ff->Prec) {
-        DoDecode = ReadEMax(&Tl->Bs, Exponent(Ff->Tolerance), &Tl->EMaxes[Bi]);
+        DoDecode = ReadEMax<t>(&Tl->Bs, Exponent(Ff->Tolerance), &Tl->EMaxes[Bi]);
 #if defined(mg_CollectStats)
         PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
 #endif
@@ -574,7 +582,7 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
         InverseShuffle(Tl->UInts.Data, Tl->Ints.Data);
         InverseBlockTransform(Tl->Ints.Data);
         Dequantize((byte*)Tl->Ints.Data, Prod(ZDims), Tl->EMaxes[Bi],
-                   Ff->Prec - 1, (byte*)Tl->Floats.Data, Ff->Volume.Type);
+                   Ff->Prec - 2, (byte*)Tl->Floats.Data, Ff->Volume.Type);
         CopyBlockInverse<t>(Ff, Tl, Block, K);
       }
       if (LastChunk)
