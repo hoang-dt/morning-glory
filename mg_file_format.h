@@ -16,6 +16,7 @@ struct chunk_stats {
   int Where;
   u64 FirstEightBytes;
   int ActualSize;
+  dynamic_array<int> Sizes;
 };
 struct tile_stats {
   int LocalId;

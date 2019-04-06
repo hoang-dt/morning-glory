@@ -122,8 +122,17 @@ void Reserve(dynamic_array<t>* Array, i64 Capacity) {
   IncreaseCapacity(Array, Capacity);
 }
 
+// TODO: test to see if t is POD, if yes, just memcpy
+template <typename t>
+void Clone(dynamic_array<t>* Dst, const dynamic_array<t>& Src) {
+  Resize(Dst, Size(Src));
+  for (int I = 0; I < Size(Src); ++I) {
+    Clone(&(*Dst)[I], Src[I]);
+  }
+}
+
 template <typename t> mg_ForceInline
-void DeallocateMemory(dynamic_array<t>* Array) {
+void Dealloc(dynamic_array<t>* Array) {
   Alloc->Deallocate(&Array->Buffer);
   Array->Size = Array->Capacity = 0;
 }

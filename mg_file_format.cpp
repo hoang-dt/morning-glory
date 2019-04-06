@@ -30,10 +30,14 @@ void Log(cstr FileName) {
       }
       fprintf(Fp, "\n");
       for (int Ck = 0; Ck < Size(TlStats.CkStats); ++Ck) {
-        fprintf(Fp, "        Chunk %d: %d 0x%016llx %d\n",
+        fprintf(Fp, "        Chunk %d: %d 0x%016llx %d ",
                 Ck, TlStats.CkStats[Ck].Where,
                     TlStats.CkStats[Ck].FirstEightBytes,
                     TlStats.CkStats[Ck].ActualSize);
+        for (int I = 0; I < Size(TlStats.CkStats[Ck].Sizes); ++I) {
+          fprintf(Fp, "%d ", TlStats.CkStats[Ck].Sizes[I]);
+        }
+        fprintf(Fp, "\n");
       }
     }
   }
@@ -161,6 +165,7 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
 #if defined(mg_CollectStats)
   tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
   Ts.LocalId = Tl->LocalId;
+  dynamic_array<int> Sizes;
 #endif
   int Ci = 0; // chunk id
   InitWrite(&Tl->Bs, Tl->Bs.Stream);
@@ -195,10 +200,18 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
           FullyEncoded =
             EncodeBlock(&Tl->UInts[K], Bp, Ff.ChunkBytes * 8, Tl->Ns[Bi],
                         Tl->Ms[Bi], Tl->InnerLoops[Bi], &Tl->Bs);
+#if defined(mg_CollectStats)
+          PushBack(&Sizes, (int)Size(Tl->Bs));
+#endif
         }
         bool ChunkComplete = Size(Tl->Bs) >= Ff.ChunkBytes;
         if (Size(Tl->Bs) > 0 && (ChunkComplete || LastChunk)) {
           WriteChunk(Ff, Tl, Ci++);
+#if defined(mg_CollectStats)
+          auto& LastCkStats = Back(Ts.CkStats);
+          Clone(&(LastCkStats.Sizes), Sizes);
+          Clear(&Sizes);
+#endif
         }
       } while (!FullyEncoded);
     } mg_EndFor3
@@ -571,8 +584,9 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
                       Tl->Ms[Bi], Tl->InnerLoops[Bi], &Tl->Bs);
         ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
 #if defined(mg_CollectStats)
+        int I = ForwardDistance(ConstBegin(ChunkList), ChunkIt);
+        PushBack(&Ts.CkStats[I].Sizes, (int)Size(Tl->Bs));
         if (FullyDecoded || ExhaustedBits) {
-          int I = ForwardDistance(ConstBegin(ChunkList), ChunkIt);
           Ts.CkStats[I].ActualSize = (int)Size(Tl->Bs);
         }
 #endif

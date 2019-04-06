@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mg_macros.h"
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -33,6 +34,18 @@ using float64 = double;
 using f64     = float64;
 using str     = char*;
 using cstr    = const char*;
+
+#define CloneFunc(type) mg_ForceInline void Clone(type* B, type A) { *B = A; }
+CloneFunc(i8)
+CloneFunc(u8)
+CloneFunc(i16)
+CloneFunc(u16)
+CloneFunc(i32)
+CloneFunc(u32)
+CloneFunc(i64)
+CloneFunc(u64)
+CloneFunc(f32)
+CloneFunc(f64)
 
 template <typename t>
 struct Traits {
