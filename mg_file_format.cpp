@@ -49,7 +49,7 @@ struct tile_data {
   bitstream Bs;
   v3i Tile;
   v3i RealDims;
-  v3i NBlocksInTile;
+  v3i NBlocks3;
   int Subband;
   i64 LocalId;
   i64 GlobalId;
@@ -172,8 +172,8 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
   for (int Bp = Ff.Prec; Bp >= 0; --Bp) {
     v3i Block;
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
-      int Bi = XyzToI(Tl->NBlocksInTile, Block / ZDims);
-      int K = XyzToI(Tl->NBlocksInTile, Block / ZDims) * Prod(ZDims);
+      int Bi = XyzToI(Tl->NBlocks3, Block / ZDims);
+      int K = XyzToI(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
       bool DoEncode = false;
       /* Copy the block data into the tile's buffer */
       if (Bp == Ff.Prec) {
@@ -193,15 +193,17 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
       }
       /* Encode and write chunks */
       DoEncode = Ff.Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff.Tolerance) + 1;
-      bool LastChunk = (Bp == 0) && (Bi + 1 == Prod(Tl->NBlocksInTile));
+      bool LastChunk = (Bp == 0) && (Bi + 1 == Prod(Tl->NBlocks3));
+      bool InnerLoop = false;
+      i8 M = 0;
       bool FullyEncoded = true;
       do {
         if (DoEncode) {
           FullyEncoded =
             EncodeBlock(&Tl->UInts[K], Bp, Ff.ChunkBytes * 8, Tl->Ns[Bi],
-                        Tl->Ms[Bi], Tl->InnerLoops[Bi], &Tl->Bs);
+                        M, InnerLoop, &Tl->Bs);
 #if defined(mg_CollectStats)
-          PushBack(&Sizes, (int)Size(Tl->Bs));
+          PushBack(&Sizes, (int)BitSize(Tl->Bs));
 #endif
         }
         bool ChunkComplete = Size(Tl->Bs) >= Ff.ChunkBytes;
@@ -239,15 +241,15 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
     Tl.RealDims = Min(SbPos3 + SbDims - Tile, Ff.TileDims);
     Tl.LocalId = XyzToI(NTilesInSb, (Tile - SbPos3) / Ff.TileDims);
     Tl.GlobalId = NTilesInSubbands(Ff, 0, Sb) + Tl.LocalId;
-    Tl.NBlocksInTile = ((Tl.RealDims + ZDims) - 1) / ZDims;
+    Tl.NBlocks3 = ((Tl.RealDims + ZDims) - 1) / ZDims;
     Tl.Subband = Sb;
     AllocBufT(&Tl.Floats, Prod(Ff.TileDims));
     AllocBufT(&Tl.Ints, Prod(Ff.TileDims));
     AllocBufT(&Tl.UInts, Prod(Ff.TileDims));
-    AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocksInTile));
-    AllocBufT0(&Tl.Ns, Prod(Tl.NBlocksInTile));
-    AllocBufT0(&Tl.Ms, Prod(Tl.NBlocksInTile));
-    AllocBufT0(&Tl.InnerLoops, Prod(Tl.NBlocksInTile));
+    AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocks3));
+    AllocBufT0(&Tl.Ns, Prod(Tl.NBlocks3));
+    AllocBufT0(&Tl.Ms, Prod(Tl.NBlocks3));
+    AllocBufT0(&Tl.InnerLoops, Prod(Tl.NBlocks3));
     AllocBuf0(&Tl.Bs.Stream, Ff.ChunkBytes + BufferSize(Tl.Bs));
     mg_CleanUp(0, DeallocBufT(&Tl.Floats);
                   DeallocBufT(&Tl.Ints);
@@ -492,15 +494,15 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
     Tl.RealDims = Min(SbPos3 + SbDims - Tile, Ff->TileDims);
     Tl.LocalId = XyzToI(NTilesInSb3, (Tile - SbPos3) / Ff->TileDims);
     Tl.GlobalId = NTilesInSubbands(*Ff, 0, Sb) + Tl.LocalId;
-    Tl.NBlocksInTile = ((Tl.RealDims + ZDims) - 1) / ZDims;
+    Tl.NBlocks3 = ((Tl.RealDims + ZDims) - 1) / ZDims;
     Tl.Subband = Sb;
     AllocBufT(&Tl.Floats, Prod(Ff->TileDims));
     AllocBufT(&Tl.Ints, Prod(Ff->TileDims));
     AllocBufT(&Tl.UInts, Prod(Ff->TileDims));
-    AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocksInTile));
-    AllocBufT0(&Tl.Ns, Prod(Tl.NBlocksInTile));
-    AllocBufT0(&Tl.Ms, Prod(Tl.NBlocksInTile));
-    AllocBufT0(&Tl.InnerLoops, Prod(Tl.NBlocksInTile));
+    AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocks3));
+    AllocBufT0(&Tl.Ns, Prod(Tl.NBlocks3));
+    AllocBufT0(&Tl.Ms, Prod(Tl.NBlocks3));
+    AllocBufT0(&Tl.InnerLoops, Prod(Tl.NBlocks3));
     AllocBuf0(&Tl.Bs.Stream, Ff->ChunkBytes + BufferSize(Tl.Bs));
     mg_CleanUp(0, DeallocBufT(&Tl.Floats);
                   DeallocBufT(&Tl.Ints);
@@ -565,7 +567,7 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
   for (int Bp = Ff->Prec; Bp >= 0; --Bp) {
     v3i Block;
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
-      int Bi = XyzToI(Tl->NBlocksInTile, Block / ZDims);
+      int Bi = XyzToI(Tl->NBlocks3, Block / ZDims);
       bool DoDecode = false;
       if (Bp == Ff->Prec) {
         DoDecode = ReadEMax<t>(&Tl->Bs, Exponent(Ff->Tolerance), &Tl->EMaxes[Bi]);
@@ -573,19 +575,21 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
         PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
 #endif
       }
-      int K = XyzToI(Tl->NBlocksInTile, Block / ZDims) * Prod(ZDims);
+      int K = XyzToI(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
       DoDecode = Ff->Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff->Tolerance) + 1;
       bool FullyDecoded = false;
       bool LastChunk = ChunkIt == ConstEnd(ChunkList);
       bool ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
+      bool InnerLoop = 0;
+      i8 M = 0;
       while (DoDecode && !FullyDecoded && !LastChunk) {
         FullyDecoded =
           DecodeBlock(&Tl->UInts[K], Bp, Ff->ChunkBytes * 8, Tl->Ns[Bi],
-                      Tl->Ms[Bi], Tl->InnerLoops[Bi], &Tl->Bs);
+                      M, InnerLoop, &Tl->Bs);
         ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
 #if defined(mg_CollectStats)
         int I = ForwardDistance(ConstBegin(ChunkList), ChunkIt);
-        PushBack(&Ts.CkStats[I].Sizes, (int)Size(Tl->Bs));
+        PushBack(&Ts.CkStats[I].Sizes, (int)BitSize(Tl->Bs));
         if (FullyDecoded || ExhaustedBits) {
           Ts.CkStats[I].ActualSize = (int)Size(Tl->Bs);
         }
