@@ -110,18 +110,34 @@ void TestEncoder() {
   bitstream Bs;
   AllocBuf(&Bs.Stream, 1000000);
   InitWrite(&Bs, Bs.Stream);
+  Fp = fopen("method1.raw", "wb");
   i8 N = 0;
+  int ChunkSize = 1024; // in bits
   for (int Bp = 63; Bp >= 0; --Bp) {
     i8 M = 0;
     bool InnerLoop = false;
     bool FullyEncoded = false;
+    if (Bp == 36)
+      int Stop = 0;
     do {
-      FullyEncoded = EncodeBlock(&InBuf[0], Bp, 1024, N, M, InnerLoop, &Bs);
+      FullyEncoded = EncodeBlock(&InBuf[0], Bp, ChunkSize, N, M, InnerLoop, &Bs);
+      if (BitSize(Bs) == ChunkSize) {
+        Flush(&Bs);
+        fwrite(Bs.Stream.Data, 128, 1, Fp);
+        InitWrite(&Bs, Bs.Stream);
+      }
       //FullyEncoded = EncodeBlock2(&InBuf[0], Bp, N, &Bs);
     } while (!FullyEncoded);
+    //printf("%d %d\n", Bp, (int)BitSize(Bs));
+  }
+  if (BitSize(Bs) > 0) {
+    Flush(&Bs);
+    fwrite(Bs.Stream.Data, Size(Bs), 1, Fp);
   }
   N = 0;
-  Flush(&Bs);
+  fclose(Fp);
+  Fp = fopen("method1.raw", "rb");
+  fread(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
   InitRead(&Bs, Bs.Stream);
   printf("-------------------------- done -------------------\n");
   for (int Bp = 63; Bp >= 0; --Bp) {
@@ -129,18 +145,22 @@ void TestEncoder() {
     bool InnerLoop = false;
     bool FullyDecoded = false;
     do {
-      FullyDecoded = DecodeBlock(&OutBuf[0], Bp, 1024, N, M, InnerLoop, &Bs);
+      FullyDecoded = DecodeBlock(&OutBuf[0], Bp, ChunkSize, N, M, InnerLoop, &Bs);
       //FullyDecoded = DecodeBlock2(&OutBuf[0], Bp, N, &Bs);
+      if (BitSize(Bs) == ChunkSize) {
+        fread(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
+        InitRead(&Bs, Bs.Stream);
+      }
     } while (!FullyDecoded);
   }
-  printf("--------- Input ---------\n");
-  for (int I = 0; I < 64; ++I) {
-    printf("%016llx\n", InBuf[I]);
-  }
-  printf("\n-------- Output --------\n");
-  for (int I = 0; I < 64; ++I) {
-    printf("%016llx\n", OutBuf[I]);
-  }
+  //printf("--------- Input ---------\n");
+  //for (int I = 0; I < 64; ++I) {
+  //  printf("%016llx\n", InBuf[I]);
+  //}
+  //printf("\n-------- Output --------\n");
+  //for (int I = 0; I < 64; ++I) {
+  //  printf("%016llx\n", OutBuf[I]);
+  //}
   DeallocBuf(&Bs.Stream);
 }
 
