@@ -108,6 +108,7 @@ mg_ForceInline u64 Write(bitstream* Bs, u64 N, int Count) {
   return N;
 }
 
+// TODO: should we return N?
 mg_ForceInline u64 WriteLong(bitstream* Bs, u64 N, int Count) {
   mg_Assert(Count >= 0 && Count <= 64);
   int FirstBatchCount = Min(Count, 64 - Bs->BitPos);

@@ -191,6 +191,7 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
         ForwardBlockTransform(&Tl->Ints[K]);
         ForwardShuffle(&Tl->Ints[K], &Tl->UInts[K]);
       }
+      continue;
       /* Encode and write chunks */
       DoEncode = Ff.Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff.Tolerance) + 1;
       bool LastChunk = (Bp == 0) && (Bi + 1 == Prod(Tl->NBlocks3));

@@ -99,8 +99,55 @@ params ParseParams(int Argc, const char** Argv) {
   return P;
 }
 
+void TestEncoder() {
+  FILE* Fp = fopen("blocks.raw", "rb");
+  dynamic_array<u64> InBuf;
+  Init(&InBuf, 14 * 64);
+  dynamic_array<u64> OutBuf;
+  Init(&OutBuf, Size(InBuf), 0ull);
+  fread(InBuf.Buffer.Data, sizeof(u64), 14 * 64, Fp);
+  fclose(Fp);
+  bitstream Bs;
+  AllocBuf(&Bs.Stream, 1000000);
+  InitWrite(&Bs, Bs.Stream);
+  i8 N = 0;
+  for (int Bp = 63; Bp >= 0; --Bp) {
+    i8 M = 0;
+    bool InnerLoop = false;
+    bool FullyEncoded = false;
+    do {
+      FullyEncoded = EncodeBlock(&InBuf[0], Bp, 1024, N, M, InnerLoop, &Bs);
+      //FullyEncoded = EncodeBlock2(&InBuf[0], Bp, N, &Bs);
+    } while (!FullyEncoded);
+  }
+  N = 0;
+  Flush(&Bs);
+  InitRead(&Bs, Bs.Stream);
+  printf("-------------------------- done -------------------\n");
+  for (int Bp = 63; Bp >= 0; --Bp) {
+    i8 M = 0;
+    bool InnerLoop = false;
+    bool FullyDecoded = false;
+    do {
+      FullyDecoded = DecodeBlock(&OutBuf[0], Bp, 1024, N, M, InnerLoop, &Bs);
+      //FullyDecoded = DecodeBlock2(&OutBuf[0], Bp, N, &Bs);
+    } while (!FullyDecoded);
+  }
+  printf("--------- Input ---------\n");
+  for (int I = 0; I < 64; ++I) {
+    printf("%016llx\n", InBuf[I]);
+  }
+  printf("\n-------- Output --------\n");
+  for (int I = 0; I < 64; ++I) {
+    printf("%016llx\n", OutBuf[I]);
+  }
+  DeallocBuf(&Bs.Stream);
+}
+
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
+  TestEncoder();
+  return 0;
   SetHandleAbortSignals();
   params P = ParseParams(Argc, Argv);
   file_format Ff;

@@ -9,7 +9,8 @@
 namespace mg {
 
 template <typename t> mg_ForceInline
-dynamic_array<t>::dynamic_array(allocator* Alloc) : Buffer(), Size(0), Capacity(0), Alloc(Alloc) {
+dynamic_array<t>::dynamic_array(allocator* Alloc) :
+  Buffer(), Size(0), Capacity(0), Alloc(Alloc) {
   mg_Assert(Alloc);
 }
 
@@ -27,14 +28,14 @@ t& dynamic_array<t>::operator[](i64 Idx) {
 
 template <typename t> mg_ForceInline
 void Init(dynamic_array<t>* Array, i64 Size){
-  Alloc->Allocate(&Array->Buffer, Size * sizeof(t));
+  Array->Alloc->Alloc(&Array->Buffer, Size * sizeof(t));
   Array->Size = Array->Capacity = Size;
 }
 
 template <typename t> mg_ForceInline
 void Init(dynamic_array<t>* Array, i64 Size, const t& Val) {
   Init(Array, Size);
-  Fill((t*)Buffer.Data, (t*)Buffer.Data + Size, Val);
+  Fill((t*)Array->Buffer.Data, (t*)Array->Buffer.Data + Size, Val);
 }
 
 template <typename t> mg_ForceInline
