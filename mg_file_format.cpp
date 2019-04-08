@@ -204,7 +204,7 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
           PushBack(&Sizes, (int)BitSize(Tl->Bs));
 #endif
         }
-        bool ChunkComplete = Size(Tl->Bs) >= Ff.ChunkBytes;
+        bool ChunkComplete = BitSize(Tl->Bs) >= Ff.ChunkBytes * 8;
         if (Size(Tl->Bs) > 0 && (ChunkComplete || LastChunk)) {
           WriteChunk(Ff, Tl, Ci++);
 #if defined(mg_CollectStats)

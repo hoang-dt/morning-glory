@@ -99,11 +99,13 @@ params ParseParams(int Argc, const char** Argv) {
   return P;
 }
 
+int MaxNBlocks = 1516;
+
 void OldEncode(int BlockBegin, int BlockEnd) {
   FILE* Fp = fopen("blocks.raw", "rb");
   dynamic_array<u64> InBuf;
-  Init(&InBuf, 14 * 64);
-  fread(InBuf.Buffer.Data, sizeof(u64), 14 * 64, Fp);
+  Init(&InBuf, MaxNBlocks * 64);
+  fread(InBuf.Buffer.Data, sizeof(u64), MaxNBlocks * 64, Fp);
   fclose(Fp);
   bitstream Bs;
   AllocBuf(&Bs.Stream, 1000000);
@@ -125,13 +127,13 @@ void OldEncode(int BlockBegin, int BlockEnd) {
 void TestEncoder(int ChunkSize, int BlockBegin, int BlockEnd) {
   FILE* Fp = fopen("blocks.raw", "rb");
   dynamic_array<u64> InBuf;
-  Init(&InBuf, 14 * 64);
+  Init(&InBuf, MaxNBlocks * 64);
   dynamic_array<u64> OutBuf;
   Init(&OutBuf, Size(InBuf), 0ull);
-  fread(InBuf.Buffer.Data, sizeof(u64), 14 * 64, Fp);
+  fread(InBuf.Buffer.Data, sizeof(u64), MaxNBlocks * 64, Fp);
   fclose(Fp);
   bitstream Bs;
-  AllocBuf(&Bs.Stream, 1000000);
+  AllocBuf(&Bs.Stream, 10000000);
   InitWrite(&Bs, Bs.Stream);
   Fp = fopen("method1.raw", "wb");
   dynamic_array<i8> Ns;
