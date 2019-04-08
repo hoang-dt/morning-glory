@@ -17,7 +17,7 @@ bool EncodeBlock2(const u64* Block, int Bitplane, i8& N, bitstream* Bs)
   WriteLong(Bs, X, N);
   u64 Y = X;
   for (int I = 0; I < N; ++I) {
-    printf("%d", Y & 1);
+    //printf("%d", Y & 1);
     Y >>= 1;
   }
   X >>= N;
@@ -28,9 +28,9 @@ bool EncodeBlock2(const u64* Block, int Bitplane, i8& N, bitstream* Bs)
     //printf("0 %d %llu\n", N, 0);
   // TODO: we may be able to speed this up by getting rid of the shift of X
   int Bit = 0;
-  for (; N < 64 && (Bit = Write(Bs, !!X), printf("%d", Bit), Bit); X >>= 1, ++N) {
+  for (; N < 64 && (Bit = Write(Bs, !!X), /*printf("%d", Bit),*/ Bit); X >>= 1, ++N) {
     //printf("1 %d\n", Bit);
-    for (; N < 64 - 1 && (!(Bit = Write(Bs, X & 1u)), printf("%d", Bit), !Bit); X >>= 1, ++N);
+    for (; N < 64 - 1 && (!(Bit = Write(Bs, X & 1u)), /*printf("%d", Bit),*/ !Bit); X >>= 1, ++N);
     //printf("2 %d\n", Bit);
   }
   mg_Assert(N <= 64);
@@ -123,11 +123,28 @@ bool DecodeBlock(u64* Block, int Bitplane, int S, i8& N, i8& M,
   /* unary run-length decode remainder of bit plane */
   u64 Lb = 1;
   if (InnerLoop) goto INNER_LOOP;
-  for (; BitSize(*Bs) < S && N < 64 && (Lb = Read(Bs)); X += 1ull << (P++), ++N) {
+  for (; BitSize(*Bs) < S && N < 64;) {
+    Lb = Read(Bs);
+    if (Lb) {
  INNER_LOOP:
-    for (; BitSize(*Bs) < S && N < 64 - 1 && !Read(Bs); ++P, ++N);
-    if (BitSize(*Bs) >= S)
-      InnerLoop = true;
+      for (; BitSize(*Bs) < S && N < 64 - 1;) {
+        u64 Li = Read(Bs);
+        if (Li) {
+          break;
+        } else {
+          ++P;
+          ++N;
+        }
+      }
+      if (BitSize(*Bs) >= S) {
+        InnerLoop = true;
+        break;
+      }
+      X += 1ull << (P++);
+      ++N;
+    } else {
+      break;
+    }
   }
   /* deposit bit plane from x */
   for (int I = M; X; ++I, X >>= 1)

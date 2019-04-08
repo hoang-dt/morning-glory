@@ -151,7 +151,7 @@ void TestEncoder(int ChunkSize, int BlockBegin, int BlockEnd) {
       bool FullyEncoded = false;
       if (Bp == 56 && I == 12)
         int Stop = 0;
-      printf("\nBit plane %d block %d\n", Bp, I);
+      //printf("\nBit plane %d block %d\n", Bp, I);
       do {
         //if (Bp == 56 && I == 12)
           //FullyEncoded = EncodeBlock(&InBuf[I * 64], Bp, ChunkSize, Ns[I - BlockBegin], M, InnerLoop, &Bs, true);
@@ -220,7 +220,7 @@ int main(int Argc, const char** Argv) {
   ToInt(Argv[1], &ChunkSize);
   ToInt(Argv[2], &BlockBegin);
   ToInt(Argv[3], &BlockEnd);
-  //OldEncode(BlockBegin, BlockEnd);
+  OldEncode(BlockBegin, BlockEnd);
   TestEncoder(ChunkSize, BlockBegin, BlockEnd);
   return 0;
   SetHandleAbortSignals();
