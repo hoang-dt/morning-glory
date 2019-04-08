@@ -41,10 +41,10 @@ bool EncodeBlock(const u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,
 // TODO: pointer aliasing?
 bool DecodeBlock(u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,
                  bool& InnerLoop, bitstream* Bs);
-bool EncodeBlock2(const u64* Block, int Bitplane, i8& N, bitstream* Bs);
+bool EncodeBlockOriginal(const u64* Block, int Bitplane, i8& N, bitstream* Bs);
 /* Decode a single bit plane of a single zfp block */
 // TODO: pointer aliasing?
-bool DecodeBlock2(u64* Block, int Bitplane, i8& N, bitstream* Bs);
+bool DecodeBlockOriginal(u64* Block, int Bitplane, i8& N, bitstream* Bs);
 
 } // namespace mg
 

@@ -58,8 +58,6 @@ struct tile_data {
   typed_buffer<u64> UInts;
   typed_buffer<i16> EMaxes;
   typed_buffer<i8> Ns;
-  typed_buffer<i8> Ms;
-  typed_buffer<bool> InnerLoops;
 };
 
 i64 NTilesInSubbands(const file_format& Ff, int FromSb, int ToSb) {
@@ -147,7 +145,7 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Tl, int Ci) {
 #if defined(mg_CollectStats)
   tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
   const u64* U64Ptr = (u64*)(Tl->Bs.Stream.Data);
-  PushBack(&(Ts.CkStats), chunk_stats{(int)Where, *U64Ptr, (int)Size(Tl->Bs)});
+  PushBack(&(Ts.CkStats), chunk_stats{(int)Where, *U64Ptr, (int)Size(Tl->Bs), {}});
 #endif
   fwrite(Tl->Bs.Stream.Data, Ff.ChunkBytes, 1, Fp);
   mg_FSeek(Fp, Ff.MetaBytes + sizeof(u64) * Tl->GlobalId, SEEK_SET);
@@ -191,7 +189,6 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
         ForwardBlockTransform(&Tl->Ints[K]);
         ForwardShuffle(&Tl->Ints[K], &Tl->UInts[K]);
       }
-      continue;
       /* Encode and write chunks */
       DoEncode = Ff.Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff.Tolerance) + 1;
       bool LastChunk = (Bp == 0) && (Bi + 1 == Prod(Tl->NBlocks3));
@@ -249,16 +246,12 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
     AllocBufT(&Tl.UInts, Prod(Ff.TileDims));
     AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocks3));
     AllocBufT0(&Tl.Ns, Prod(Tl.NBlocks3));
-    AllocBufT0(&Tl.Ms, Prod(Tl.NBlocks3));
-    AllocBufT0(&Tl.InnerLoops, Prod(Tl.NBlocks3));
     AllocBuf0(&Tl.Bs.Stream, Ff.ChunkBytes + BufferSize(Tl.Bs));
     mg_CleanUp(0, DeallocBufT(&Tl.Floats);
                   DeallocBufT(&Tl.Ints);
                   DeallocBufT(&Tl.UInts);
                   DeallocBufT(&Tl.EMaxes);
                   DeallocBufT(&Tl.Ns);
-                  DeallocBufT(&Tl.Ms);
-                  DeallocBufT(&Tl.InnerLoops);
                   DeallocBuf(&Tl.Bs.Stream));
     ff_err Err = WriteTile<t>(Ff, &Tl);
     if (ErrorOccurred(Err))
@@ -467,7 +460,7 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
 #if defined(mg_CollectStats)
       tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
       const u64* U64Ptr = (u64*)((*ChunkIt).Data);
-      PushBack(&(Ts.CkStats), chunk_stats{(int)Where, *U64Ptr, 0});
+      PushBack(&(Ts.CkStats), chunk_stats{(int)Where, *U64Ptr, 0, {}});
 #endif
     } else { // cannot read the chunk in the file
       return mg_Error(ff_err_code::FileReadFailed);
@@ -502,16 +495,12 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
     AllocBufT(&Tl.UInts, Prod(Ff->TileDims));
     AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocks3));
     AllocBufT0(&Tl.Ns, Prod(Tl.NBlocks3));
-    AllocBufT0(&Tl.Ms, Prod(Tl.NBlocks3));
-    AllocBufT0(&Tl.InnerLoops, Prod(Tl.NBlocks3));
     AllocBuf0(&Tl.Bs.Stream, Ff->ChunkBytes + BufferSize(Tl.Bs));
     mg_CleanUp(0, DeallocBufT(&Tl.Floats);
                   DeallocBufT(&Tl.Ints);
                   DeallocBufT(&Tl.UInts);
                   DeallocBufT(&Tl.EMaxes);
                   DeallocBufT(&Tl.Ns);
-                  DeallocBufT(&Tl.Ms);
-                  DeallocBufT(&Tl.InnerLoops);
                   DeallocBuf(&Tl.Bs.Stream));
     ff_err Err(ff_err_code::NoError);
     while (true) {

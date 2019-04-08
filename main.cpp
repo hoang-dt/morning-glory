@@ -113,9 +113,7 @@ void OldEncode(int BlockBegin, int BlockEnd) {
   Fp = fopen("method2.raw", "wb");
   for (int Bp = 63; Bp >= 0; --Bp) {
     for (int I = BlockBegin; I < BlockEnd; ++I) {
-      EncodeBlock2(&InBuf[I * 64], Bp, Ns[I - BlockBegin], &Bs);
-      int Size = BitSize(Bs);
-
+      EncodeBlockOriginal(&InBuf[I * 64], Bp, Ns[I - BlockBegin], &Bs);
     }
   }
   if (BitSize(Bs) > 0) {
@@ -145,7 +143,6 @@ void TestEncoder(int ChunkSize, int BlockBegin, int BlockEnd) {
       bool FullyEncoded = false;
       do {
         FullyEncoded = EncodeBlock(&InBuf[I * 64], Bp, ChunkSize, Ns[I - BlockBegin], M, InnerLoop, &Bs);
-        int Size = BitSize(Bs);
         if (BitSize(Bs) == ChunkSize) {
           Flush(&Bs);
           fwrite(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
@@ -189,13 +186,13 @@ void TestEncoder(int ChunkSize, int BlockBegin, int BlockEnd) {
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
-  int ChunkSize, BlockBegin, BlockEnd;
-  ToInt(Argv[1], &ChunkSize);
-  ToInt(Argv[2], &BlockBegin);
-  ToInt(Argv[3], &BlockEnd);
-  OldEncode(BlockBegin, BlockEnd);
-  TestEncoder(ChunkSize, BlockBegin, BlockEnd);
-  return 0;
+  //int ChunkSize, BlockBegin, BlockEnd;
+  //ToInt(Argv[1], &ChunkSize);
+  //ToInt(Argv[2], &BlockBegin);
+  //ToInt(Argv[3], &BlockEnd);
+  //OldEncode(BlockBegin, BlockEnd);
+  //TestEncoder(ChunkSize, BlockBegin, BlockEnd);
+  //return 0;
   SetHandleAbortSignals();
   params P = ParseParams(Argc, Argv);
   file_format Ff;
