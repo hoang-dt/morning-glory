@@ -55,7 +55,7 @@ bool DecodeBlock2(u64* Block, int Bitplane, i8& N, bitstream* Bs)
 }
 /* Only return true if the block is fully encoded */
 bool EncodeBlock(const u64* Block, int Bitplane, int S, i8& N, i8& M,
-                 bool& InnerLoop, bitstream* Bs, bool Print)
+                 bool& InnerLoop, bitstream* Bs)
 {
   /* extract bit plane Bitplane to X */
   mg_Assert(N <= 64);
@@ -65,28 +65,17 @@ bool EncodeBlock(const u64* Block, int Bitplane, int S, i8& N, i8& M,
   i8 P = Min(N - M, S - (int)BitSize(*Bs));
   if (P > 0) {
     WriteLong(Bs, X, P);
-    u64 Y = X;
-    for (int J = 0; J < P; ++J) {
-      if (Print) printf("%d", (Y & 1));
-      Y >>= 1;
-    }
     X >>= P; // P == 64 is fine since in that case we don't need X any more
   }
-  //printf(" ");
   u64 Lb = 1;
-  if (InnerLoop)
-    goto INNER_LOOP;
+  if (InnerLoop) goto INNER_LOOP;
   // TODO: we may be able to speed this up by getting rid of the shift of X
   // or the call bit BitSize()
   for (; BitSize(*Bs) < S && N < 64;) {
-    Lb = Write(Bs, !!X);
-    if (Print) printf("%d", Lb);
-    if (Lb) {
+    if ((Lb = Write(Bs, !!X))) {
 INNER_LOOP:
       for (; BitSize(*Bs) < S && N < 64 - 1;) {
-        u64 Li = Write(Bs, X & 1u);
-        if (Print) printf("%d", Li);
-        if (Li) {
+        if (Write(Bs, X & 1u)) {
           break;
         } else {
           X >>= 1;
@@ -107,7 +96,7 @@ INNER_LOOP:
   }
   mg_Assert(N <= 64);
   M += P;
-  //printf("\n");
+  // TODO: it seems M == N is always true?
   return ((N == 64 && M == N) || Lb == 0);
 }
 
@@ -117,23 +106,19 @@ bool DecodeBlock(u64* Block, int Bitplane, int S, i8& N, i8& M,
 {
   i8 P = Min(N - M, S - (int)BitSize(*Bs));
   /* decode first N bits of bit plane #Bitplane */
-  u64 X = 0;
-  if (P > 0)
-    X = ReadLong(Bs, P);
+  u64 X = P > 0 ? ReadLong(Bs, P) : 0;
   /* unary run-length decode remainder of bit plane */
   u64 Lb = 1;
   if (InnerLoop) goto INNER_LOOP;
   for (; BitSize(*Bs) < S && N < 64;) {
-    Lb = Read(Bs);
-    if (Lb) {
+    if ((Lb = Read(Bs))) {
  INNER_LOOP:
       for (; BitSize(*Bs) < S && N < 64 - 1;) {
-        u64 Li = Read(Bs);
-        if (Li) {
+        if (Read(Bs)) {
           break;
         } else {
-          ++P;
           ++N;
+          ++P;
         }
       }
       if (BitSize(*Bs) >= S) {

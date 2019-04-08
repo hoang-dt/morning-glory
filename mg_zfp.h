@@ -36,7 +36,7 @@ void PadBlock(t* P, int N, int S);
 /* Encode a single bit plane of a single zfp block */
 // TODO: turn this into a template?
 bool EncodeBlock(const u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,
-                 bool& InnerLoop, bitstream* Bs, bool Print = false);
+                 bool& InnerLoop, bitstream* Bs);
 /* Decode a single bit plane of a single zfp block */
 // TODO: pointer aliasing?
 bool DecodeBlock(u64* Block, int Bitplane, int BitsMax, i8& N, i8& M,
