@@ -99,7 +99,35 @@ params ParseParams(int Argc, const char** Argv) {
   return P;
 }
 
-void TestEncoder() {
+void OldEncode(int BlockBegin, int BlockEnd) {
+  FILE* Fp = fopen("blocks.raw", "rb");
+  dynamic_array<u64> InBuf;
+  Init(&InBuf, 14 * 64);
+  fread(InBuf.Buffer.Data, sizeof(u64), 14 * 64, Fp);
+  fclose(Fp);
+  bitstream Bs;
+  AllocBuf(&Bs.Stream, 1000000);
+  InitWrite(&Bs, Bs.Stream);
+  dynamic_array<i8> Ns;
+  Init(&Ns, BlockEnd - BlockBegin, (i8)0);
+  Fp = fopen("method2.raw", "wb");
+  for (int Bp = 63; Bp >= 0; --Bp) {
+    for (int I = BlockBegin; I < BlockEnd; ++I) {
+      //printf("\nBit plane %d block %d\n", Bp, I);
+      if (I == 12 && Bp == 56)
+        int Stop = 0;
+      EncodeBlock2(&InBuf[I * 64], Bp, Ns[I - BlockBegin], &Bs);
+      int Size = BitSize(Bs);
+
+    }
+  }
+  if (BitSize(Bs) > 0) {
+    Flush(&Bs);
+    fwrite(Bs.Stream.Data, Size(Bs), 1, Fp);
+  }
+}
+
+void TestEncoder(int ChunkSize, int BlockBegin, int BlockEnd) {
   FILE* Fp = fopen("blocks.raw", "rb");
   dynamic_array<u64> InBuf;
   Init(&InBuf, 14 * 64);
@@ -111,47 +139,63 @@ void TestEncoder() {
   AllocBuf(&Bs.Stream, 1000000);
   InitWrite(&Bs, Bs.Stream);
   Fp = fopen("method1.raw", "wb");
-  i8 N = 0;
-  int ChunkSize = 1024; // in bits
+  //i8 N = 0;
+  //int ChunkSize = 512; // in bits
+  //int NBlocks = 14;
+  dynamic_array<i8> Ns;
+  Init(&Ns, BlockEnd - BlockBegin, (i8)0);
   for (int Bp = 63; Bp >= 0; --Bp) {
-    i8 M = 0;
-    bool InnerLoop = false;
-    bool FullyEncoded = false;
-    if (Bp == 36)
-      int Stop = 0;
-    do {
-      FullyEncoded = EncodeBlock(&InBuf[0], Bp, ChunkSize, N, M, InnerLoop, &Bs);
-      if (BitSize(Bs) == ChunkSize) {
-        Flush(&Bs);
-        fwrite(Bs.Stream.Data, 128, 1, Fp);
-        InitWrite(&Bs, Bs.Stream);
-      }
-      //FullyEncoded = EncodeBlock2(&InBuf[0], Bp, N, &Bs);
-    } while (!FullyEncoded);
-    //printf("%d %d\n", Bp, (int)BitSize(Bs));
+    for (int I = BlockBegin; I < BlockEnd; ++I) {
+      i8 M = 0;
+      bool InnerLoop = false;
+      bool FullyEncoded = false;
+      if (Bp == 56 && I == 12)
+        int Stop = 0;
+      printf("\nBit plane %d block %d\n", Bp, I);
+      do {
+        //if (Bp == 56 && I == 12)
+          //FullyEncoded = EncodeBlock(&InBuf[I * 64], Bp, ChunkSize, Ns[I - BlockBegin], M, InnerLoop, &Bs, true);
+        //else
+          FullyEncoded = EncodeBlock(&InBuf[I * 64], Bp, ChunkSize, Ns[I - BlockBegin], M, InnerLoop, &Bs);
+        int Size = BitSize(Bs);
+        if (Size >= 1024)
+          int Stop = 0;
+        //if (InnerLoop)
+          //printf("Inner loop");
+        if (BitSize(Bs) == ChunkSize) {
+          Flush(&Bs);
+          fwrite(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
+          InitWrite(&Bs, Bs.Stream);
+        }
+        //FullyEncoded = EncodeBlock2(&InBuf[0], Bp, N, &Bs);
+      } while (!FullyEncoded);
+      //printf("%d %d\n", Bp, (int)BitSize(Bs));
+    }
   }
   if (BitSize(Bs) > 0) {
     Flush(&Bs);
     fwrite(Bs.Stream.Data, Size(Bs), 1, Fp);
   }
-  N = 0;
+  Fill(Begin(Ns), End(Ns), (i8)0);
   fclose(Fp);
   Fp = fopen("method1.raw", "rb");
   fread(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
   InitRead(&Bs, Bs.Stream);
   printf("-------------------------- done -------------------\n");
   for (int Bp = 63; Bp >= 0; --Bp) {
-    i8 M = 0;
-    bool InnerLoop = false;
-    bool FullyDecoded = false;
-    do {
-      FullyDecoded = DecodeBlock(&OutBuf[0], Bp, ChunkSize, N, M, InnerLoop, &Bs);
-      //FullyDecoded = DecodeBlock2(&OutBuf[0], Bp, N, &Bs);
-      if (BitSize(Bs) == ChunkSize) {
-        fread(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
-        InitRead(&Bs, Bs.Stream);
-      }
-    } while (!FullyDecoded);
+    for (int I = BlockBegin; I < BlockEnd; ++I) {
+      i8 M = 0;
+      bool InnerLoop = false;
+      bool FullyDecoded = false;
+      do {
+        FullyDecoded = DecodeBlock(&OutBuf[I * 64], Bp, ChunkSize, Ns[I - BlockBegin], M, InnerLoop, &Bs);
+        //FullyDecoded = DecodeBlock2(&OutBuf[0], Bp, N, &Bs);
+        if (BitSize(Bs) == ChunkSize) {
+          fread(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
+          InitRead(&Bs, Bs.Stream);
+        }
+      } while (!FullyDecoded);
+    }
   }
   //printf("--------- Input ---------\n");
   //for (int I = 0; I < 64; ++I) {
@@ -161,12 +205,23 @@ void TestEncoder() {
   //for (int I = 0; I < 64; ++I) {
   //  printf("%016llx\n", OutBuf[I]);
   //}
+  i64 Error = 0;
+  for (int I = BlockBegin; I < BlockEnd; ++I) {
+    for (int J = 0; J < 64; ++J)
+      Error += InBuf[I * 64 + J] - OutBuf[I * 64 + J];
+  }
+  printf("%llu\n", Error);
   DeallocBuf(&Bs.Stream);
 }
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
-  TestEncoder();
+  int ChunkSize, BlockBegin, BlockEnd;
+  ToInt(Argv[1], &ChunkSize);
+  ToInt(Argv[2], &BlockBegin);
+  ToInt(Argv[3], &BlockEnd);
+  //OldEncode(BlockBegin, BlockEnd);
+  TestEncoder(ChunkSize, BlockBegin, BlockEnd);
   return 0;
   SetHandleAbortSignals();
   params P = ParseParams(Argc, Argv);
