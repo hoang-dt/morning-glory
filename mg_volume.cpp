@@ -15,11 +15,12 @@ error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
   if (Ok.Code != err_code::NoError)
     return Ok;
   Volume->DimsCompact = Stuff3Ints64(Dims);
+  Volume->Extent = extent(v3i(0, 0, 0), Dims);
   Volume->Type = Type;
   return mg_Error(err_code::NoError);
 }
 
-void Copy(sub_volume* Dst, const sub_volume& Src) {
+void Copy(volume* Dst, const volume& Src) {
 #define Body(type)\
   mg_Assert(Src.Extent.DimsCompact == Dst->Extent.DimsCompact);\
   mg_Assert(Dst->Buffer.Data && Src.Buffer.Data);\
@@ -49,12 +50,6 @@ void Copy(sub_volume* Dst, const sub_volume& Src) {
 }
 
 void Clone(volume* Dst, const volume& Src, allocator* Alloc) {
-  Clone(&Dst->Buffer, Src.Buffer, Alloc);
-  Dst->DimsCompact = Src.DimsCompact;
-  Dst->Type = Src.Type;
-}
-
-void Clone(sub_volume* Dst, const sub_volume& Src, allocator* Alloc) {
   Clone(&Dst->Buffer, Src.Buffer, Alloc);
   Dst->DimsCompact = Src.DimsCompact;
   Dst->Type = Src.Type;

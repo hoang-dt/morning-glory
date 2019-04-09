@@ -134,7 +134,7 @@ void Clone(dynamic_array<t>* Dst, const dynamic_array<t>& Src) {
 
 template <typename t> mg_ForceInline
 void Dealloc(dynamic_array<t>* Array) {
-  Alloc->Deallocate(&Array->Buffer);
+  Array->Alloc->Dealloc(&Array->Buffer);
   Array->Size = Array->Capacity = 0;
 }
 

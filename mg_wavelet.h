@@ -24,8 +24,8 @@ template <typename t> void InverseLiftExtrapolateCdf53Z(t* F, v3i N, v3i NBig, v
 
 void Cdf53Forward(volume* Vol, int NLevels);
 void Cdf53Inverse(volume* Vol, int NLevels);
-void Cdf53ForwardExtrapolate(sub_volume* Vol);
-void Cdf53InverseExtrapolate(sub_volume* Vol);
+void Cdf53ForwardExtrapolate(volume* Vol);
+void Cdf53InverseExtrapolate(volume* Vol);
 
 template <typename t>
 struct dynamic_array;

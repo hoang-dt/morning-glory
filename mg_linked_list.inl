@@ -10,7 +10,8 @@ template <typename t> mg_ForceInline
 list<t>::list(allocator* Alloc) : Alloc(Alloc) {}
 
 template <typename t>
-list_iterator<t> Insert(list<t>* List, list_iterator<t> Where, const t& Payload) {
+list_iterator<t> Insert(list<t>* List, list_iterator<t> Where, const t& Payload)
+{
   buffer Buf;
   List->Alloc->Alloc(&Buf, sizeof(list_node<t>));
   list_node<t>* NewNode = (list_node<t>*)Buf.Data;
@@ -39,7 +40,7 @@ list_iterator<t> PushBack(list<t>* List, const t& Payload) {
 }
 
 template <typename t>
-void Deallocate(list<t>* List) {
+void Dealloc(list<t>* List) {
   auto Node = List->Head;
   while (Node) {
     buffer Buf((byte*)Node, sizeof(list_node<t>), List->Alloc);
@@ -63,13 +64,13 @@ list_iterator<t>& list_iterator<t>::operator++() {
 }
 
 template <typename t> mg_ForceInline
-list_node<t>* list_iterator<t>::operator->() {
+list_node<t>* list_iterator<t>::operator->() const {
   mg_Assert(Node);
   return Node;
 }
 
 template <typename t> mg_ForceInline
-t& list_iterator<t>::operator*() {
+t& list_iterator<t>::operator*() const {
   mg_Assert(Node);
   return Node->Payload;
 }
@@ -93,13 +94,13 @@ list_iterator<t> End(list<t>& List) {
   return list_iterator<t>();
 }
 template <typename t> mg_ForceInline
-const list_iterator<t> ConstBegin(const list<t>& List) {
-  return list_iterator<t>{List.Head};
+list_iterator<const t> ConstBegin(const list<t>& List) {
+  return list_iterator<const t>{(list_node<const t>*)List.Head};
 }
 template <typename t> mg_ForceInline
-const list_iterator<t> ConstEnd(const list<t>& List) {
+list_iterator<const t> ConstEnd(const list<t>& List) {
   (void)List;
-  return list_iterator<t>();
+  return list_iterator<const t>();
 }
 
 } // namespace mg

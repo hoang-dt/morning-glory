@@ -23,6 +23,20 @@ f64 SquaredError(const byte* F, const byte* G, i64 Size, data_type Type) {
 #undef Body
 }
 
+//f64 SquaredError(const volume& F, const volume& G) {
+//#define Body(type)\
+//  const type* FPtr = (type*)F.Buffer.Data;\
+//  const type* GPtr = (type*)G.Buffer.Data;\
+//  f64 Err = 0;
+//  for () {
+//    for () {
+//      for () {
+//
+//      }
+//    }
+//  }
+//}
+
 f64 RMSError(const byte* F, const byte* G, i64 Size, data_type Type) {
   return sqrt(SquaredError(F, G, Size, Type) / Size);
 }
@@ -38,8 +52,28 @@ f64 PSNR(const byte* F, const byte* G, i64 Size, data_type Type) {
 
   TypeChooser(Type)
   return 0;
-#undef Body 
+#undef Body
 }
+
+//f64 PSNR(const volume& F, const volume& G) {
+//  mg_Assert(F.Type == G.Type);
+//  mg_Assert(SmallDims(F) == SmallDims(G));
+//#define Body(type)\
+//  type MinVal = Traits<type>::Max;\
+//  type MaxVal = Traits<type>::Min;\
+//  f64 Err
+//  auto FIt = ConstBegin(F);
+//  auto GIt = ConstBegin(G);
+//  auto FEnd = ConstEnd(F);
+//  while (FIt != FEnd) {
+//
+//  }
+//  i64 N = Prod<i64>(SmallDims(F));
+//  for (i64 I = 0; I < N; ++I) {
+//
+//  }
+//#undef Body
+//}
 
 void ConvertToNegabinary(const byte* FIn, i64 Size, byte* FOut, data_type Type) {
 #define Body(type)\

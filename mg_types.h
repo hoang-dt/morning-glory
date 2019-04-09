@@ -2,6 +2,7 @@
 
 #include "mg_macros.h"
 #include <inttypes.h>
+#include <float.h>
 #include <stdint.h>
 #include <stdio.h>
 

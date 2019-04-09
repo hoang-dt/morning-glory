@@ -86,6 +86,8 @@ struct Traits<f32> {
   using integral_t = i32;
   static constexpr int ExpBits = 8;
   static constexpr int ExpBias = (1 << (ExpBits - 1)) - 1;
+  static constexpr f32 Min = -FLT_MAX;
+  static constexpr f32 Max = FLT_MAX;
 };
 
 template <>
@@ -93,6 +95,8 @@ struct Traits<f64> {
   using integral_t = i64;
   static constexpr int ExpBits = 11;
   static constexpr int ExpBias = (1 << (ExpBits - 1)) - 1;
+  static constexpr f64 Min = -DBL_MAX;
+  static constexpr f64 Max = DBL_MAX;
 };
 
 /* Something to replace std::array */

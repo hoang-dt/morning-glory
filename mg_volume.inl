@@ -1,9 +1,12 @@
 #pragma once
 
+#include "mg_assert.h"
 #include "mg_bitops.h"
+#include "mg_common_types.h"
 #include "mg_types.h"
 
 namespace mg {
+
 
 mg_ForceInline
 extent::extent() = default;
@@ -37,12 +40,51 @@ bool IsFace(extent Ext) {
 }
 
 mg_ForceInline
-sub_volume::sub_volume() = default;
+v3i Pos(extent Ext) {
+  return Extract3Ints64(Ext.PosCompact);
+}
 
 mg_ForceInline
-sub_volume::sub_volume(volume Vol)
-  : volume(Vol)
-  , Extent(v3i(0, 0, 0), Extract3Ints64(Vol.DimsCompact)) {}
+v3i Dims(extent Ext) {
+  return Extract3Ints64(Ext.DimsCompact);
+}
+
+mg_ForceInline
+v3i BigDims(const volume& Vol) {
+  return Extract3Ints64(Vol.DimsCompact);
+}
+mg_ForceInline
+v3i SmallDims(const volume& Vol) {
+  return Dims(Vol.Extent);
+}
+
+i64 Size(const volume& Vol) {
+  return Prod<i64>(Extract3Ints64(Vol.Extent.DimsCompact));
+}
+
+template <typename t> mg_ForceInline
+t& At(volume& Vol, i64 I) {
+  mg_Assert(MatchTypes<t>(Vol.Type));
+  mg_Assert(I < Prod<i64>(Dims(Vol.Extent)));
+  v3i Pos = IToXyz(I, Dims(Vol.Extent)) + Pos(Vol.Extent);
+  volume& Vol = (volume&)Vol;
+  i64 J = XyzToI(Dims(Vol), Pos);
+  mg_Assert(I < Prod<i64>(Extract3Ints64(Vol.DimsCompact)));
+  t* Ptr = (t*)Vol.Buffer.Data;
+  return Ptr[I];
+}
+
+template <typename t> mg_ForceInline
+t At(const volume& Vol, i64 I) {
+  mg_Assert(MatchTypes<t>(Vol.Type));
+  mg_Assert(I < Prod<i64>(Dims(Vol.Extent)));
+  v3i Pos = IToXyz(I, Dims(Vol.Extent)) + Pos(Vol.Extent);
+  const volume& Vol = (const volume&)Vol;
+  i64 J = XyzToI(Dims(Vol), Pos);
+  mg_Assert(I < Prod<i64>(Extract3Ints64(Vol.DimsCompact)));
+  const t* Ptr = (t*)Vol.Buffer.Data;
+  return Ptr[I];
+}
 
 mg_ForceInline
 i64 XyzToI(v3i N, v3i P) {

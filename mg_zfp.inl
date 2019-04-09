@@ -175,15 +175,6 @@ void ForwardShuffle(const t* IBlock, u* UBlock) {
   auto Mask = Traits<u>::NegabinaryMask;
   for (int I = 0; I < 64; ++I)
     UBlock[I] = (u)((IBlock[Perm3[I]] + Mask) ^ Mask);
-  // TODO: remove the following
-  if (rand() % 10 == 4) {
-   FILE* Fp = fopen("blocks.raw", "r+b");
-   if (!Fp)
-     Fp = fopen("blocks.raw", "wb");
-   mg_FSeek(Fp, 0, SEEK_END);
-   fwrite(UBlock, sizeof(u), 64, Fp);
-   fclose(Fp);
-  }
 }
 
 /* Reorder unsigned coefficients within a block, and convert them to two's complement */

@@ -262,8 +262,6 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
 
 // TODO: separate the reading of meta data from the decoding so that the client
 // can manage their own memory
-
-// TODO: change AllocateTypedBuffer to AllocTypedBuf
 ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   /* Only support float32 and float64 for now */
   if (Ff->Volume.Type != data_type::float32 &&
@@ -471,6 +469,71 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
   return error(ff_err_code::NoError);
 }
 
+// TODO: add an "incremental" mode where the returned values are deltas
+template <typename t>
+void DecompressTile(file_format* Ff, tile_data* Tl) {
+#if defined(mg_CollectStats)
+  tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
+  Ts.LocalId = Tl->LocalId;
+#endif
+  const auto & ChunkList = Ff->Chunks[Tl->Subband][Tl->LocalId];
+  auto ChunkIt = ConstBegin(ChunkList);
+  InitRead(&Tl->Bs, *ChunkIt);
+  for (int Bp = Ff->Prec; Bp >= 0; --Bp) {
+    v3i Block;
+    mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
+      int Bi = XyzToI(Tl->NBlocks3, Block / ZDims);
+      bool DoDecode = false;
+      if (Bp == Ff->Prec) {
+        DoDecode = ReadEMax<t>(&Tl->Bs, Exponent(Ff->Tolerance), &Tl->EMaxes[Bi]);
+#if defined(mg_CollectStats)
+        PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
+#endif
+      }
+      int K = XyzToI(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
+      DoDecode = Ff->Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff->Tolerance) + 1;
+      bool FullyDecoded = false;
+      bool LastChunk = ChunkIt == ConstEnd(ChunkList);
+      bool ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
+      bool InnerLoop = 0;
+      i8 M = 0;
+      while (DoDecode && !FullyDecoded && !LastChunk) {
+        FullyDecoded =
+          DecodeBlock(&Tl->UInts[K], Bp, Ff->ChunkBytes * 8, Tl->Ns[Bi],
+                      M, InnerLoop, &Tl->Bs);
+        ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
+#if defined(mg_CollectStats)
+        int I = ForwardDistance(ConstBegin(ChunkList), ChunkIt);
+        PushBack(&Ts.CkStats[I].Sizes, (int)BitSize(Tl->Bs));
+        if (FullyDecoded || ExhaustedBits) {
+          Ts.CkStats[I].ActualSize = (int)Size(Tl->Bs);
+        }
+#endif
+        if (ExhaustedBits) {
+          ++ChunkIt;
+          LastChunk = ChunkIt == ConstEnd(ChunkList);
+          if (!LastChunk)
+            InitRead(&Tl->Bs, *ChunkIt);
+        } else {
+          mg_Assert(FullyDecoded);
+        }
+      }
+
+      if (Bp == 0) {
+        InverseShuffle(Tl->UInts.Data, Tl->Ints.Data);
+        InverseBlockTransform(Tl->Ints.Data);
+        Dequantize((byte*)Tl->Ints.Data, Prod(ZDims), Tl->EMaxes[Bi],
+                   Ff->Prec - 2, (byte*)Tl->Floats.Data, Ff->Volume.Type);
+        CopyBlockInverse<t>(Ff, Tl, Block, K);
+      }
+      if (LastChunk)
+        goto END;
+    } mg_EndFor3
+  }
+END:
+  return;
+}
+
 // TODO: add signature to the .h file
 template <typename t>
 ff_err ReadSubband(file_format* Ff, int Sb) {
@@ -538,87 +601,26 @@ ff_err Decode(file_format* Ff, metadata* Meta) {
         return Err;
     }
   }
+  if (Ff->NLevels > 0)
+    Cdf53Inverse(&(Ff->Volume), Ff->NLevels);
   return mg_Error(ff_err_code::NoError);
 }
 
 // TODO: add an API function called ImproveTile that uses ReadNextChunk and
 // DecompressTile
 
-// TODO: add an "incremental" mode where the returned values are deltas
-template <typename t>
-void DecompressTile(file_format* Ff, tile_data* Tl) {
-#if defined(mg_CollectStats)
-  tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
-  Ts.LocalId = Tl->LocalId;
-#endif
-  const auto & ChunkList = Ff->Chunks[Tl->Subband][Tl->LocalId];
-  auto ChunkIt = ConstBegin(ChunkList);
-  InitRead(&Tl->Bs, *ChunkIt);
-  for (int Bp = Ff->Prec; Bp >= 0; --Bp) {
-    v3i Block;
-    mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
-      int Bi = XyzToI(Tl->NBlocks3, Block / ZDims);
-      bool DoDecode = false;
-      if (Bp == Ff->Prec) {
-        DoDecode = ReadEMax<t>(&Tl->Bs, Exponent(Ff->Tolerance), &Tl->EMaxes[Bi]);
-#if defined(mg_CollectStats)
-        PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
-#endif
-      }
-      int K = XyzToI(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
-      DoDecode = Ff->Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff->Tolerance) + 1;
-      bool FullyDecoded = false;
-      bool LastChunk = ChunkIt == ConstEnd(ChunkList);
-      bool ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
-      bool InnerLoop = 0;
-      i8 M = 0;
-      while (DoDecode && !FullyDecoded && !LastChunk) {
-        FullyDecoded =
-          DecodeBlock(&Tl->UInts[K], Bp, Ff->ChunkBytes * 8, Tl->Ns[Bi],
-                      M, InnerLoop, &Tl->Bs);
-        ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
-#if defined(mg_CollectStats)
-        int I = ForwardDistance(ConstBegin(ChunkList), ChunkIt);
-        PushBack(&Ts.CkStats[I].Sizes, (int)BitSize(Tl->Bs));
-        if (FullyDecoded || ExhaustedBits) {
-          Ts.CkStats[I].ActualSize = (int)Size(Tl->Bs);
-        }
-#endif
-        if (ExhaustedBits) {
-          ++ChunkIt;
-          LastChunk = ChunkIt == ConstEnd(ChunkList);
-          if (!LastChunk)
-            InitRead(&Tl->Bs, *ChunkIt);
-        } else {
-          mg_Assert(FullyDecoded);
-        }
-      }
-
-      if (Bp == 0) {
-        InverseShuffle(Tl->UInts.Data, Tl->Ints.Data);
-        InverseBlockTransform(Tl->Ints.Data);
-        Dequantize((byte*)Tl->Ints.Data, Prod(ZDims), Tl->EMaxes[Bi],
-                   Ff->Prec - 2, (byte*)Tl->Floats.Data, Ff->Volume.Type);
-        CopyBlockInverse<t>(Ff, Tl, Block, K);
-      }
-      if (LastChunk)
-        goto END;
-    } mg_EndFor3
-  }
-END:
-  return;
-}
-
 void CleanUp(file_format* Ff) {
   if (Ff->Mode == file_format::mode::Read) {
     for (int S = 0; S < Size(Ff->Subbands); ++S) {
       for (int T = 0; T < Size(Ff->Chunks[S]); ++T)
-        Deallocate(&Ff->Chunks[S][T]);
+        Dealloc(&Ff->Chunks[S][T]);
       DeallocBufT(&Ff->Chunks[S]);
     }
     if (Size(Ff->Chunks) > 0)
       DeallocBufT(&Ff->Chunks);
   }
+  if (Size(Ff->Subbands) > 0)
+    Dealloc(&Ff->Subbands);
   if (Size(Ff->TileHeaders) > 0)
     DeallocBufT(&Ff->TileHeaders);
 }

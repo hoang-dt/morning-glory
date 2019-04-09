@@ -44,7 +44,7 @@ void TestLinkedList() {
   for (auto It = ConstBegin(List); It != ConstEnd(List); ++It) {
     printf("%d\n", It->Payload);
   }
-  Deallocate(&List);
+  Dealloc(&List);
 }
 
 mg_Enum(action, int, Encode, Decode)
@@ -216,9 +216,10 @@ int main(int Argc, const char** Argv) {
 #if defined(mg_CollectStats)
     Log("stats_encode.txt");
 #endif
-  } else {
+  } else { // Decode
     ff_err FfErr = Decode(&Ff, &P.Meta);
     mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
+
 #if defined(mg_CollectStats)
     Log("stats_decode.txt");
 #endif

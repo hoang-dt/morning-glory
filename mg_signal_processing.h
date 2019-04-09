@@ -3,12 +3,14 @@
 #include "mg_common_types.h"
 #include "mg_dataset.h"
 #include "mg_types.h"
+#include "mg_volume.h"
 
 namespace mg {
 
 f64 SquaredError(const byte* F, const byte* G, i64 Size, data_type Type = data_type::float64);
 f64 RMSError(const byte* F, const byte* G, i64 Size, data_type Type = data_type::float64);
 f64 PSNR(const byte* F, const byte* G, i64 Size, data_type Type = data_type::float64);
+f64 PSNR(const volume& F, const volume& G);
 void ConvertToNegabinary(const byte* FIn, i64 Size, byte* FOut, data_type Type = data_type::int64);
 void ConvertFromNegabinary(const byte* FIn, i64 Size, byte* FOut, data_type Type = data_type::int64);
 f64 DotProduct(const byte* F, const byte* G, i64 Size, data_type Type = data_type::float64);

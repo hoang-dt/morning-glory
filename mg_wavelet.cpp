@@ -10,6 +10,7 @@
 
 namespace mg {
 
+// TODO: this won't work for a general (sub)volume
 void Cdf53Forward(volume* Vol, int NLevels) {
 #define Body(type)\
   v3i Dims = Extract3Ints64(Vol->DimsCompact);\
@@ -24,6 +25,7 @@ void Cdf53Forward(volume* Vol, int NLevels) {
 #undef Body
 }
 
+// TODO: this won't work for a general (sub)volume
 void Cdf53Inverse(volume* Vol, int NLevels) {
 #define Body(type)\
   v3i Dims = Extract3Ints64(Vol->DimsCompact);\
@@ -38,7 +40,8 @@ void Cdf53Inverse(volume* Vol, int NLevels) {
 #undef Body
 }
 
-void Cdf53ForwardExtrapolate(sub_volume* Vol) {
+// TODO: this won't work for a general (sub)volume
+void Cdf53ForwardExtrapolate(volume* Vol) {
 #define Body(type)\
   v3i SmallDims = Extract3Ints64(Vol->Extent.DimsCompact);\
   v3i BigDims = Extract3Ints64(Vol->DimsCompact);\
@@ -59,7 +62,8 @@ void Cdf53ForwardExtrapolate(sub_volume* Vol) {
 #undef Body
 }
 
-void Cdf53InverseExtrapolate(sub_volume* Vol) {
+// TODO: this won't work for a general (sub)volume
+void Cdf53InverseExtrapolate(volume* Vol) {
 #define Body(type)\
   v3i SmallDims = Extract3Ints64(Vol->Extent.DimsCompact);\
   v3i BigDims = Extract3Ints64(Vol->DimsCompact);\

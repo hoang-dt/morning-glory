@@ -58,5 +58,9 @@ namespace mg {
 int SizeOf(data_type Type);
 int BitSizeOf(data_type Type);
 data_type IntType(data_type InputType);
+template <typename t>
+bool MatchTypes(data_type Type);
 
 } // namespace mg
+
+#include "mg_common_types.inl"
