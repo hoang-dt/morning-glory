@@ -10,9 +10,11 @@ namespace mg {
 struct extent {
   u64 PosCompact;
   u64 DimsCompact;
+  u64 StrideCompact;
   extent();
   extent(v3i Dims);
   extent(v3i Pos, v3i Dims);
+  extent(v3i Pos, v3i Dims, v3i Stride);
 };
 
 struct volume {
@@ -24,6 +26,7 @@ struct volume {
 
 v3i Pos(extent Ext);
 v3i Dims(extent Ext);
+v3i Stride(extent Ext);
 v3i BigDims(const volume& Vol);
 v3i SmallDims(const volume& Vol);
 i64 Size(const volume& Vol);

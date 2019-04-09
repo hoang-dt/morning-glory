@@ -15,7 +15,7 @@ error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
   if (Ok.Code != err_code::NoError)
     return Ok;
   Volume->DimsCompact = Stuff3Ints64(Dims);
-  Volume->Extent = extent(v3i(0, 0, 0), Dims);
+  Volume->Extent = extent(Dims);
   Volume->Type = Type;
   return mg_Error(err_code::NoError);
 }
@@ -27,19 +27,24 @@ void Copy(volume* Dst, const volume& Src) {
   mg_Assert(Dst->Type == Src.Type);\
   type* DstBuf = (type*)Dst->Buffer.Data;\
   const type* SrcBuf = (const type*)Src.Buffer.Data;\
-  v3i StartSrc = Extract3Ints64(Src.Extent.PosCompact);\
-  v3i StartDst = Extract3Ints64(Dst->Extent.PosCompact);\
-  v3i Dims = Extract3Ints64(Src.Extent.DimsCompact);\
-  v3i BigDimsSrc = Extract3Ints64(Src.DimsCompact);\
-  v3i BigDimsDst = Extract3Ints64(Dst->DimsCompact);\
+  v3i StartSrc = Pos(Src.Extent);\
+  v3i StartDst = Pos(Dst->Extent);\
+  v3i CopyDims = Dims(Src.Extent);\
+  v3i BigDimsSrc = BigDims(Src);\
+  v3i BigDimsDst = BigDims(*Dst);\
+  v3i StrideSrc = Stride(Src.Extent);\
+  v3i StrideDst = Stride(Dst->Extent);\
   v3i PosSrc = StartSrc;\
   v3i PosDst = StartDst;\
   for (PosSrc.Z = StartSrc.Z, PosDst.Z = StartDst.Z;\
-       PosSrc.Z < StartSrc.Z + Dims.Z; ++PosSrc.Z, ++PosDst.Z) {\
+       PosSrc.Z < StartSrc.Z + CopyDims.Z;\
+       PosSrc.Z += StrideSrc.Z, PosDst.Z += StrideDst.Z) {\
   for (PosSrc.Y = StartSrc.Y, PosDst.Y = StartDst.Y;\
-       PosSrc.Y < StartSrc.Y + Dims.Y; ++PosSrc.Y, ++PosDst.Y) {\
+       PosSrc.Y < StartSrc.Y + CopyDims.Y;\
+       PosSrc.Y += StrideSrc.Y, PosDst.Y += StrideDst.Y) {\
   for (PosSrc.X = StartSrc.X, PosDst.X = StartDst.X;\
-       PosSrc.X < StartSrc.X + Dims.X; ++PosSrc.X, ++PosDst.X) {\
+       PosSrc.X < StartSrc.X + CopyDims.X;\
+       PosSrc.X += StrideSrc.X, PosDst.X += StrideDst.X) {\
     i64 I = XyzToI(BigDimsSrc, PosSrc);\
     i64 J = XyzToI(BigDimsDst, PosDst);\
     DstBuf[J] = SrcBuf[I];\

@@ -14,30 +14,40 @@ extent::extent() = default;
 mg_ForceInline
 extent::extent(v3i Dims)
   : PosCompact(Stuff3Ints64(v3i(0, 0, 0)))
-  , DimsCompact(Stuff3Ints64(Dims)) {}
+  , DimsCompact(Stuff3Ints64(Dims))
+  , StrideCompact(Stuff3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
 extent::extent(v3i Pos, v3i Dims)
   : PosCompact(Stuff3Ints64(Pos))
-  , DimsCompact(Stuff3Ints64(Dims)) {}
+  , DimsCompact(Stuff3Ints64(Dims))
+  , StrideCompact(Stuff3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
-bool IsPoint(extent Ext) {
-  v3i Dims = Extract3Ints64(Ext.DimsCompact);
-  return Dims.X * Dims.Y * Dims.Z == 1;
-}
+extent::extent(v3i Pos, v3i Dims, v3i Stride)
+  : PosCompact(Stuff3Ints64(Pos))
+  , DimsCompact(Stuff3Ints64(Dims))
+  , StrideCompact(Stuff3Ints64(Stride)) {}
 
-mg_ForceInline
-bool IsLine(extent Ext) {
-  v3i Dims = Extract3Ints64(Ext.DimsCompact);
-  return (Dims.X * Dims.Y == 1) || (Dims.Y * Dims.Z == 1) || (Dims.X * Dims.Z == 1);
-}
-
-mg_ForceInline
-bool IsFace(extent Ext) {
-  v3i Dims = Extract3Ints64(Ext.DimsCompact);
-  return Dims.X == 1 || Dims.Y == 1 || Dims.Z == 1;
-}
+//mg_ForceInline
+//bool IsPoint(extent Ext) {
+//  v3i MyDims = Dims(Ext);
+//  return Dims.X == 1 && Dims.Y == 1 && Dims.Z == 1;
+//}
+//
+//mg_ForceInline
+//bool IsLine(extent Ext) {
+//  v3i MyDims = Dims(Ext);
+//  return !IsPoint(Ext) && ((MyDims.X * MyDims.Y == 1) || 
+//                           (MyDims.Y * MyDims.Z == 1) ||
+//                           (MyDims.X * MyDims.Z == 1));
+//}
+//
+//mg_ForceInline
+//bool IsFace(extent Ext) {
+//  v3i ExtDims = Dims(Ext);
+//  return !IsLine(Ext) && (Dims.X == 1 || Dims.Y == 1 || Dims.Z == 1);
+//}
 
 mg_ForceInline
 v3i Pos(extent Ext) {
@@ -50,6 +60,11 @@ v3i Dims(extent Ext) {
 }
 
 mg_ForceInline
+v3i Stride(extent Ext) {
+  return Extract3Ints64(Ext.StrideCompact);
+}
+
+mg_ForceInline
 v3i BigDims(const volume& Vol) {
   return Extract3Ints64(Vol.DimsCompact);
 }
@@ -59,30 +74,30 @@ v3i SmallDims(const volume& Vol) {
 }
 
 i64 Size(const volume& Vol) {
-  return Prod<i64>(Extract3Ints64(Vol.Extent.DimsCompact));
+  return Prod<i64>(SmallDims(Vol));
 }
 
 template <typename t> mg_ForceInline
-t& At(volume& Vol, i64 I) {
+t& At(volume& Vol, v3i MyPos) {
   mg_Assert(MatchTypes<t>(Vol.Type));
-  mg_Assert(I < Prod<i64>(Dims(Vol.Extent)));
-  v3i Pos = IToXyz(I, Dims(Vol.Extent)) + Pos(Vol.Extent);
+  mg_Assert(MyPos < SmallDims(Vol));
+  MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
   volume& Vol = (volume&)Vol;
-  i64 J = XyzToI(Dims(Vol), Pos);
-  mg_Assert(I < Prod<i64>(Extract3Ints64(Vol.DimsCompact)));
+  i64 I = XyzToI(BigDims(Vol), MyPos);
   t* Ptr = (t*)Vol.Buffer.Data;
+  mg_Assert(I * sizeof(t) < Vol.Buffer.Bytes);
   return Ptr[I];
 }
 
 template <typename t> mg_ForceInline
 t At(const volume& Vol, i64 I) {
   mg_Assert(MatchTypes<t>(Vol.Type));
-  mg_Assert(I < Prod<i64>(Dims(Vol.Extent)));
-  v3i Pos = IToXyz(I, Dims(Vol.Extent)) + Pos(Vol.Extent);
-  const volume& Vol = (const volume&)Vol;
-  i64 J = XyzToI(Dims(Vol), Pos);
-  mg_Assert(I < Prod<i64>(Extract3Ints64(Vol.DimsCompact)));
+  mg_Assert(MyPos < SmallDims(Vol));
+  MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
+  volume& Vol = (volume&)Vol;
+  i64 I = XyzToI(BigDims(Vol), MyPos);
   const t* Ptr = (t*)Vol.Buffer.Data;
+  mg_Assert(I * sizeof(t) < Vol.Buffer.Bytes);
   return Ptr[I];
 }
 
@@ -94,9 +109,8 @@ i64 XyzToI(v3i N, v3i P) {
 mg_ForceInline
 v3i IToXyz(i64 I, v3i N) {
   i32 Z = I / (N.X * N.Y);
-  i32 X = I % N.X;
-  i32 Y = (I - i64(Z) * (N.X * N.Y)) / N.X;
-  return v3i(X, Y, Z);
+  i32 XY = I % (N.X * N.Y);
+  return v3i(XY % N.X, XY / N.X, Z);
 }
 
 mg_ForceInline
