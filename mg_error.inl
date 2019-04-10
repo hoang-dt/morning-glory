@@ -37,7 +37,7 @@ void PrintStacktrace(printer* Pr, const error<t>& Err) {
 }
 
 template <typename t>
-bool ErrorOccurred(const error<t>& Err) {
+bool ErrorExists(const error<t>& Err) {
   return Err.Code != t::NoError;
 }
 

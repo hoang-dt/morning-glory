@@ -188,6 +188,14 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
 #endif
         ForwardBlockTransform(&Tl->Ints[K]);
         ForwardShuffle(&Tl->Ints[K], &Tl->UInts[K]);
+        static bool First = true;
+        if (First) {
+          for (int I = 0; I < 64; ++I) {
+            printf("%llu ", Tl->UInts.Data[K + I]);
+          }
+          printf("\n");
+          First = false;
+        }
       }
       /* Encode and write chunks */
       DoEncode = Ff.Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff.Tolerance) + 1;
@@ -254,7 +262,7 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
                   DeallocBufT(&Tl.Ns);
                   DeallocBuf(&Tl.Bs.Stream));
     ff_err Err = WriteTile<t>(Ff, &Tl);
-    if (ErrorOccurred(Err))
+    if (ErrorExists(Err))
       return Err;
   } mg_EndFor3
   return mg_Error(ff_err_code::NoError);
@@ -356,6 +364,7 @@ ff_err ParseMeta(file_format* Ff, metadata* Meta) {
              &Meta->Dims.X, &Meta->Dims.Y, &Meta->Dims.Z) != 3)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Dims corrupted");
   Ff->Volume.DimsCompact = Stuff3Ints64(Meta->Dims);
+  Ff->Volume.Extent = extent(Meta->Dims);
   char Type[16];
   if (fscanf(Fp, "type = %s\n", Type) != 1)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Type corrupted");
@@ -377,7 +386,7 @@ ff_err ParseMeta(file_format* Ff, metadata* Meta) {
 // TODO: write to an existing file
 ff_err Encode(file_format* Ff, const metadata& Meta) {
   ff_err Err = Finalize(Ff, file_format::mode::Write);
-  if (ErrorOccurred(Err))
+  if (ErrorExists(Err))
     return Err;
   if (Ff->DoExtrapolation) {
     // TODO
@@ -391,10 +400,10 @@ ff_err Encode(file_format* Ff, const metadata& Meta) {
   mg_Assert(Ff->MetaBytes == 1 + (int)strnlen(Ff->Meta, sizeof(Ff->Meta)));
   for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
     if (Ff->Volume.Type == data_type::float64) {
-      if (ErrorOccurred(Err = WriteSubband<f64>(*Ff, Sb)))
+      if (ErrorExists(Err = WriteSubband<f64>(*Ff, Sb)))
         return Err;
     } else if (Ff->Volume.Type == data_type::float32) {
-      if (ErrorOccurred(Err = WriteSubband<f32>(*Ff, Sb)))
+      if (ErrorExists(Err = WriteSubband<f32>(*Ff, Sb)))
         return Err;
     } else {
       mg_Abort("Type not supported");
@@ -520,10 +529,18 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
       }
 
       if (Bp == 0) {
-        InverseShuffle(Tl->UInts.Data, Tl->Ints.Data);
-        InverseBlockTransform(Tl->Ints.Data);
-        Dequantize((byte*)Tl->Ints.Data, Prod(ZDims), Tl->EMaxes[Bi],
-                   Ff->Prec - 2, (byte*)Tl->Floats.Data, Ff->Volume.Type);
+        static bool First = true;
+        if (First) {
+          for (int I = 0; I < 64; ++I) {
+            printf("%llu ", Tl->UInts[K + I]);
+          }
+          printf("\n");
+          First = false;
+        }
+        InverseShuffle(&Tl->UInts[K], &Tl->Ints[K]);
+        InverseBlockTransform(&Tl->Ints[K]);
+        Dequantize((byte*)&Tl->Ints[K], Prod(ZDims), Tl->EMaxes[Bi],
+                   Ff->Prec - 2, (byte*)&Tl->Floats[K], Ff->Volume.Type);
         CopyBlockInverse<t>(Ff, Tl, Block, K);
       }
       if (LastChunk)
@@ -555,7 +572,7 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
     Tl.Subband = Sb;
     AllocBufT(&Tl.Floats, Prod(Ff->TileDims));
     AllocBufT(&Tl.Ints, Prod(Ff->TileDims));
-    AllocBufT(&Tl.UInts, Prod(Ff->TileDims));
+    AllocBufT0(&Tl.UInts, Prod(Ff->TileDims));
     AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocks3));
     AllocBufT0(&Tl.Ns, Prod(Tl.NBlocks3));
     AllocBuf0(&Tl.Bs.Stream, Ff->ChunkBytes + BufferSize(Tl.Bs));
@@ -571,7 +588,7 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
       AllocBuf(&ChunkBuf, Ff->ChunkBytes);
       mg_CleanUp(1, DeallocBuf(&ChunkBuf));
       ff_err Err = ReadNextChunk(Ff, &Tl, &ChunkBuf);
-      if (ErrorOccurred(Err) && Err.Code != ff_err_code::ChunkReadFailed &&
+      if (ErrorExists(Err) && Err.Code != ff_err_code::ChunkReadFailed &&
           Err.Code != ff_err_code::FileOpenFailed)
         return Err;
       if (Err.Code == ff_err_code::ChunkReadFailed ||
@@ -587,22 +604,34 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
 ff_err Decode(file_format* Ff, metadata* Meta) {
   ParseMeta(Ff, Meta);
   ff_err Err = Finalize(Ff, file_format::mode::Read);
-  if (ErrorOccurred(Err))
+  if (ErrorExists(Err))
     return Err;
 #if defined(mg_CollectStats)
   Resize(&FStats.SbStats, Size(Ff->Subbands));
 #endif
   for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
     if (Ff->Volume.Type == data_type::float64) {
-      if (ErrorOccurred(Err = ReadSubband<f64>(Ff, Sb)))
+      if (ErrorExists(Err = ReadSubband<f64>(Ff, Sb)))
         return Err;
     } else {
-      if (ErrorOccurred(Err = ReadSubband<f32>(Ff, Sb)))
+      if (ErrorExists(Err = ReadSubband<f32>(Ff, Sb)))
         return Err;
     }
   }
   if (Ff->NLevels > 0)
     Cdf53Inverse(&(Ff->Volume), Ff->NLevels);
+  //FILE* Fp = fopen("output.raw", "wb");
+  //fwrite(Ff->Volume.Buffer.Data, Ff->Volume.Buffer.Bytes, 1, Fp);
+  //fclose(Fp);
+  printf("%f ", At<f64>(Ff->Volume, v3i(0, 0, 0)));
+  printf("%f ", At<f64>(Ff->Volume, v3i(0, 0, 1)));
+  printf("%f ", At<f64>(Ff->Volume, v3i(0, 1, 0)));
+  printf("%f ", At<f64>(Ff->Volume, v3i(0, 1, 1)));
+  printf("%f ", At<f64>(Ff->Volume, v3i(1, 0, 0)));
+  printf("%f ", At<f64>(Ff->Volume, v3i(1, 0, 1)));
+  printf("%f ", At<f64>(Ff->Volume, v3i(1, 1, 0)));
+  printf("%f ", At<f64>(Ff->Volume, v3i(1, 1, 1)));
+  printf("\n\n");
   return mg_Error(ff_err_code::NoError);
 }
 

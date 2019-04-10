@@ -3,6 +3,7 @@
 #include "mg_common_types.h"
 #include "mg_math.h"
 #include "mg_signal_processing.h"
+
 namespace mg {
 
 /* TODO: rewrite these functions to take in a volume with dimensions, strides, etc */
@@ -23,19 +24,32 @@ f64 SquaredError(const byte* F, const byte* G, i64 Size, data_type Type) {
 #undef Body
 }
 
-//f64 SquaredError(const volume& F, const volume& G) {
-//#define Body(type)\
-//  const type* FPtr = (type*)F.Buffer.Data;\
-//  const type* GPtr = (type*)G.Buffer.Data;\
-//  f64 Err = 0;
-//  for () {
-//    for () {
-//      for () {
-//
-//      }
-//    }
-//  }
-//}
+f64 SquaredError(const volume& F, const volume& G) {
+  printf("%llu %llu", F.Extent.DimsCompact, G.Extent.DimsCompact);
+  mg_Assert(Dims(F.Extent) == Dims(G.Extent));
+  mg_Assert(F.Type == G.Type);
+#define Body(type)\
+  const type* FPtr = (type*)F.Buffer.Data;\
+  const type* GPtr = (type*)G.Buffer.Data;\
+  f64 Err = 0;\
+  v3i PosF, PosG;\
+  v3i BegF = Pos(F.Extent), BegG = Pos(G.Extent);\
+  v3i EndF = BegF + Dims(F.Extent);\
+  v3i StrideF = Stride(F.Extent), StrideG = Stride(G.Extent);\
+  v3i BigDimsF = BigDims(F), BigDimsG = BigDims(G);\
+  mg_BeginFor3Lockstep(PosF, BegF, EndF, StrideF, PosG, BegG, EndG, StrideG) {\
+    i64 I = XyzToI(BigDimsF, PosF);\
+    i64 J = XyzToI(BigDimsG, PosG);\
+    f64 Diff = f64(FPtr[I]) - f64(GPtr[J]);\
+    Err += Diff * Diff;\
+  }\
+  mg_EndFor3\
+  return Err;
+
+  TypeChooser(F.Type)
+  return 0;
+#undef Body
+}
 
 f64 RMSError(const byte* F, const byte* G, i64 Size, data_type Type) {
   return sqrt(SquaredError(F, G, Size, Type) / Size);

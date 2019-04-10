@@ -82,10 +82,9 @@ t& At(volume& Vol, v3i MyPos) {
   mg_Assert(MatchTypes<t>(Vol.Type));
   mg_Assert(MyPos < SmallDims(Vol));
   MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
-  volume& Vol = (volume&)Vol;
   i64 I = XyzToI(BigDims(Vol), MyPos);
   t* Ptr = (t*)Vol.Buffer.Data;
-  mg_Assert(I * sizeof(t) < Vol.Buffer.Bytes);
+  mg_Assert(I * (i64)sizeof(t) < Vol.Buffer.Bytes);
   return Ptr[I];
 }
 
@@ -94,10 +93,9 @@ t At(const volume& Vol, i64 I) {
   mg_Assert(MatchTypes<t>(Vol.Type));
   mg_Assert(MyPos < SmallDims(Vol));
   MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
-  volume& Vol = (volume&)Vol;
   i64 I = XyzToI(BigDims(Vol), MyPos);
   const t* Ptr = (t*)Vol.Buffer.Data;
-  mg_Assert(I * sizeof(t) < Vol.Buffer.Bytes);
+  mg_Assert(I * (i64)sizeof(t) < Vol.Buffer.Bytes);
   return Ptr[I];
 }
 

@@ -142,6 +142,7 @@ using v3d  = v3<f64>;
 /* 3-level nested for loop */
 #define mg_BeginFor3(Counter, Begin, End, Step)
 #define mg_EndFor3
+#define mg_BeginFor3Lockstep(C1, B1, E1, S1, C2, B2, E2, S2)
 
 template <typename t>
 struct typed_buffer;

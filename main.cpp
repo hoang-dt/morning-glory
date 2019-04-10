@@ -76,13 +76,13 @@ params ParseParams(int Argc, const char** Argv) {
     "Provide --compressed_files");
   mg_AbortIf(!GetOptionValue(Argc, Argv, "--raw_file", &P.DataFile),
     "Provide --raw_file");
+  error Err = ParseMeta(P.DataFile, &P.Meta);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
+    "Data dimensions too big");
+  mg_AbortIf(P.Meta.Type != data_type::float32 &&
+             P.Meta.Type != data_type::float64, "Data type not supported");
   if (P.Action == action::Encode) {
-    error Err = ParseMeta(P.DataFile, &P.Meta);
-    mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
-    mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
-      "Data dimensions too big");
-    mg_AbortIf(P.Meta.Type != data_type::float32 &&
-               P.Meta.Type != data_type::float64, "Data type not supported");
     mg_AbortIf(!GetOptionValue(Argc, Argv, "--num_levels", &P.NLevels),
       "Provide --num_levels");
     mg_AbortIf(!GetOptionValue(Argc, Argv, "--tile_dims", &P.TileDims),
@@ -195,6 +195,8 @@ int main(int Argc, const char** Argv) {
   //OldEncode(BlockBegin, BlockEnd);
   //TestEncoder(ChunkSize, BlockBegin, BlockEnd);
   //return 0;
+
+  /* Read the parameters */
   SetHandleAbortSignals();
   params P = ParseParams(Argc, Argv);
   file_format Ff;
@@ -204,21 +206,36 @@ int main(int Argc, const char** Argv) {
   SetPrecision(&Ff, P.NBitPlanes);
   SetTolerance(&Ff, P.Tolerance);
   SetFileName(&Ff, P.CompressedFile);
+
+  /* Read the raw file */
+  volume F;
+  AllocBuf(&F.Buffer, SizeOf(P.Meta.Type) * Prod(P.Meta.Dims));
+  mg_CleanUp(0, DeallocBuf(&F.Buffer));
+  error Err = ReadVolume(P.Meta.File, P.Meta.Dims, P.Meta.Type, &F);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+
+  /* Perform the action */
   if (P.Action == action::Encode) {
-    volume F;
-    AllocBuf(&F.Buffer, SizeOf(P.Meta.Type) * Prod(P.Meta.Dims));
-    mg_CleanUp(0, DeallocBuf(&F.Buffer));
-    error Err = ReadVolume(P.Meta.File, P.Meta.Dims, P.Meta.Type, &F);
-    mg_AbortIf(ErrorOccurred(Err), "%s", ToString(Err));
-    SetVolume(&Ff, F.Buffer.Data, Extract3Ints64(F.DimsCompact), F.Type);
+    SetVolume(&Ff, F.Buffer.Data, BigDims(F), F.Type);
     ff_err FfErr = Encode(&Ff, P.Meta);
-    mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
+    mg_AbortIf(ErrorExists(FfErr), "%s", ToString(FfErr));
 #if defined(mg_CollectStats)
     Log("stats_encode.txt");
 #endif
   } else { // Decode
+    printf("%f ", At<f64>(F, v3i(0, 0, 0)));
+    printf("%f ", At<f64>(F, v3i(0, 0, 1)));
+    printf("%f ", At<f64>(F, v3i(0, 1, 0)));
+    printf("%f ", At<f64>(F, v3i(0, 1, 1)));
+    printf("%f ", At<f64>(F, v3i(1, 0, 0)));
+    printf("%f ", At<f64>(F, v3i(1, 0, 1)));
+    printf("%f ", At<f64>(F, v3i(1, 1, 0)));
+    printf("%f ", At<f64>(F, v3i(1, 1, 1)));
+    printf("\n\n");
     ff_err FfErr = Decode(&Ff, &P.Meta);
-    mg_AbortIf(ErrorOccurred(FfErr), "%s", ToString(FfErr));
+    mg_AbortIf(ErrorExists(FfErr), "%s", ToString(FfErr));
+    f64 Error = SquaredError(F, Ff.Volume);
+    printf("Error = %f\n", Error);
 
 #if defined(mg_CollectStats)
     Log("stats_decode.txt");

@@ -263,5 +263,11 @@ v3<t>& v3<t>::operator=(v3<u> other) {
 #undef mg_EndFor3
 #define mg_EndFor3 }}
 
+#undef mg_BeginFor3Lockstep
+#define mg_BeginFor3Lockstep(C1, B1, E1, S1, C2, B2, E2, S2)\
+  for (C1.Z = (B1).Z, C2.Z = (B2).Z; C1.Z < (E1).Z; C1.Z += (S1).Z, C2.Z += (S2).Z) {\
+  for (C1.Y = (B1).Y, C2.Y = (B2).Y; C1.Y < (E1).Y; C1.Y += (S1).Y, C2.Y += (S2).Y) {\
+  for (C1.X = (B1).X, C2.X = (B2).X; C1.X < (E1).X; C1.X += (S1).X, C2.X += (S2).X)
+
 } // namespace mg
 
