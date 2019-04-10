@@ -188,14 +188,6 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
 #endif
         ForwardBlockTransform(&Tl->Ints[K]);
         ForwardShuffle(&Tl->Ints[K], &Tl->UInts[K]);
-        static bool First = true;
-        if (First) {
-          for (int I = 0; I < 64; ++I) {
-            printf("%llu ", Tl->UInts.Data[K + I]);
-          }
-          printf("\n");
-          First = false;
-        }
       }
       /* Encode and write chunks */
       DoEncode = Ff.Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff.Tolerance) + 1;
@@ -529,14 +521,6 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
       }
 
       if (Bp == 0) {
-        static bool First = true;
-        if (First) {
-          for (int I = 0; I < 64; ++I) {
-            printf("%llu ", Tl->UInts[K + I]);
-          }
-          printf("\n");
-          First = false;
-        }
         InverseShuffle(&Tl->UInts[K], &Tl->Ints[K]);
         InverseBlockTransform(&Tl->Ints[K]);
         Dequantize((byte*)&Tl->Ints[K], Prod(ZDims), Tl->EMaxes[Bi],
@@ -620,18 +604,6 @@ ff_err Decode(file_format* Ff, metadata* Meta) {
   }
   if (Ff->NLevels > 0)
     Cdf53Inverse(&(Ff->Volume), Ff->NLevels);
-  //FILE* Fp = fopen("output.raw", "wb");
-  //fwrite(Ff->Volume.Buffer.Data, Ff->Volume.Buffer.Bytes, 1, Fp);
-  //fclose(Fp);
-  printf("%f ", At<f64>(Ff->Volume, v3i(0, 0, 0)));
-  printf("%f ", At<f64>(Ff->Volume, v3i(0, 0, 1)));
-  printf("%f ", At<f64>(Ff->Volume, v3i(0, 1, 0)));
-  printf("%f ", At<f64>(Ff->Volume, v3i(0, 1, 1)));
-  printf("%f ", At<f64>(Ff->Volume, v3i(1, 0, 0)));
-  printf("%f ", At<f64>(Ff->Volume, v3i(1, 0, 1)));
-  printf("%f ", At<f64>(Ff->Volume, v3i(1, 1, 0)));
-  printf("%f ", At<f64>(Ff->Volume, v3i(1, 1, 1)));
-  printf("\n\n");
   return mg_Error(ff_err_code::NoError);
 }
 

@@ -25,7 +25,6 @@ f64 SquaredError(const byte* F, const byte* G, i64 Size, data_type Type) {
 }
 
 f64 SquaredError(const volume& F, const volume& G) {
-  printf("%llu %llu", F.Extent.DimsCompact, G.Extent.DimsCompact);
   mg_Assert(Dims(F.Extent) == Dims(G.Extent));
   mg_Assert(F.Type == G.Type);
 #define Body(type)\
@@ -55,6 +54,10 @@ f64 RMSError(const byte* F, const byte* G, i64 Size, data_type Type) {
   return sqrt(SquaredError(F, G, Size, Type) / Size);
 }
 
+f64 RMSError(const volume& F, const volume& G) {
+  return sqrt(SquaredError(F, G) / Size(F));
+}
+
 f64 PSNR(const byte* F, const byte* G, i64 Size, data_type Type) {
 #define Body(type)\
   const type* FPtr = (const type*)F;\
@@ -65,6 +68,38 @@ f64 PSNR(const byte* F, const byte* G, i64 Size, data_type Type) {
   return 20.0 * log10(D) - 10.0 * log10(Err);
 
   TypeChooser(Type)
+  return 0;
+#undef Body
+}
+
+f64 PSNR(const volume& F, const volume& G) {
+  mg_Assert(Dims(F.Extent) == Dims(G.Extent));
+  mg_Assert(F.Type == G.Type);
+#define Body(type)\
+  const type* FPtr = (type*)F.Buffer.Data;\
+  const type* GPtr = (type*)G.Buffer.Data;\
+  f64 Err = 0;\
+  v3i PosF, PosG;\
+  v3i BegF = Pos(F.Extent), BegG = Pos(G.Extent);\
+  v3i EndF = BegF + Dims(F.Extent);\
+  v3i StrideF = Stride(F.Extent), StrideG = Stride(G.Extent);\
+  v3i BigDimsF = BigDims(F), BigDimsG = BigDims(G);\
+  type MinElem = Traits<type>::Max;\
+  type MaxElem = Traits<type>::Min;\
+  mg_BeginFor3Lockstep(PosF, BegF, EndF, StrideF, PosG, BegG, EndG, StrideG) {\
+    i64 I = XyzToI(BigDimsF, PosF);\
+    i64 J = XyzToI(BigDimsG, PosG);\
+    f64 Diff = f64(FPtr[I]) - f64(GPtr[J]);\
+    Err += Diff * Diff;\
+    MinElem = Min(MinElem ,FPtr[I]);\
+    MaxElem = Max(MaxElem, FPtr[I]);\
+  }\
+  mg_EndFor3\
+  f64 D = 0.5 * (MaxElem - MinElem);\
+  Err = Err / Size(F);\
+  return 20.0 * log10(D) - 10.0 * log10(Err);
+
+  TypeChooser(F.Type)
   return 0;
 #undef Body
 }

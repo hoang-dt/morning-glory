@@ -96,7 +96,7 @@ bool DecodeBlock(u64* Block, int Bitplane, int S, i8& N, i8& M,
   if (InnerLoop) goto INNER_LOOP;
   for (; BitSize(*Bs) < S && N < 64;) {
     if ((Lb = Read(Bs))) {
- INNER_LOOP:
+INNER_LOOP:
       for (; BitSize(*Bs) < S && N < 64 - 1;) {
         if (Read(Bs)) {
           break;

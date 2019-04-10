@@ -27,7 +27,7 @@ if %1==Debug (set CFLAGS= -O0 -D_DEBUG)
 set COMMON_CDEFS= -D_CRT_SECURE_NO_WARNINGS
 if %1==Release (set CDEFS= )
 if %1==FastDebug (set CDEFS= -Dmg_Slow=1 -Dmg_Verbose=1)
-if %1==Debug (set CDEFS= -Dmg_Slow=1 -Dmg_Verbose=1 -Dmg_CollectStats)
+if %1==Debug (set CDEFS= -Dmg_Slow=1 -Dmg_Verbose=1)
 
 :: Linker flags
 set COMMON_LDFLAGS= -machine:x64 -nodefaultlib -subsystem:console -incremental:no -debug:full -opt:ref,icf

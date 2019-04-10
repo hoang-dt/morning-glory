@@ -223,19 +223,11 @@ int main(int Argc, const char** Argv) {
     Log("stats_encode.txt");
 #endif
   } else { // Decode
-    printf("%f ", At<f64>(F, v3i(0, 0, 0)));
-    printf("%f ", At<f64>(F, v3i(0, 0, 1)));
-    printf("%f ", At<f64>(F, v3i(0, 1, 0)));
-    printf("%f ", At<f64>(F, v3i(0, 1, 1)));
-    printf("%f ", At<f64>(F, v3i(1, 0, 0)));
-    printf("%f ", At<f64>(F, v3i(1, 0, 1)));
-    printf("%f ", At<f64>(F, v3i(1, 1, 0)));
-    printf("%f ", At<f64>(F, v3i(1, 1, 1)));
-    printf("\n\n");
     ff_err FfErr = Decode(&Ff, &P.Meta);
     mg_AbortIf(ErrorExists(FfErr), "%s", ToString(FfErr));
-    f64 Error = SquaredError(F, Ff.Volume);
-    printf("Error = %f\n", Error);
+    f64 Error = PSNR(F, Ff.Volume);
+    //f64 Error = PSNR(F.Buffer.Data, Ff.Volume.Buffer.Data, 96*96*96);
+    printf("PSNR = %f\n", Error);
 
 #if defined(mg_CollectStats)
     Log("stats_decode.txt");
