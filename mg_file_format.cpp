@@ -167,14 +167,14 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
 #endif
   int Ci = 0; // chunk id
   InitWrite(&Tl->Bs, Tl->Bs.Stream);
-  for (int Bp = Ff.Prec; Bp >= 0; --Bp) {
+  for (int Bp = Ff.Prec - 1; Bp >= 0; --Bp) {
     v3i Block;
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
       int Bi = XyzToI(Tl->NBlocks3, Block / ZDims);
       int K = XyzToI(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
       bool DoEncode = false;
       /* Copy the block data into the tile's buffer */
-      if (Bp == Ff.Prec) {
+      if (Bp == Ff.Prec - 1) {
         CopyBlockForward<t>(Ff, Tl, Block, K);
         Tl->EMaxes[Bi] =
           (i16)Quantize((byte*)&Tl->Floats[K], Prod(ZDims),
@@ -324,7 +324,7 @@ int FormatMeta(file_format* Ff, const metadata& Meta) {
     N += snprintf(MetaBuf + N, sizeof(MetaBuf) - N, "chunk bytes = %d\n",
                   Ff->ChunkBytes);
     N += snprintf(MetaBuf + N, sizeof(MetaBuf) - N, "precision = %d\n", Ff->Prec);
-    N += snprintf(MetaBuf + N, sizeof(MetaBuf) - N, "tolerance = %f\n",
+    N += snprintf(MetaBuf + N, sizeof(MetaBuf) - N, "tolerance = %.16f\n",
                   Ff->Tolerance);
     return N;
   };
@@ -480,12 +480,12 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
   const auto & ChunkList = Ff->Chunks[Tl->Subband][Tl->LocalId];
   auto ChunkIt = ConstBegin(ChunkList);
   InitRead(&Tl->Bs, *ChunkIt);
-  for (int Bp = Ff->Prec; Bp >= 0; --Bp) {
+  for (int Bp = Ff->Prec - 1; Bp >= 0; --Bp) {
     v3i Block;
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
       int Bi = XyzToI(Tl->NBlocks3, Block / ZDims);
       bool DoDecode = false;
-      if (Bp == Ff->Prec) {
+      if (Bp == Ff->Prec - 1) {
         DoDecode = ReadEMax<t>(&Tl->Bs, Exponent(Ff->Tolerance), &Tl->EMaxes[Bi]);
 #if defined(mg_CollectStats)
         PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
@@ -520,7 +520,7 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
         }
       }
 
-      if (Bp == 0) {
+      if (Bp == 0 || LastChunk) {
         InverseShuffle(&Tl->UInts[K], &Tl->Ints[K]);
         InverseBlockTransform(&Tl->Ints[K]);
         Dequantize((byte*)&Tl->Ints[K], Prod(ZDims), Tl->EMaxes[Bi],

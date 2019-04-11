@@ -4,6 +4,6 @@ bin\main^
   --num_levels 2^
   --precision 64^
   --tile_dims 12 12 12^
-  --tolerance 1e-6^
+  --tolerance 1e-7^
   --chunk_bytes 512^
   --compressed_file compressed

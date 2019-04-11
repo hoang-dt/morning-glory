@@ -99,7 +99,7 @@ params ParseParams(int Argc, const char** Argv) {
   return P;
 }
 
-int MaxNBlocks = 1516;
+int MaxNBlocks = 1;
 
 void OldEncode(int BlockBegin, int BlockEnd) {
   FILE* Fp = fopen("blocks.raw", "rb");
@@ -125,7 +125,7 @@ void OldEncode(int BlockBegin, int BlockEnd) {
 }
 
 void TestEncoder(int ChunkSize, int BlockBegin, int BlockEnd) {
-  FILE* Fp = fopen("blocks.raw", "rb");
+  FILE* Fp = fopen("test.raw", "rb");
   dynamic_array<u64> InBuf;
   Init(&InBuf, MaxNBlocks * 64);
   dynamic_array<u64> OutBuf;
@@ -225,9 +225,9 @@ int main(int Argc, const char** Argv) {
   } else { // Decode
     ff_err FfErr = Decode(&Ff, &P.Meta);
     mg_AbortIf(ErrorExists(FfErr), "%s", ToString(FfErr));
-    f64 Error = PSNR(F, Ff.Volume);
-    //f64 Error = PSNR(F.Buffer.Data, Ff.Volume.Buffer.Data, 96*96*96);
-    printf("PSNR = %f\n", Error);
+    f64 Error = RMSError(F, Ff.Volume);
+    f64 Psnr = PSNR(F, Ff.Volume);
+    printf("RMSE = %e PSNR = %f\n", Error, Psnr);
 
 #if defined(mg_CollectStats)
     Log("stats_decode.txt");
