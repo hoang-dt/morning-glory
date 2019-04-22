@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.28307.136
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28721.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "main", "main.exe", "{05531BF2-0140-4B69-8BBC-50D8506418E5}"
 	ProjectSection(DebuggerProjectSystem) = preProject
@@ -9,7 +9,7 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "main", "main.exe", "{05531B
 		Executable = E:\Workspace\file-format-new\bin\main.exe
 		RemoteMachine = MEOW
 		StartingDirectory = E:\Workspace\file-format-new
-		Arguments = --encode --raw_file D:/Datasets/3D/Small/MIRANDA-DENSITY-[96-96-96]-Float64.raw --num_levels 2 --precision 64 --tile_dims 12 12 12 --tolerance 1e-4 --chunk_bytes 512 --compressed_file compressed
+		Arguments = --decode --raw_file D:/Datasets/3D/Small/MIRANDA-DENSITY-[96-96-96]-Float64.raw --compressed_file compressed
 		Environment = Default
 		LaunchingEngine = 00000000-0000-0000-0000-000000000000
 		UseLegacyDebugEngines = No
@@ -19,7 +19,6 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "main", "main.exe", "{05531B
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A5B2C1F5-7D4C-4D84-8375-C11FFEDA3419}"
 	ProjectSection(SolutionItems) = preProject
-		app_convert_raw.cpp = app_convert_raw.cpp
 		build.cpp = build.cpp
 		main.cpp = main.cpp
 		mg_algorithm.h = mg_algorithm.h
@@ -37,7 +36,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		mg_bitstream.inl = mg_bitstream.inl
 		mg_common_types.cpp = mg_common_types.cpp
 		mg_common_types.h = mg_common_types.h
-		mg_common_types.inl = mg_common_types.inl
 		mg_dataset.cpp = mg_dataset.cpp
 		mg_dataset.h = mg_dataset.h
 		mg_debugbreak.h = mg_debugbreak.h
@@ -45,6 +43,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		mg_encode.h = mg_encode.h
 		mg_enum.h = mg_enum.h
 		mg_enum.inl = mg_enum.inl
+		mg_error.cpp = mg_error.cpp
 		mg_error.h = mg_error.h
 		mg_error.inl = mg_error.inl
 		mg_expected.h = mg_expected.h

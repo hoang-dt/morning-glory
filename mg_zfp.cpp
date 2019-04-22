@@ -16,9 +16,8 @@ bool EncodeBlockOriginal(const u64* Block, int Bitplane, i8& N, bitstream* Bs) {
   WriteLong(Bs, X, N);
   X >>= N;
   // TODO: we may be able to speed this up by getting rid of the shift of X
-  int Bit = 0;
-  for (; N < 64 && (Bit = Write(Bs, !!X)); X >>= 1, ++N) {
-    for (; N < 64 - 1 && !(Bit = Write(Bs, X & 1u)); X >>= 1, ++N);
+  for (; N < 64 && Write(Bs, !!X); X >>= 1, ++N) {
+    for (; N < 64 - 1 && !Write(Bs, X & 1u); X >>= 1, ++N);
   }
   mg_Assert(N <= 64);
   return (N == 64);
@@ -28,9 +27,8 @@ bool DecodeBlockOriginal(u64* Block, int Bitplane, i8& N, bitstream* Bs) {
   /* decode first N bits of bit plane #Bitplane */
   u64 X = ReadLong(Bs, N);
   /* unary run-length decode remainder of bit plane */
-  int Bit = 0;
-  for (; N < 64 && (Bit = Read(Bs)); X += 1ull << N++) {
-    for (; N < 64 - 1 && !(Bit = Read(Bs)); ++N);
+  for (; N < 64 && Read(Bs); X += 1ull << N++) {
+    for (; N < 64 - 1 && !Read(Bs); ++N);
   }
   /* deposit bit plane from x */
   for (int I = 0; X; ++I, X >>= 1)

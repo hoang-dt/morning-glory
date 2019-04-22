@@ -2,8 +2,8 @@
 
 :: Parameters
 set "LLVMPath=C:\Program Files\LLVM"
-set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise"
-set "VSVersion=14.16.27023"
+set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
+set "VSVersion=14.20.27508"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
 set "OUTPUT=main.exe"
@@ -26,7 +26,7 @@ if %1==Debug (set CFLAGS= -O0 -D_DEBUG)
 
 set COMMON_CDEFS= -D_CRT_SECURE_NO_WARNINGS
 if %1==Release (set CDEFS= )
-if %1==FastDebug (set CDEFS= -Dmg_Slow=1 -Dmg_Verbose=1)
+if %1==FastDebug (set CDEFS= -Dmg_Slow=1 -Dmg_Verbose=1 -Dmg_CollectStats=1)
 if %1==Debug (set CDEFS= -Dmg_Slow=1 -Dmg_Verbose=1 -Dmg_CollectStats=1)
 
 :: Linker flags
