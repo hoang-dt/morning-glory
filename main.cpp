@@ -82,7 +82,7 @@ params ParseParams(int Argc, const char** Argv) {
   return P;
 }
 
-void TestMemMap() {
+void TestMemMap(const char* Input) {
   /* test write */
   mmap_file MMap;
   auto Err = open_file("test.raw", map_mode::Write, &MMap);
@@ -103,8 +103,7 @@ void TestMemMap() {
   Err = close_file(&MMap);
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
   /* test read */
-  Err = open_file("D:/Datasets/3D/MAGNETIC-RECONNECTION-[512-512-512]-Float32.raw",
-                  map_mode::Read, &MMap);
+  Err = open_file(Input, map_mode::Read, &MMap);
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
   Err = map_file(&MMap);
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
@@ -123,7 +122,9 @@ void TestMemMap() {
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
-  TestMemMap();
+  if (Argc < 2)
+    mg_Abort("Prove a file path");
+  TestMemMap(Argv[1]);
   return 0;
   //int ChunkSize, BlockBegin, BlockEnd;
   //ToInt(Argv[1], &ChunkSize);

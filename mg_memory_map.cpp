@@ -18,7 +18,8 @@ error<mmap_err_code> open_file(const char* Name, map_mode Mode, mmap_file* MMap)
   if (MMap->File == INVALID_HANDLE_VALUE)
     return mg_Error(mmap_err_code::FileCreateFailed);
 #elif defined(__linux__) || defined(__APPLE__)
-  MMap->File = open(Name, Mode == map_mode::Read ? O_RDONLY : O_RDWR);
+  MMap->File = open(Name, Mode == map_mode::Read ? O_RDONLY
+                                                 : O_RDWR | O_CREAT | O_TRUNC, 0600);
   if (MMap->File == -1)
     return mg_Error(mmap_err_code::FileCreateFailed);
 #endif
@@ -61,10 +62,11 @@ error<mmap_err_code> map_file(mmap_file* MMap, i64 Bytes) {
     FileSize = Bytes;
   else if (fstat(MMap->File, &Stat) == 0)
     FileSize = Stat.st_size;
+  printf("File size = %d", (int)FileSize);
   void* MapAddress =
     mmap(0,
          FileSize,
-         MMap->Mode == map_mode::Read ? PROT_READ : PROT_WRITE,
+         MMap->Mode == map_mode::Read ? PROT_READ : PROT_READ | PROT_WRITE,
          MAP_SHARED,
          MMap->File,
          0);

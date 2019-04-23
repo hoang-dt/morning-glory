@@ -23,7 +23,7 @@ mg_Enum(mmap_err_code, int, mg_CommonErrs,
 
 namespace mg {
 
-enum class map_mode { Read, Write, ReadWrite };
+enum class map_mode { Read, Write };
 
 #if defined(_WIN32)
 using file_handle = HANDLE;
