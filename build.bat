@@ -58,7 +58,7 @@ if %1==Debug (set LDLIBS= ^
 ::@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
 md bin
 cd bin
-clang++.exe "../build.cpp" -o "build.o" -c %COMMON_CFLAGS% %CFLAGS% %COMMON_CDEFS% %CDEFS%
+clang++.exe "../src/build.cpp" -o "build.o" -c %COMMON_CFLAGS% %CFLAGS% %COMMON_CDEFS% %CDEFS%
 
 :: Linking
 ::@set "LINK_FILES="

@@ -1,6 +1,6 @@
 # Parameters
 export COMPILER=g++-8
-export OUTPUT=main
+export OUTPUT=bin/main
 
 # Compiler flags
 export CFLAGS="Please-provide-a-build-configuration:-Debug/FastDebug/Release"
@@ -37,5 +37,5 @@ if [ "$1" == "Release" ]
 fi
 
 # Compiling
-${COMPILER} build.cpp -o ${OUTPUT} ${CFLAGS} ${CDEFS}
+${COMPILER} src/build.cpp -o ${OUTPUT} ${CFLAGS} ${CDEFS}
 
