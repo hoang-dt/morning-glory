@@ -155,6 +155,8 @@ struct buffer {
   buffer();
   buffer(byte* Data, i64 Bytes, allocator* Alloc);
   template<typename t> buffer(typed_buffer<t> Buf);
+  byte& operator[](i64 Idx);
+  byte operator[](i64 Idx) const;
 };
 
 template <typename t>

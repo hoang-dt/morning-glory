@@ -127,4 +127,14 @@ v3i Extract3Ints64(u64 V) {
   return v3i(V & 0x1FFFFF, (V & 0x3FFFFE00000) >> 21, (V & 0x7FFFFC0000000000ull) >> 42);
 }
 
+mg_ForceInline
+u32 LowBits64(u64 V) {
+  return V & 0xFFFFFFFF;
+}
+
+mg_ForceInline
+u32 HighBits64(u64 V) {
+  return V >> 32;
+}
+
 } // namespace mg

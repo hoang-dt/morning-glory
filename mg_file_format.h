@@ -1,6 +1,7 @@
 #pragma once
 
 #include "mg_array.h"
+#include "mg_enum.h"
 #include "mg_error.h"
 #include "mg_linked_list.h"
 #include "mg_volume.h"

@@ -16,6 +16,7 @@
 #include "mg_io.h"
 #include "mg_math.h"
 #include "mg_memory.h"
+#include "mg_memory_map.h"
 #include "mg_scopeguard.h"
 #include "mg_signal_processing.h"
 #include "mg_dataset.h"
@@ -27,25 +28,7 @@
 
 using namespace mg;
 
-// TODO: have an abstraction for typed buffer
-// TODO: enforce error checking everywhere
 // TODO: memory out-of-bound/leak detection
-
-void TestLinkedList() {
-  list<int> List;
-  auto Where1 = PushBack(&List, 1);
-  auto Where2 = PushBack(&List, 2);
-  auto Where3 = PushBack(&List, 3);
-  auto Where4 = PushBack(&List, 4);
-  Insert(&List, Where1, 5);
-  Insert(&List, Where2, 6);
-  Insert(&List, Where3, 7);
-  Insert(&List, Where4, 8);
-  for (auto It = ConstBegin(List); It != ConstEnd(List); ++It) {
-    printf("%d\n", It->Payload);
-  }
-  Dealloc(&List);
-}
 
 mg_Enum(action, int, Encode, Decode)
 
@@ -99,95 +82,46 @@ params ParseParams(int Argc, const char** Argv) {
   return P;
 }
 
-int MaxNBlocks = 1;
-
-void OldEncode(int BlockBegin, int BlockEnd) {
-  FILE* Fp = fopen("blocks.raw", "rb");
-  dynamic_array<u64> InBuf;
-  Init(&InBuf, MaxNBlocks * 64);
-  fread(InBuf.Buffer.Data, sizeof(u64), MaxNBlocks * 64, Fp);
-  fclose(Fp);
-  bitstream Bs;
-  AllocBuf(&Bs.Stream, 1000000);
-  InitWrite(&Bs, Bs.Stream);
-  dynamic_array<i8> Ns;
-  Init(&Ns, BlockEnd - BlockBegin, (i8)0);
-  Fp = fopen("method2.raw", "wb");
-  for (int Bp = 63; Bp >= 0; --Bp) {
-    for (int I = BlockBegin; I < BlockEnd; ++I) {
-      EncodeBlockOriginal(&InBuf[I * 64], Bp, Ns[I - BlockBegin], &Bs);
-    }
-  }
-  if (BitSize(Bs) > 0) {
-    Flush(&Bs);
-    fwrite(Bs.Stream.Data, Size(Bs), 1, Fp);
-  }
-}
-
-void TestEncoder(int ChunkSize, int BlockBegin, int BlockEnd) {
-  FILE* Fp = fopen("test.raw", "rb");
-  dynamic_array<u64> InBuf;
-  Init(&InBuf, MaxNBlocks * 64);
-  dynamic_array<u64> OutBuf;
-  Init(&OutBuf, Size(InBuf), 0ull);
-  fread(InBuf.Buffer.Data, sizeof(u64), MaxNBlocks * 64, Fp);
-  fclose(Fp);
-  bitstream Bs;
-  AllocBuf(&Bs.Stream, 10000000);
-  InitWrite(&Bs, Bs.Stream);
-  Fp = fopen("method1.raw", "wb");
-  dynamic_array<i8> Ns;
-  Init(&Ns, BlockEnd - BlockBegin, (i8)0);
-  for (int Bp = 63; Bp >= 0; --Bp) {
-    for (int I = BlockBegin; I < BlockEnd; ++I) {
-      i8 M = 0;
-      bool InnerLoop = false;
-      bool FullyEncoded = false;
-      do {
-        FullyEncoded = EncodeBlock(&InBuf[I * 64], Bp, ChunkSize, Ns[I - BlockBegin], M, InnerLoop, &Bs);
-        if (BitSize(Bs) == ChunkSize) {
-          Flush(&Bs);
-          fwrite(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
-          InitWrite(&Bs, Bs.Stream);
-        }
-      } while (!FullyEncoded);
-    }
-  }
-  if (BitSize(Bs) > 0) {
-    Flush(&Bs);
-    fwrite(Bs.Stream.Data, Size(Bs), 1, Fp);
-  }
-  Fill(Begin(Ns), End(Ns), (i8)0);
-  fclose(Fp);
-  Fp = fopen("method1.raw", "rb");
-  fread(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
-  InitRead(&Bs, Bs.Stream);
-  printf("-------------------------- done -------------------\n");
-  for (int Bp = 63; Bp >= 0; --Bp) {
-    for (int I = BlockBegin; I < BlockEnd; ++I) {
-      i8 M = 0;
-      bool InnerLoop = false;
-      bool FullyDecoded = false;
-      do {
-        FullyDecoded = DecodeBlock(&OutBuf[I * 64], Bp, ChunkSize, Ns[I - BlockBegin], M, InnerLoop, &Bs);
-        if (BitSize(Bs) == ChunkSize) {
-          fread(Bs.Stream.Data, ChunkSize / 8, 1, Fp);
-          InitRead(&Bs, Bs.Stream);
-        }
-      } while (!FullyDecoded);
-    }
-  }
-  i64 Error = 0;
-  for (int I = BlockBegin; I < BlockEnd; ++I) {
-    for (int J = 0; J < 64; ++J)
-      Error += InBuf[I * 64 + J] - OutBuf[I * 64 + J];
-  }
-  printf("%llu\n", Error);
-  DeallocBuf(&Bs.Stream);
+void TestMemMap() {
+  /* test write */
+  mmap_file MMap;
+  auto Err = open_file("test.raw", map_mode::Write, &MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  Err = map_file(&MMap, 128);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  MMap.Buf[4] = 'h';
+  MMap.Buf[5] = 'e';
+  MMap.Buf[6] = 'l';
+  MMap.Buf[7] = 'l';
+  MMap.Buf[8] = 'o';
+  Err = flush_file(&MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  Err = sync_file(&MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  Err = unmap_file(&MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  Err = close_file(&MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  /* test read */
+  Err = open_file("D:/Datasets/3D/MAGNETIC-RECONNECTION-[512-512-512]-Float32.raw",
+                  map_mode::Read, &MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  Err = map_file(&MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  printf("%x\n", MMap.Buf[4096]);
+  printf("%x\n", MMap.Buf[4096 * 2]);
+  printf("%x\n", MMap.Buf[4096 * 3]);
+  printf("%x\n", MMap.Buf[500000000]);
+  Err = unmap_file(&MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  Err = close_file(&MMap);
+  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
 }
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
+  TestMemMap();
+  return 0;
   //int ChunkSize, BlockBegin, BlockEnd;
   //ToInt(Argv[1], &ChunkSize);
   //ToInt(Argv[2], &BlockBegin);

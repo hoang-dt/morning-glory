@@ -32,6 +32,9 @@ u32 EncodeMorton3(u32 X, u32 Y, u32 Z);
 u64 Stuff3Ints64(v3i V);
 /* The inverse of Stuff3Ints */
 v3i Extract3Ints64(u64 V);
+/* Return the low 32 bits of the input */
+u32 LowBits64(u64 V);
+u32 HighBits64(u64 V);
 
 } // namespace mg
 
