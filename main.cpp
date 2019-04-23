@@ -118,6 +118,9 @@ void TestMemMap() {
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
 }
 
+#include <iostream>
+#include <new>
+
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
   TestMemMap();

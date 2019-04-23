@@ -38,7 +38,7 @@ extent::extent(v3i Pos, v3i Dims, v3i Stride)
 //mg_ForceInline
 //bool IsLine(extent Ext) {
 //  v3i MyDims = Dims(Ext);
-//  return !IsPoint(Ext) && ((MyDims.X * MyDims.Y == 1) || 
+//  return !IsPoint(Ext) && ((MyDims.X * MyDims.Y == 1) ||
 //                           (MyDims.Y * MyDims.Z == 1) ||
 //                           (MyDims.X * MyDims.Z == 1));
 //}
@@ -77,27 +77,27 @@ i64 Size(const volume& Vol) {
   return Prod<i64>(SmallDims(Vol));
 }
 
-template <typename t> mg_ForceInline
-t& At(volume& Vol, v3i MyPos) {
-  mg_Assert(MatchTypes<t>(Vol.Type));
-  mg_Assert(MyPos < SmallDims(Vol));
-  MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
-  i64 I = XyzToI(BigDims(Vol), MyPos);
-  t* Ptr = (t*)Vol.Buffer.Data;
-  mg_Assert(I * (i64)sizeof(t) < Vol.Buffer.Bytes);
-  return Ptr[I];
-}
-
-template <typename t> mg_ForceInline
-t At(const volume& Vol, i64 I) {
-  mg_Assert(MatchTypes<t>(Vol.Type));
-  mg_Assert(MyPos < SmallDims(Vol));
-  MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
-  i64 I = XyzToI(BigDims(Vol), MyPos);
-  const t* Ptr = (t*)Vol.Buffer.Data;
-  mg_Assert(I * (i64)sizeof(t) < Vol.Buffer.Bytes);
-  return Ptr[I];
-}
+//template <typename t> mg_ForceInline
+//t& At(volume& Vol, v3i MyPos) {
+//  mg_Assert(MatchTypes<t>(Vol.Type));
+//  auto MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
+//  mg_Assert(MyPos < SmallDims(Vol));
+//  i64 I = XyzToI(BigDims(Vol), MyPos);
+//  t* Ptr = (t*)Vol.Buffer.Data;
+//  mg_Assert(I * (i64)sizeof(t) < Vol.Buffer.Bytes);
+//  return Ptr[I];
+//}
+//
+//template <typename t> mg_ForceInline
+//t At(const volume& Vol, i64 I) {
+//  mg_Assert(MatchTypes<t>(Vol.Type));
+//  auto MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
+//  mg_Assert(MyPos < SmallDims(Vol));
+//  i64 I = XyzToI(BigDims(Vol), MyPos);
+//  const t* Ptr = (t*)Vol.Buffer.Data;
+//  mg_Assert(I * (i64)sizeof(t) < Vol.Buffer.Bytes);
+//  return Ptr[I];
+//}
 
 mg_ForceInline
 i64 XyzToI(v3i N, v3i P) {

@@ -1,5 +1,5 @@
 # Parameters
-export COMPILER=clang++-7
+export COMPILER=g++-8
 export OUTPUT=main
 
 # Compiler flags
@@ -37,5 +37,5 @@ if [ "$1" == "Release" ]
 fi
 
 # Compiling
-g++-8 build.cpp -o ${OUTPUT} ${CFLAGS} ${CDEFS}
+${COMPILER} build.cpp -o ${OUTPUT} ${CFLAGS} ${CDEFS}
 

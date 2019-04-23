@@ -289,8 +289,10 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
       v3i SbDims3 = Extract3Ints64(Ff->Subbands[Sb].DimsCompact);
       v3i NTiles3 = (SbDims3 + Ff->TileDims - 1) / Ff->TileDims;
       AllocBufT(&Ff->Chunks[Sb], Prod<i64>(NTiles3));
-      for (i64 Ti = 0; Ti < Size(Ff->Chunks[Sb]); ++Ti)
-        new (&Ff->Chunks[Sb][Ti]) list<buffer>;
+      for (i64 Ti = 0; Ti < Size(Ff->Chunks[Sb]); ++Ti) {
+        list<buffer>* List = &Ff->Chunks[Sb][Ti];
+        *List = list<buffer>();
+      }
     }
     AllocBuf(&Ff->Volume.Buffer, Prod<i64>(Dims) * SizeOf(Ff->Volume.Type));
   }

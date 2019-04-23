@@ -33,8 +33,8 @@ i64 Size(const volume& Vol);
 
 volume SubVolume(); // TODO: extract a subvolume from a volume
 
-template <typename t> t& At(volume& Vol, i64 I);
-template <typename t> t At(const volume& Vol, i64 I);
+//template <typename t> t& At(volume& Vol, i64 I);
+//template <typename t> t At(const volume& Vol, i64 I);
 
 i64 XyzToI(v3i N, v3i P);
 v3i IToXyz(i64 I, v3i N);

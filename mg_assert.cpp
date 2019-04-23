@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <stdlib.h>
+#include "mg_assert.h"
 #include "mg_io.h"
 #include "mg_stacktrace.h"
 #include "mg_types.h"
