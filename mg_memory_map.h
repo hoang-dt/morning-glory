@@ -28,8 +28,10 @@ using file_handle = HANDLE;
 #endif
 
 struct mmap_file {
+#if defined(_WIN32)
   HANDLE File;
   HANDLE FileMapping;
+#endif
   map_mode Mode;
   buffer Buf;
 };

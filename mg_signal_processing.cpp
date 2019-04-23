@@ -104,26 +104,6 @@ f64 PSNR(const volume& F, const volume& G) {
 #undef Body
 }
 
-//f64 PSNR(const volume& F, const volume& G) {
-//  mg_Assert(F.Type == G.Type);
-//  mg_Assert(SmallDims(F) == SmallDims(G));
-//#define Body(type)\
-//  type MinVal = Traits<type>::Max;\
-//  type MaxVal = Traits<type>::Min;\
-//  f64 Err
-//  auto FIt = ConstBegin(F);
-//  auto GIt = ConstBegin(G);
-//  auto FEnd = ConstEnd(F);
-//  while (FIt != FEnd) {
-//
-//  }
-//  i64 N = Prod<i64>(SmallDims(F));
-//  for (i64 I = 0; I < N; ++I) {
-//
-//  }
-//#undef Body
-//}
-
 void ConvertToNegabinary(const byte* FIn, i64 Size, byte* FOut, data_type Type) {
 #define Body(type)\
   using utype = typename Traits<type>::unsigned_t;\
