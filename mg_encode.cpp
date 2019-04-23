@@ -291,7 +291,7 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   Flush(&Bs);
   printf("Encoding time: %f s\n", ResetTimer(&Timer) / 1000.0);
   fwrite(Bs.Stream.Data, Size(Bs), 1, Fp);
-  printf("Compressed size = %ld", Size(Bs));
+  printf("Compressed size = %" PRId64, Size(Bs));
   fclose(Fp);
   printf("\n------------------------------------\n");
 }

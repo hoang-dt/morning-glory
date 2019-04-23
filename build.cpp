@@ -13,6 +13,7 @@
 #include "mg_logger.cpp"
 #include "mg_math.cpp"
 #include "mg_memory.cpp"
+#include "mg_memory_map.cpp"
 #include "mg_mutex.cpp"
 #include "mg_signal_processing.cpp"
 #include "mg_stacktrace.cpp"
