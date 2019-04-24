@@ -7,3 +7,5 @@ _gsdata_
 *.dll
 *.swp
 bin
+build
+CMakeFiles

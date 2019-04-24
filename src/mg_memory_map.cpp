@@ -29,7 +29,7 @@ error<mmap_err_code> open_file(const char* Name, map_mode Mode, mmap_file* MMap)
 
 error<mmap_err_code> map_file(mmap_file* MMap, i64 Bytes) {
 #if defined(_WIN32)
-  LARGE_INTEGER FileSize{0, 0};
+  LARGE_INTEGER FileSize{{0, 0}};
   if (!GetFileSizeEx(MMap->File, &FileSize) || Bytes != 0)
     FileSize.QuadPart = Bytes;
   MMap->FileMapping =

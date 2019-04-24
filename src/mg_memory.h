@@ -13,7 +13,7 @@
 namespace mg {
 
 /* General purpose buffer for string-related operations */
-thread_local char ScratchBuf[1024];
+inline thread_local char ScratchBuf[1024];
 
 /* Quickly declare a heap-allocated array which deallocates itself at the end of
  * scope return a typed_buffer */
@@ -94,7 +94,7 @@ struct fallback_allocator : public allocator {
   void DeallocAll() override;
 };
 
-static mallocator& Mallocator() {
+static inline mallocator& Mallocator() {
   static mallocator Instance;
   return Instance;
 }

@@ -145,11 +145,13 @@ template<typename t> mg_ForceInline
 buffer::buffer(typed_buffer<t> Buf)
   : Data(Buf.Data), Bytes(Buf.Size * sizeof(t)) {}
 
+mg_ForceInline
 byte& buffer::operator[](i64 Idx) {
   assert(Idx < Bytes);
   return Data[Idx];
 }
 
+mg_ForceInline
 byte buffer::operator[](i64 Idx) const {
   assert(Idx < Bytes);
   return Data[Idx];

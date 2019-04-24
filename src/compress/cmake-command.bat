@@ -1,0 +1,1 @@
+cmake -H. -Bbin -G Ninja -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe"  -DCMAKE_CXX_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe" -DCMAKE_LINKER:PATH="C:/Program Files/LLVM/bin/lld-link.exe" -Dzfp_DIR="E:/Libraries/zfp/zfp/build/install/lib/cmake/zfp" -Dstlab_DIR="E:\Libraries\stlab\libraries\build\install\share\cmake\stlab" -DBOOST_ROOT="E:\Libraries\Boost"
