@@ -62,7 +62,10 @@ error<mmap_err_code> map_file(mmap_file* MMap, i64 Bytes) {
     FileSize = Bytes;
   else if (fstat(MMap->File, &Stat) == 0)
     FileSize = Stat.st_size;
-  printf("File size = %d", (int)FileSize);
+  if (MMap->Mode == map_mode::Write)
+    // TODO: only works on Linux, not Mac OS X
+    if (fallocate(MMap->File, 0, 0, FileSize) == -1)
+      return mg_Error(mmap_err_code::AllocateFailed);
   void* MapAddress =
     mmap(0,
          FileSize,

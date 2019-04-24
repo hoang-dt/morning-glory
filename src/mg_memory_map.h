@@ -19,7 +19,7 @@
 // TODO: create a mapping that is not backed by a file
 
 mg_Enum(mmap_err_code, int, mg_CommonErrs,
-  MappingFailed, MapViewFailed, FlushFailed, SyncFailed, UnmapFailed)
+  MappingFailed, MapViewFailed, AllocateFailed, FlushFailed, SyncFailed, UnmapFailed)
 
 namespace mg {
 
