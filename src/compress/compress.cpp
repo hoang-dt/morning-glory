@@ -9,6 +9,7 @@
 #include <stlab/concurrency/immediate_executor.hpp>
 #include <stlab/concurrency/future.hpp>
 #include <zfp.h>
+#include <bitstream.h>
 #include "../mg_args.h"
 #include "../mg_assert.h"
 #include "../mg_dataset.h"
@@ -67,24 +68,26 @@ void Compress(const params& P) {
   i64 TotalCompressedBytes = Prod<i64>(NumBlocks3) * 8 * P.Rate;
   Err = map_file(&MMapOut, TotalCompressedBytes);
 
+  zfp_field* Field = zfp_field_3d(NULL, zfp_type_double, 4, 4, 4);
+  zfp_stream* Zfp = zfp_stream_open(NULL);
+  zfp_stream_set_rate(Zfp, P.Rate, zfp_field_type(Field), zfp_field_dimensionality(Field), 0);
+  size_t Bytes = zfp_stream_maximum_size(Zfp, Field);
+  zfp_stream ZfpCopy = *Zfp;
+  bitstream* Stream = stream_open(MMapOut.Buf.Data, Bytes * Prod<i64>(NumBlocks3));
+  bitstream StreamCopy = *Stream;
   //mg_BeginFor3(V, v3i::Zero(), P.Meta.Dims, ZDims) {
   Counter = Prod<i64>(NumBlocks3);
   for (i64 BlockId = 0; BlockId < Prod<i64>(NumBlocks3); ++BlockId) { // for each block
-    auto Fut = async(immediate_executor, [=]() {
+    auto Fut = async(default_executor, [&, ZfpCopy, StreamCopy, BlockId]() mutable {
       //if (BlockId % 100 == 0)
         //fprintf(stderr, "Block %lld : %f\n", BlockId, S);
       v3i V = IToXyz(BlockId, NumBlocks3) * ZDims;
       f64 Block[64];
       CopyBlock(Block, (f64*)MMapIn.Buf.Data, P.Meta.Dims, V);
-      zfp_field* Field = zfp_field_3d(NULL, zfp_type_double, 4, 4, 4);
-      zfp_stream* Zfp = zfp_stream_open(NULL);
-      zfp_stream_set_rate(Zfp, P.Rate, zfp_field_type(Field), zfp_field_dimensionality(Field), 0);
-      size_t Bytes = zfp_stream_maximum_size(Zfp, Field);
-      zfp_field_free(Field);
-      bitstream* Stream = stream_open(MMapOut.Buf.Data + BlockId * 8 * P.Rate, Bytes);
-      zfp_stream_set_bit_stream(Zfp, Stream);
-      zfp_encode_block_double_3(Zfp, Block);
-      zfp_stream_flush(Zfp);
+      zfp_stream_set_bit_stream(&ZfpCopy, &StreamCopy);
+      stream_skip(&StreamCopy, P.Rate * BlockId * 64);
+      zfp_encode_block_double_3(&ZfpCopy, Block);
+      zfp_stream_flush(&ZfpCopy);
       {
         unique_lock<mutex> Lock(Mutex);
         --Counter;
@@ -96,6 +99,9 @@ void Compress(const params& P) {
   }
   unique_lock<mutex> Lock(Mutex);
   Cond.wait(Lock, []{ return Counter == 0; });
+  zfp_field_free(Field);
+  zfp_stream_close(Zfp);
+  stream_close(Stream);
   //this_thread::sleep_for(chrono::milliseconds(10000));
   printf("Flusing file...\n");
   Err = flush_file(&MMapOut); mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
