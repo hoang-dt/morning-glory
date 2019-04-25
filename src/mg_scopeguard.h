@@ -6,7 +6,8 @@ template <typename func_t>
 struct scope_guard {
   func_t Func;
   bool Dismissed = false;
-  scope_guard(const func_t& Func) : Func(Func) {}
+  // TODO: std::forward FuncIn?
+  scope_guard(const func_t& FuncIn) : Func(FuncIn) {}
   ~scope_guard() { if (!Dismissed) { Func(); } }
 };
 

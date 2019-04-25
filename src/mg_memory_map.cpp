@@ -84,8 +84,8 @@ error<mmap_err_code> map_file(mmap_file* MMap, i64 Bytes) {
 /* (Non-blocking) flush dirty pages */
 error<mmap_err_code> flush_file(mmap_file* MMap, byte* Start, i64 Bytes) {
 #if defined(_WIN32)
-  bool Result = Start ? FlushViewOfFile(Start, Bytes)
-                      : FlushViewOfFile(MMap->Buf.Data, Bytes);
+  bool Result = Start ? FlushViewOfFile(Start, (size_t)Bytes)
+                      : FlushViewOfFile(MMap->Buf.Data, (size_t)Bytes);
   if (!Result)
     return mg_Error(mmap_err_code::FlushFailed);
 #elif defined(__linux__) || defined(__APPLE__)

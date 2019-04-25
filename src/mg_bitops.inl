@@ -34,6 +34,8 @@ t FlipBit(t Val, int I) {
   return Val ^ t(1ull << I);
 }
 
+// TODO: replace bsr with the faster intrinsic
+
 /* Return the bit plane of the most significant one-bit. Counting starts from the least significant
 bit plane. Examples: Bsr(0) = -1, Bsr(2) = 1, Bsr(5) = 2, Bsr(8) = 3 */
 #if defined(__clang__) || defined(__GNUC__)

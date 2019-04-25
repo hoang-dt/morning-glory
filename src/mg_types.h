@@ -153,7 +153,7 @@ struct buffer {
   i64 Bytes = 0;
   allocator* Alloc = nullptr;
   buffer();
-  buffer(byte* Data, i64 Bytes, allocator* Alloc);
+  buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn);
   template<typename t> buffer(typed_buffer<t> Buf);
   byte& operator[](i64 Idx);
   byte operator[](i64 Idx) const;

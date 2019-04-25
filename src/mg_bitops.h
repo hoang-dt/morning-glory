@@ -4,7 +4,7 @@
 #include "mg_macros.h"
 #include "mg_types.h"
 
-#define mg_BitSizeOf(X) (sizeof(X) * 8)
+#define mg_BitSizeOf(X) ((int)sizeof(X) * 8)
 
 namespace mg {
 

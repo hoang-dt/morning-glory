@@ -4,7 +4,7 @@
 // https://stackoverflow.com/questions/22467604/how-can-you-use-capturestackbacktrace-to-capture-the-exception-stack-not-the-ca
 #include <process.h>
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <Windows.h>
 #include <DbgHelp.h>
 #include "mg_io.h"
 #include "mg_mutex.h"
@@ -31,7 +31,7 @@ bool PrintStacktrace(printer* Pr) {
                               &Stack, &Context, nullptr,
       SymFunctionTableAccess64, SymGetModuleBase64, nullptr);
     if (!Result)
-      return false;
+      break;
     PSymbol->SizeOfStruct = sizeof(SYMBOL_INFO);
     PSymbol->MaxNameLen = MAX_SYM_NAME;
     DWORD64 Displacement = 0;
@@ -40,17 +40,17 @@ bool PrintStacktrace(printer* Pr) {
     Line.SizeOfStruct = sizeof(IMAGEHLP_LINE64);
     DWORD Offset = 0;
     if (SymGetLineFromAddr64(Process, Stack.AddrPC.Offset, &Offset, &Line)) {
-      mg_Print(Pr, "Function %s, file %s, line %lu: \n", 
+      mg_Print(Pr, "Function %s, file %s, line %lu: \n",
                PSymbol->Name, Line.FileName, Line.LineNumber);
     } else { // failed to get the line number
       HMODULE HModule = nullptr;
       char Module[256] = "";
-      GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | 
+      GetModuleHandleEx(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
                         GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
                         (LPCTSTR)(Stack.AddrPC.Offset), &HModule);
       if (HModule)
         GetModuleFileNameA(HModule, Module, 256);
-      mg_Print(Pr, "Function %s, file %s, address 0x%0llX\n", 
+      mg_Print(Pr, "Function %s, file %s, address 0x%0llX\n",
                PSymbol->Name, Module, PSymbol->Address);
     }
   }
@@ -111,7 +111,7 @@ bool PrintStacktrace(printer* Pr) {
 		    mg_Print(Pr, "  %s: %s +%s [%p]\n",
                  SymbolList[I], FuncName, BeginOffset, AddrList[I]);
 	    } else { // demangling failed
-		    mg_Print(Pr, "  %s: %s() +%s [%p]\n", 
+		    mg_Print(Pr, "  %s: %s() +%s [%p]\n",
                  SymbolList[I], BeginName, BeginOffset, AddrList[I]);
 	    }
       /* get file names and line numbers using addr2line */

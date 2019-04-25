@@ -9,12 +9,12 @@ void MemCopy(buffer* Dst, const buffer& Src) {
   mg_Assert(Dst->Data, "Copy to null");
   mg_Assert(Src.Data || Src.Bytes == 0, "Copy from null");
   mg_Assert(Dst->Bytes >= Src.Bytes, "Copy to a smaller buffer");
-  memcpy(Dst->Data, Src.Data, Src.Bytes);
+  memcpy(Dst->Data, Src.Data, size_t(Src.Bytes));
 }
 
 void ZeroBuf(buffer* Buf) {
   mg_Assert(Buf->Data);
-  memset(Buf->Data, 0, Buf->Bytes);
+  memset(Buf->Data, 0, size_t(Buf->Bytes));
 }
 
 template <typename t>
@@ -30,7 +30,7 @@ void AllocBuf(buffer* Buf, i64 Bytes, allocator* Alloc) {
 void AllocBuf0(buffer* Buf, i64 Bytes, allocator* Alloc) {
   mg_Assert(!Buf->Data || Buf->Bytes == 0, "Buffer not freed before allocating new memory");
   if (Alloc == &Mallocator()) {
-    Buf->Data = (byte*)calloc(Bytes, 1);
+    Buf->Data = (byte*)calloc(size_t(Bytes), 1);
   }  else {
     AllocBuf(Buf, Bytes, Alloc);
     ZeroBuf(Buf);
@@ -47,7 +47,7 @@ void DeallocBuf(buffer* Buf) {
 
 bool mallocator::Alloc(buffer* Buf, i64 Bytes) {
   mg_Assert(!Buf->Data || Buf->Bytes == 0, "Buffer not freed before allocating new memory");
-  Buf->Data = (byte*)malloc(Bytes);
+  Buf->Data = (byte*)malloc(size_t(Bytes));
   mg_AbortIf(!(Buf->Data), "Out of memory");
   Buf->Bytes = Bytes;
   Buf->Alloc = this;
@@ -99,10 +99,10 @@ bool linear_allocator::Own(buffer Buf) {
 
 free_list_allocator::free_list_allocator() = default;
 
-free_list_allocator::free_list_allocator(i64 MinBytes, i64 MaxBytes, allocator* Parent)
-  : MinBytes(MinBytes)
-  , MaxBytes(MaxBytes)
-  , Parent(Parent) {}
+free_list_allocator::free_list_allocator(i64 MinBytesIn, i64 MaxBytesIn, allocator* ParentIn)
+  : MinBytes(MinBytesIn)
+  , MaxBytes(MaxBytesIn)
+  , Parent(ParentIn) {}
 
 bool free_list_allocator::Alloc(buffer* Buf, i64 Bytes) {
   if (MinBytes <= Bytes && Bytes <= MaxBytes && Head) {
@@ -140,9 +140,9 @@ void free_list_allocator::DeallocAll() {
 
 fallback_allocator::fallback_allocator() = default;
 
-fallback_allocator::fallback_allocator(owning_allocator* Primary, allocator* Secondary)
-  : Primary(Primary)
-  , Secondary(Secondary) {}
+fallback_allocator::fallback_allocator(owning_allocator* PrimaryIn, allocator* SecondaryIn)
+  : Primary(PrimaryIn)
+  , Secondary(SecondaryIn) {}
 
 bool fallback_allocator::Alloc(buffer* Buf, i64 Size) {
   bool Success = Primary->Alloc(Buf, Size);

@@ -27,6 +27,7 @@ struct allocator {
   virtual bool Alloc(buffer* Buf, i64 Bytes) = 0;
   virtual void Dealloc(buffer* Buf) = 0;
   virtual void DeallocAll() = 0;
+  virtual ~allocator() {}
 };
 
 /* Allocators that know if they own an address/buffer */
@@ -78,7 +79,7 @@ struct free_list_allocator : public allocator {
   i64 MaxBytes = 0;
   allocator* Parent = nullptr;
   free_list_allocator();
-  free_list_allocator(i64 MinBytes, i64 MaxBytes, allocator* Parent = nullptr);
+  free_list_allocator(i64 MinBytesIn, i64 MaxBytesIn, allocator* ParentIn = nullptr);
   bool Alloc(buffer* Buf, i64 Bytes) override;
   void Dealloc(buffer* Buf) override;
   void DeallocAll() override;
@@ -88,7 +89,7 @@ struct fallback_allocator : public allocator {
   owning_allocator* Primary = nullptr;
   allocator* Secondary = nullptr;
   fallback_allocator();
-  fallback_allocator(owning_allocator* Primary, allocator* Secondary);
+  fallback_allocator(owning_allocator* PrimaryIn, allocator* SecondaryIn);
   bool Alloc(buffer* Buf, i64 Bytes) override;
   void Dealloc(buffer* Buf) override;
   void DeallocAll() override;

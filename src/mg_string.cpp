@@ -10,8 +10,8 @@
 namespace mg {
 
 str_ref::str_ref() = default;
-str_ref::str_ref(cstr Ptr, int Size) : ConstPtr(Ptr), Size(Size) {}
-str_ref::str_ref(cstr Ptr) : ConstPtr(Ptr), Size(strlen(Ptr)) {}
+str_ref::str_ref(cstr PtrIn, int SizeIn) : ConstPtr(PtrIn), Size(SizeIn) {}
+str_ref::str_ref(cstr PtrIn) : ConstPtr(PtrIn), Size(int(strlen(PtrIn))) {}
 char& str_ref::operator[](int Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
 char str_ref::operator[](int Idx) const { mg_Assert(Idx < Size); return Ptr[Idx]; }
 str_ref::operator bool() const { return Ptr != nullptr; }
@@ -69,7 +69,7 @@ str_ref SubString(str_ref Str, int Begin, int Size) {
 
 void Copy(str_ref Dst, str_ref Src, bool AddNull) {
   int NumBytes = Min(Dst.Size, Src.Size);
-  memcpy(Dst.Ptr, Src.Ptr, NumBytes);
+  memcpy(Dst.Ptr, Src.Ptr, size_t(NumBytes));
   if (AddNull)
     Dst.Ptr[NumBytes] = 0;
 }
@@ -107,8 +107,8 @@ bool ToDouble(str_ref Str, f64* Result) {
 /* tokenizer stuff */
 
 tokenizer::tokenizer() = default;
-tokenizer::tokenizer(str_ref Input, str_ref Delims)
-  : Input(Input), Delims(Delims), Pos(0) {}
+tokenizer::tokenizer(str_ref InputIn, str_ref DelimsIn)
+  : Input(InputIn), Delims(DelimsIn), Pos(0) {}
 
 void Init(tokenizer* Tk, str_ref Input, str_ref Delims) {
   Tk->Input = Input;

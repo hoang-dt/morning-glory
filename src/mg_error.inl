@@ -15,9 +15,8 @@ template <typename t>
 error<t>::error() {}
 
 template <typename t>
-error<t>::error(t Code, bool StrGenerated, cstr Msg) :
-  Msg(Msg), Code(Code), StackIdx(0),
-  StrGenerated(StrGenerated) {}
+error<t>::error(t CodeIn, bool StrGened, cstr MsgIn) :
+  Msg(MsgIn), Code(CodeIn), StackIdx(0), StrGenerated(StrGened) {}
 
 template <typename t>
 cstr ToString(const error<t>& Err, bool Force) {
@@ -44,7 +43,7 @@ bool ErrorExists(const error<t>& Err) {
 } // namespace mg
 
 #define mg_TempSprintHelper(...)\
-  __VA_OPT__(snprintf(ScratchBuf + L, sizeof(ScratchBuf) - L, __VA_ARGS__));\
+  __VA_OPT__(snprintf(ScratchBuf + L, sizeof(ScratchBuf) - size_t(L), __VA_ARGS__));\
   mg_Unused(L)
 
 #define mg_ExtractFirst(X, ...) X

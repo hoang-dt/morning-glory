@@ -29,7 +29,7 @@ error<> ParseMeta(str_ref FilePath, metadata* Meta) {
   if (6 == sscanf(FileName.ConstPtr, "%[^-]-%[^-]-[%d-%d-%d]-%[^.]", Meta->Name,
                   Meta->Field, &Meta->Dims.X, &Meta->Dims.Y, &Meta->Dims.Z, Type))
   {
-    Type[0] = tolower(Type[0]);
+    Type[0] = (char)tolower(Type[0]);
     Meta->Type = StringTo<data_type>()(str_ref(Type));
     Copy(mg_StringRef(Meta->File), FilePath);
     return mg_Error(err_code::NoError);

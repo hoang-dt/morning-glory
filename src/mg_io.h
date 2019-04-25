@@ -15,8 +15,8 @@ struct printer {
   int Size = 0;
   FILE* File = nullptr; // either File == nullptr or Buf == nullptr
   printer();
-  printer(char* Buf, int Size);
-  printer(FILE* File);
+  printer(char* BufIn, int SizeIn);
+  printer(FILE* FileIn);
 };
 
 void Reset(printer* Pr, char* Buf, int Size);

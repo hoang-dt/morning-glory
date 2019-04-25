@@ -16,11 +16,11 @@ struct mg_Cat(enum_name, _s) {\
   enum_name Val;\
   struct enum_item {\
     str_ref Name;\
-    enum_name Val;\
+    enum_name ItemVal;\
   };\
   using name_map = array<enum_item, mg_NumArgs(__VA_ARGS__)>;\
   inline static name_map NameMap = []() {\
-    name_map NameMap;\
+    name_map MyNameMap;\
     tokenizer Tk1(mg_Str(__VA_ARGS__), ",");\
     type CurrentVal = 0;\
     for (int I = 0; ; ++I, ++CurrentVal) {\
@@ -32,30 +32,30 @@ struct mg_Cat(enum_name, _s) {\
       if (EnumVal) {\
         char* EndPtr = nullptr;\
         errno = 0;\
-        enum_name Val = enum_name(strtol(EnumVal.Ptr, &EndPtr, 10));\
+        enum_name MyVal = enum_name(strtol(EnumVal.Ptr, &EndPtr, 10));\
         if (errno == ERANGE || EndPtr == EnumVal.Ptr || !EndPtr ||\
             !(isspace(*EndPtr) || *EndPtr == ',' || *EndPtr == '\0'))\
           assert(false && " non-integer enum values");\
-        else if (Val < static_cast<enum_name>(CurrentVal))\
+        else if (MyVal < static_cast<enum_name>(CurrentVal))\
           assert(false && " non-increasing enum values");\
         else\
-          CurrentVal = static_cast<type>(Val);\
+          CurrentVal = static_cast<type>(MyVal);\
       }\
-      assert(I < Size(NameMap));\
-      NameMap[I] = enum_item{EnumStr, static_cast<enum_name>(CurrentVal)};\
+      assert(I < Size(MyNameMap));\
+      MyNameMap[I] = enum_item{EnumStr, static_cast<enum_name>(CurrentVal)};\
     }\
-    return NameMap;\
+    return MyNameMap;\
   }();\
   \
   mg_Cat(enum_name, _s)() : mg_Cat(enum_name, _s)(enum_name::__Invalid__) {}\
-  mg_Cat(enum_name, _s)(enum_name Val) {\
+  mg_Cat(enum_name, _s)(enum_name Value) {\
     const auto* It = ConstBegin(NameMap);\
     while (It != ConstEnd(NameMap)) {\
-      if (It->Val == Val)\
+      if (It->ItemVal == Value)\
         break;\
       ++It;\
     }\
-    this->Val = (It != ConstEnd(NameMap)) ? It->Val : enum_name::__Invalid__;\
+    this->Val = (It != ConstEnd(NameMap)) ? It->ItemVal : enum_name::__Invalid__;\
   }\
   explicit mg_Cat(enum_name, _s)(str_ref Name) {\
     const auto* It = ConstBegin(NameMap);\
@@ -64,7 +64,7 @@ struct mg_Cat(enum_name, _s) {\
         break;\
       ++It;\
     }\
-    Val = (It != ConstEnd(NameMap)) ? It->Val : enum_name::__Invalid__;\
+    Val = (It != ConstEnd(NameMap)) ? It->ItemVal : enum_name::__Invalid__;\
   }\
   explicit operator bool() const { return Val != enum_name::__Invalid__; }\
 }; /* struct enum_name */\
@@ -73,7 +73,7 @@ inline str_ref ToString(enum_name Enum) {\
   mg_Cat(enum_name, _s) EnumS(Enum);\
   const auto* It = ConstBegin(EnumS.NameMap);\
   while (It != ConstEnd(EnumS.NameMap)) {\
-    if (It->Val == EnumS.Val)\
+    if (It->ItemVal == EnumS.Val)\
       break;\
     ++It;\
   }\

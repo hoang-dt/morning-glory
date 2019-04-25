@@ -8,8 +8,8 @@
 namespace mg {
 
 printer::printer() = default;
-printer::printer(char* Buf, int Size) : Buf(Buf), Size(Size), File(nullptr) {}
-printer::printer(FILE* File) : Buf(nullptr), Size(0), File(File) {}
+printer::printer(char* BufIn, int SizeIn) : Buf(BufIn), Size(SizeIn), File(nullptr) {}
+printer::printer(FILE* FileIn) : Buf(nullptr), Size(0), File(FileIn) {}
 
 void Reset(printer* Pr, char* Buf, int Size) {
   Pr->Buf = Buf;
@@ -44,7 +44,7 @@ error<> ReadFile(cstr FileName, buffer* Buf) {
 
   /* Read file contents */
   mg_CleanUp(1, DeallocBuf(Buf));
-  if (fread(Buf->Data, Size, 1, Fp) != 1)
+  if (fread(Buf->Data, size_t(Size), 1, Fp) != 1)
     return mg_Error(err_code::FileReadFailed, "%s", FileName);
 
   mg_DismissCleanUp(1);
@@ -60,7 +60,7 @@ error<> WriteFile(cstr FileName, const buffer& Buf) {
     return mg_Error(err_code::FileCreateFailed, "%s", FileName);
 
   /* Read file contents */
-  if (fwrite(Buf.Data, Buf.Bytes, 1, Fp) != 1)
+  if (fwrite(Buf.Data, size_t(Buf.Bytes), 1, Fp) != 1)
     return mg_Error(err_code::FileWriteFailed, "%s", FileName);
   return mg_Error(err_code::NoError);
 }

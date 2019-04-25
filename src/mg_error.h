@@ -13,7 +13,7 @@ struct error {
   i8 StackIdx = 0;
   bool StrGenerated = false;
   error();
-  error(t Code, bool StrGenerated = false, cstr Msg = "");
+  error(t Code, bool StrGened = false, cstr MsgIn = "");
   inline thread_local static cstr Files[64]; // Store file names up the stack
   inline thread_local static i16 Lines[64]; // Store line numbers up the stack
 }; // struct err_template

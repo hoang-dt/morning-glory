@@ -8,7 +8,7 @@
 #if defined(_WIN32)
   #include <direct.h>
   #include <io.h>
-  #include <windows.h>
+  #include <Windows.h>
   #define GetCurrentDir _getcwd
   #define MkDir(Dir) _mkdir(Dir)
   #define Access(Dir) _access(Dir, 0)
@@ -42,8 +42,8 @@ str_ref GetFileName(str_ref Path) {
   mg_Assert(!Contains(Path, '\\'));
   cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
   if (LastSlash != ConstReverseEnd(Path))
-    return SubString(Path, LastSlash - ConstBegin(Path) + 1,
-                     Path.Size - (LastSlash - ConstBegin(Path)));
+    return SubString(Path, int(LastSlash - ConstBegin(Path) + 1),
+                     Path.Size - int(LastSlash - ConstBegin(Path)));
   return Path;
 }
 
@@ -51,7 +51,7 @@ str_ref GetDirName(str_ref Path) {
   mg_Assert(!Contains(Path, '\\'));
   cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
   if (LastSlash != ConstReverseEnd(Path))
-    return SubString(Path, 0, LastSlash - ConstBegin(Path));
+    return SubString(Path, 0, int(LastSlash - ConstBegin(Path)));
   return Path;
 }
 

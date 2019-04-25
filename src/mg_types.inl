@@ -49,7 +49,7 @@ struct Traits<i32> {
   using unsigned_t = u32;
   using floating_t = f32;
   static constexpr u32 NegabinaryMask = 0xaaaaaaaa;
-  static constexpr i32 Min = 0x80000000;
+  static constexpr i32 Min = i32(0x80000000);
   static constexpr i32 Max = 0x7fffffff;
 };
 
@@ -68,7 +68,7 @@ struct Traits<i64> {
   using unsigned_t = u64;
   using floating_t = f64;
   static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaULL;
-  static constexpr i64 Min = 0x8000000000000000ull;
+  static constexpr i64 Min = 0x8000000000000000ll;
   static constexpr i64 Max = 0x7fffffffffffffffull;
 };
 
@@ -139,8 +139,8 @@ TemplateArr mg_ForceInline int Size(array<t, N>&) {
 #undef TemplateArr
 
 mg_ForceInline buffer::buffer() = default;
-mg_ForceInline buffer::buffer(byte* Data, i64 Bytes, allocator* Alloc)
-  : Data(Data), Bytes(Bytes), Alloc(Alloc) {}
+mg_ForceInline buffer::buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn)
+  : Data(DataIn), Bytes(BytesIn), Alloc(AllocIn) {}
 template<typename t> mg_ForceInline
 buffer::buffer(typed_buffer<t> Buf)
   : Data(Buf.Data), Bytes(Buf.Size * sizeof(t)) {}

@@ -22,8 +22,8 @@ struct str_ref {
   int Size = 0;
 
   str_ref();
-  str_ref(cstr Ptr, int Size);
-  str_ref(cstr Ptr);
+  str_ref(cstr PtrIn, int SizeIn);
+  str_ref(cstr PtrIn);
   char& operator[](int Idx);
   char operator[](int Idx) const;
   operator bool() const;
@@ -67,7 +67,7 @@ struct tokenizer {
   int Pos = 0;
 
   tokenizer();
-  tokenizer(str_ref Input, str_ref Delims = " \n\t");
+  tokenizer(str_ref InputIn, str_ref DelimsIn = " \n\t");
 }; // struct tokenizer
 
 void Init(tokenizer* Tk, str_ref Input, str_ref Delims = " \n\t");

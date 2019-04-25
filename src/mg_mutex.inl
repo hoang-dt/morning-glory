@@ -2,7 +2,7 @@
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
-#include <windows.h>
+#include <Windows.h>
 namespace mg {
 struct mutex {
   CRITICAL_SECTION Crit;
@@ -12,7 +12,7 @@ struct mutex {
 
 struct lock {
   mutex* Mutex;
-  lock(mutex* Mutex);
+  lock(mutex* MutexIn);
   ~lock();
 };
 } // namespace mg

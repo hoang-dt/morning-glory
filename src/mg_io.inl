@@ -22,7 +22,7 @@ namespace mg {
   if ((PrinterPtr)->Buf && !(PrinterPtr)->File) {\
     if ((PrinterPtr)->Size <= 1)\
       assert(false && "buffer too small"); /* TODO: always abort */ \
-    int Written = snprintf((PrinterPtr)->Buf, (PrinterPtr)->Size, Format, ##__VA_ARGS__);\
+    int Written = snprintf((PrinterPtr)->Buf, size_t((PrinterPtr)->Size), Format, ##__VA_ARGS__);\
     (PrinterPtr)->Buf += Written;\
     if (Written < (PrinterPtr)->Size)\
       (PrinterPtr)->Size -= Written;\

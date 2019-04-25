@@ -73,6 +73,7 @@ v3i SmallDims(const volume& Vol) {
   return Dims(Vol.Extent);
 }
 
+mg_ForceInline
 i64 Size(const volume& Vol) {
   return Prod<i64>(SmallDims(Vol));
 }
@@ -106,8 +107,8 @@ i64 XyzToI(v3i N, v3i P) {
 
 mg_ForceInline
 v3i IToXyz(i64 I, v3i N) {
-  i32 Z = I / (N.X * N.Y);
-  i32 XY = I % (N.X * N.Y);
+  i32 Z = i32(I / (N.X * N.Y));
+  i32 XY = i32(I % (N.X * N.Y));
   return v3i(XY % N.X, XY / N.X, Z);
 }
 
