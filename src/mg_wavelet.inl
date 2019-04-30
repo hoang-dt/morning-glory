@@ -2,13 +2,91 @@
 
 #include "mg_algorithm.h"
 #include "mg_assert.h"
+#include "mg_bitops.h"
 #include "mg_math.h"
 #include "mg_memory.h"
 #include "mg_types.h"
+#include "mg_volume.h"
+#include <stlab/concurrency/future.hpp>
 
 #define mg_IdxX(x, y, z, N) i64(z) * N.X * N.Y + i64(y) * N.X + (x)
 #define mg_IdxY(y, x, z, N) i64(z) * N.X * N.Y + i64(y) * N.X + (x)
 #define mg_IdxZ(z, x, y, N) i64(z) * N.X * N.Y + i64(y) * N.X + (x)
+
+/* Async forward lifting */
+#define mg_FLiftCdf53(z, y, x)\
+namespace mg {\
+template <typename t>\
+stlab::future<void> FLiftCdf53##x(const volume& Vol) {\
+  v3i P = Pos(Vol.Extent), D = SmallDims(Vol.Extent), S = Strides(Vol.Extent);\
+  v3i N = BigDims(Vol.Extent);\
+  mg_Assert(IsEven(P.x));\
+  mg_Assert(IsOdd(D.x));\
+  typed_buffer<t> F(Vol.Buffer);\
+  for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
+  for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
+  for (int x = P.x + 1; x < P.x + S.x * D.x; x += 2 * S.x) {\
+    t & Val = F[mg_Idx##x(x, y, z, N)];\
+    Val -= F[mg_Idx##x((x - 1), y, z, N)] / 2;\
+    Val -= F[mg_Idx##x((x + 1), y, z, N)] / 2;\
+  }}}\
+  for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
+  for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
+  for (int x = P.x + 1; x < P.x + S.x * M.x; x += 2 * s.x) {\
+    t Val = F[mg_Idx##x(x, y, z, N)];\
+    F[mg_Idx##x((x - 1), y, z, N)] += Val / 4;\
+    F[mg_Idx##x((x + 1), y, z, N)] += Val / 4;\
+  }}}\
+}\
+} // namespace mg
+mg_FLiftCdf53(Z, Y, X) // X forward lifting
+mg_FLiftCdf53(Z, X, Y) // Y forward lifting
+mg_FLiftCdf53(Y, X, Z) // Z forward lifting
+#undef mg_FLiftCdf53
+
+#define mg_ILiftCdf53(z, y, x)\
+namespace mg {\
+template <typename t>\
+void ILiftCdf53##x(t* F, v3i N, v3i L) {\
+  v3i P(1 << L.X, 1 << L.Y, 1 << L.Z);\
+  v3i M = (N + P - 1) / P;\
+  if (M.x <= 1)\
+    return;\
+  mg_HeapArray(Temp, t, M.x / 2);\
+  int S##x = (M.x + 1) >> 1;\
+  for (int z = 0; z < M.z; ++z) {\
+  for (int y = 0; y < M.y; ++y) {\
+    for (int x = 0; x < (M.x / 2); ++x)\
+      Temp[x] = F[mg_Idx##x(S##x + x, y, z, N)];\
+    if (IsOdd(M.x))\
+      F[mg_Idx##x(M.x - 1, y, z, N)] = F[mg_Idx##x(M.x >> 1, y, z, N)];\
+    for (int x = (M.x / 2) * 2 - 1; x >= 1; x -= 2) {\
+      F[mg_Idx##x(x - 1, y, z, N)] = F[mg_Idx##x(x >> 1, y, z, N)];\
+      F[mg_Idx##x(x    , y, z, N)] = Temp[x / 2];\
+    }\
+  }}\
+  _Pragma("omp parallel for collapse(2)")\
+  for (int z = 0; z < M.z; ++z   ) {\
+  for (int y = 0; y < M.y; ++y   ) {\
+  for (int x = 1; x < M.x; x += 2) {\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
+    t Val = F[mg_Idx##x(x, y, z, N)];\
+    F[mg_Idx##x(XLeft, y, z, N)] -= Val / 4;\
+    F[mg_Idx##x(XRight, y, z, N)] -= Val / 4;\
+  }}}\
+  _Pragma("omp parallel for collapse(2)")\
+  for (int z = 0; z < M.z; ++z   ) {\
+  for (int y = 0; y < M.y; ++y   ) {\
+  for (int x = 1; x < M.x; x += 2) {\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
+    t & Val = F[mg_Idx##x(x, y, z, N)];\
+    Val += F[mg_Idx##x(XLeft, y, z, N)] / 2;\
+    Val += F[mg_Idx##x(XRight, y, z, N)] / 2;\
+  }}}\
+}\
+} // namespace mg
 
 /* Forward x lifting */
 #define mg_ForwardLiftCdf53(z, y, x)\

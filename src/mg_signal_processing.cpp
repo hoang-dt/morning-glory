@@ -34,7 +34,7 @@ f64 SquaredError(const volume& F, const volume& G) {
   v3i PosF, PosG;\
   v3i BegF = Pos(F.Extent), BegG = Pos(G.Extent);\
   v3i EndF = BegF + Dims(F.Extent);\
-  v3i StrideF = Stride(F.Extent), StrideG = Stride(G.Extent);\
+  v3i StrideF = Strides(F.Extent), StrideG = Strides(G.Extent);\
   v3i BigDimsF = BigDims(F), BigDimsG = BigDims(G);\
   mg_BeginFor3Lockstep(PosF, BegF, EndF, StrideF, PosG, BegG, EndG, StrideG) {\
     i64 I = XyzToI(BigDimsF, PosF);\
@@ -82,7 +82,7 @@ f64 PSNR(const volume& F, const volume& G) {
   v3i PosF, PosG;\
   v3i BegF = Pos(F.Extent), BegG = Pos(G.Extent);\
   v3i EndF = BegF + Dims(F.Extent);\
-  v3i StrideF = Stride(F.Extent), StrideG = Stride(G.Extent);\
+  v3i StrideF = Strides(F.Extent), StrideG = Strides(G.Extent);\
   v3i BigDimsF = BigDims(F), BigDimsG = BigDims(G);\
   type MinElem = Traits<type>::Max;\
   type MaxElem = Traits<type>::Min;\

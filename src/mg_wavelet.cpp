@@ -13,7 +13,7 @@ namespace mg {
 // TODO: this won't work for a general (sub)volume
 void Cdf53Forward(volume* Vol, int NLevels) {
 #define Body(type)\
-  v3i Dims = Extract3Ints64(Vol->DimsCompact);\
+  v3i Dims = Unpack3Ints64(Vol->DimsCompact);\
   type* FPtr = (type*)(Vol->Buffer.Data);\
   for (int I = 0; I < NLevels; ++I) {\
     ForwardLiftCdf53X(FPtr, Dims, v3i(I, I, I));\
@@ -28,7 +28,7 @@ void Cdf53Forward(volume* Vol, int NLevels) {
 // TODO: this won't work for a general (sub)volume
 void Cdf53Inverse(volume* Vol, int NLevels) {
 #define Body(type)\
-  v3i Dims = Extract3Ints64(Vol->DimsCompact);\
+  v3i Dims = Unpack3Ints64(Vol->DimsCompact);\
   type* FPtr = (type*)(Vol->Buffer.Data);\
   for (int I = NLevels - 1; I >= 0; --I) {\
     InverseLiftCdf53Z(FPtr, Dims, v3i(I, I, I));\
@@ -43,8 +43,8 @@ void Cdf53Inverse(volume* Vol, int NLevels) {
 // TODO: this won't work for a general (sub)volume
 void Cdf53ForwardExtrapolate(volume* Vol) {
 #define Body(type)\
-  v3i SmallDims = Extract3Ints64(Vol->Extent.DimsCompact);\
-  v3i BigDims = Extract3Ints64(Vol->DimsCompact);\
+  v3i SmallDims = Unpack3Ints64(Vol->Extent.DimsCompact);\
+  v3i BigDims = Unpack3Ints64(Vol->DimsCompact);\
   if (BigDims.Y > 1)\
     mg_Assert(BigDims.X == BigDims.Y);\
   if (BigDims.Z > 1)\
@@ -65,8 +65,8 @@ void Cdf53ForwardExtrapolate(volume* Vol) {
 // TODO: this won't work for a general (sub)volume
 void Cdf53InverseExtrapolate(volume* Vol) {
 #define Body(type)\
-  v3i SmallDims = Extract3Ints64(Vol->Extent.DimsCompact);\
-  v3i BigDims = Extract3Ints64(Vol->DimsCompact);\
+  v3i SmallDims = Unpack3Ints64(Vol->Extent.DimsCompact);\
+  v3i BigDims = Unpack3Ints64(Vol->DimsCompact);\
   if (BigDims.Y > 1)\
     mg_Assert(BigDims.X == BigDims.Y);\
   if (BigDims.Z > 1)\

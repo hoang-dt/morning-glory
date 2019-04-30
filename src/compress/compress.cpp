@@ -154,11 +154,11 @@ void Decompress(const params& P) {
   zfp_stream* Zfp = zfp_stream_open(NULL);
   zfp_stream_set_rate(Zfp, P.Rate, zfp_field_type(Field), zfp_field_dimensionality(Field), 0);
   bitstream* Stream = stream_open(MMapIn.Buf.Data, size_t(MMapIn.Buf.Bytes));
-  int Step = 64;
+  int Step = 64; // we process every 64 blocks together as a group
   Counter = (Prod<i64>(NumBlocks3) + Step - 1) / Step;
-  #pragma omp parallel for
-  for (i64 BlockId = 0; BlockId < Prod<i64>(NumBlocks3); BlockId += Step) { // for each block
-    //auto Fut = async(default_executor, [&, ZfpCopy, StreamCopy, BlockId]() mutable {
+  //#pragma omp parallel for
+  for (i64 BlockId = 0; BlockId < Prod<i64>(NumBlocks3); BlockId += Step) { // for each group of blocks
+    auto Fut = async(default_executor, [&, ZfpCopy, StreamCopy, BlockId]() mutable {
       for (i64 BId = BlockId; BId < BlockId + Step; ++BId) {
         zfp_stream ZfpCopy = *Zfp;
         bitstream StreamCopy = *Stream;
@@ -170,16 +170,16 @@ void Decompress(const params& P) {
         CopyBlockOut((f64*)MMapOut.Buf.Data, P.Meta.Dims, V, Block);
       }
       {
-        //unique_lock<mutex> Lock(Mutex);
-        //--Counter;
+        unique_lock<mutex> Lock(Mutex);
+        --Counter;
       }
-      if (Counter == 0)
+      if (Counter == 0) // notify the main thread who is waiting
         Cond.notify_all();
-    //});
-    //Fut.detach();
+    });
+    Fut.detach(); // if there is any processing to be done on the group of block, here is where we call Fut.then(...)
   }
   unique_lock<mutex> Lock(Mutex);
-  //Cond.wait(Lock, []{ return Counter == 0; });
+  Cond.wait(Lock, []{ return Counter == 0; });
   zfp_field_free(Field);
   zfp_stream_close(Zfp);
   stream_close(Stream);

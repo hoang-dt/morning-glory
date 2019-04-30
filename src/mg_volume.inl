@@ -13,21 +13,21 @@ extent::extent() = default;
 
 mg_ForceInline
 extent::extent(v3i Dims)
-  : PosCompact(Stuff3Ints64(v3i(0, 0, 0)))
-  , DimsCompact(Stuff3Ints64(Dims))
-  , StrideCompact(Stuff3Ints64(v3i(1, 1, 1))) {}
+  : PosCompact(Pack3Ints64(v3i(0, 0, 0)))
+  , DimsCompact(Pack3Ints64(Dims))
+  , StrideCompact(Pack3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
 extent::extent(v3i Pos, v3i Dims)
-  : PosCompact(Stuff3Ints64(Pos))
-  , DimsCompact(Stuff3Ints64(Dims))
-  , StrideCompact(Stuff3Ints64(v3i(1, 1, 1))) {}
+  : PosCompact(Pack3Ints64(Pos))
+  , DimsCompact(Pack3Ints64(Dims))
+  , StrideCompact(Pack3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
 extent::extent(v3i Pos, v3i Dims, v3i Stride)
-  : PosCompact(Stuff3Ints64(Pos))
-  , DimsCompact(Stuff3Ints64(Dims))
-  , StrideCompact(Stuff3Ints64(Stride)) {}
+  : PosCompact(Pack3Ints64(Pos))
+  , DimsCompact(Pack3Ints64(Dims))
+  , StrideCompact(Pack3Ints64(Stride)) {}
 
 //mg_ForceInline
 //bool IsPoint(extent Ext) {
@@ -51,22 +51,22 @@ extent::extent(v3i Pos, v3i Dims, v3i Stride)
 
 mg_ForceInline
 v3i Pos(extent Ext) {
-  return Extract3Ints64(Ext.PosCompact);
+  return Unpack3Ints64(Ext.PosCompact);
 }
 
 mg_ForceInline
 v3i Dims(extent Ext) {
-  return Extract3Ints64(Ext.DimsCompact);
+  return Unpack3Ints64(Ext.DimsCompact);
 }
 
 mg_ForceInline
-v3i Stride(extent Ext) {
-  return Extract3Ints64(Ext.StrideCompact);
+v3i Strides(extent Ext) {
+  return Unpack3Ints64(Ext.StrideCompact);
 }
 
 mg_ForceInline
 v3i BigDims(const volume& Vol) {
-  return Extract3Ints64(Vol.DimsCompact);
+  return Unpack3Ints64(Vol.DimsCompact);
 }
 mg_ForceInline
 v3i SmallDims(const volume& Vol) {

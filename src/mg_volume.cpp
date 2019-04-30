@@ -14,7 +14,7 @@ error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
   error Ok = ReadFile(FileName, &Volume->Buffer);
   if (Ok.Code != err_code::NoError)
     return Ok;
-  Volume->DimsCompact = Stuff3Ints64(Dims);
+  Volume->DimsCompact = Pack3Ints64(Dims);
   Volume->Extent = extent(Dims);
   Volume->Type = Type;
   return mg_Error(err_code::NoError);
@@ -32,8 +32,8 @@ void Copy(volume* Dst, const volume& Src) {
   v3i CopyDims = Dims(Src.Extent);\
   v3i BigDimsSrc = BigDims(Src);\
   v3i BigDimsDst = BigDims(*Dst);\
-  v3i StrideSrc = Stride(Src.Extent);\
-  v3i StrideDst = Stride(Dst->Extent);\
+  v3i StrideSrc = Strides(Src.Extent);\
+  v3i StrideDst = Strides(Dst->Extent);\
   v3i PosSrc = StartSrc;\
   v3i PosDst = StartDst;\
   for (PosSrc.Z = StartSrc.Z, PosDst.Z = StartDst.Z;\

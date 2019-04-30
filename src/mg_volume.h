@@ -26,7 +26,7 @@ struct volume {
 
 v3i Pos(extent Ext);
 v3i Dims(extent Ext);
-v3i Stride(extent Ext);
+v3i Strides(extent Ext);
 v3i BigDims(const volume& Vol);
 v3i SmallDims(const volume& Vol);
 i64 Size(const volume& Vol);

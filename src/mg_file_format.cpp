@@ -63,7 +63,7 @@ struct tile_data {
 i64 NTilesInSubbands(const file_format& Ff, int FromSb, int ToSb) {
   i64 NTiles = 0;
   for (int S = FromSb; S < ToSb; ++S) {
-    v3i SbDims = Extract3Ints64(Ff.Subbands[S].DimsCompact);
+    v3i SbDims = Unpack3Ints64(Ff.Subbands[S].DimsCompact);
     NTiles += Prod<i64>((SbDims + Ff.TileDims - 1) / Ff.TileDims);
   }
   return NTiles;
@@ -72,7 +72,7 @@ i64 NTilesInSubbands(const file_format& Ff, int FromSb, int ToSb) {
 // TODO: refactor to separate the copying of tile data from the encoding
 template <typename t>
 void CopyBlockForward(const file_format& Ff, tile_data* Tl, v3i Block, int K) {
-  v3i Dims = Extract3Ints64(Ff.Volume.DimsCompact);
+  v3i Dims = Unpack3Ints64(Ff.Volume.DimsCompact);
   v3i RealBlockDims = Min(Ff.TileDims - Block, ZDims);
   const t* Data = (t*)Ff.Volume.Buffer.Data;
   v3i Voxel;
@@ -89,7 +89,7 @@ void CopyBlockForward(const file_format& Ff, tile_data* Tl, v3i Block, int K) {
 // TODO: refactor to separate the copying from the decoding
 template <typename t>
 void CopyBlockInverse(file_format* Ff, tile_data* Tl, v3i Block, int K) {
-  v3i Dims = Extract3Ints64(Ff->Volume.DimsCompact);
+  v3i Dims = Unpack3Ints64(Ff->Volume.DimsCompact);
   v3i RealBlockDims = Min(Tl->RealDims - Block, ZDims);
   v3i Voxel;
   t* Data = (t*)Ff->Volume.Buffer.Data;
@@ -225,8 +225,8 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
 // TODO: write the tile in Z order
 template <typename t>
 ff_err WriteSubband(const file_format& Ff, int Sb) {
-  v3i SbPos3 = Extract3Ints64(Ff.Subbands[Sb].PosCompact);
-  v3i SbDims = Extract3Ints64(Ff.Subbands[Sb].DimsCompact);
+  v3i SbPos3 = Unpack3Ints64(Ff.Subbands[Sb].PosCompact);
+  v3i SbDims = Unpack3Ints64(Ff.Subbands[Sb].DimsCompact);
   v3i Tile;
 #if defined(mg_CollectStats)
   FStats.SbStats[Sb].NumTiles3 = (SbDims + Ff.TileDims - 1) / Ff.TileDims;
@@ -267,9 +267,9 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   if (Ff->Volume.Type != data_type::float32 &&
       Ff->Volume.Type != data_type::float64)
     return mg_Error(ff_err_code::TypeNotSupported);
-  v3i Dims = Extract3Ints64(Ff->Volume.DimsCompact);
+  v3i Dims = Unpack3Ints64(Ff->Volume.DimsCompact);
   BuildSubbands(Dims, Ff->NLevels, &Ff->Subbands);
-  v3i Sb0Dims = Extract3Ints64(Ff->Subbands[0].DimsCompact);
+  v3i Sb0Dims = Unpack3Ints64(Ff->Subbands[0].DimsCompact);
   if (!(Ff->TileDims >= ZDims || Sb0Dims >= Ff->TileDims))
     return mg_Error(ff_err_code::InvalidTileDims);
   /* Chunk size must be large enough to store all the EMaxes in a tile */
@@ -286,7 +286,7 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
     /* allocate memory for the linked list */
     AllocBufT(&Ff->Chunks, Size(Ff->Subbands));
     for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
-      v3i SbDims3 = Extract3Ints64(Ff->Subbands[Sb].DimsCompact);
+      v3i SbDims3 = Unpack3Ints64(Ff->Subbands[Sb].DimsCompact);
       v3i NTiles3 = (SbDims3 + Ff->TileDims - 1) / Ff->TileDims;
       AllocBufT(&Ff->Chunks[Sb], Prod<i64>(NTiles3));
       for (i64 Ti = 0; Ti < Size(Ff->Chunks[Sb]); ++Ti) {
@@ -357,7 +357,7 @@ ff_err ParseMeta(file_format* Ff, metadata* Meta) {
   if (fscanf(Fp, "dimensions = %d %d %d\n",
              &Meta->Dims.X, &Meta->Dims.Y, &Meta->Dims.Z) != 3)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Dims corrupted");
-  Ff->Volume.DimsCompact = Stuff3Ints64(Meta->Dims);
+  Ff->Volume.DimsCompact = Pack3Ints64(Meta->Dims);
   Ff->Volume.Extent = extent(Meta->Dims);
   char Type[16];
   if (fscanf(Fp, "type = %s\n", Type) != 1)
@@ -424,7 +424,7 @@ void SetPrecision(file_format* Ff, int Precision) {
 void SetVolume(file_format* Ff, byte* Data, v3i Dims, data_type Type) {
   Ff->Volume.Buffer.Data = Data;
   Ff->Volume.Buffer.Bytes = SizeOf(Type) * Prod<i64>(Dims);
-  Ff->Volume.DimsCompact = Stuff3Ints64(Dims);
+  Ff->Volume.DimsCompact = Pack3Ints64(Dims);
   Ff->Volume.Type = Type;
 }
 void SetWaveletTransform(file_format* Ff, int NLevels) {
@@ -540,8 +540,8 @@ END:
 // TODO: add signature to the .h file
 template <typename t>
 ff_err ReadSubband(file_format* Ff, int Sb) {
-  v3i SbPos3 = Extract3Ints64(Ff->Subbands[Sb].PosCompact);
-  v3i SbDims = Extract3Ints64(Ff->Subbands[Sb].DimsCompact);
+  v3i SbPos3 = Unpack3Ints64(Ff->Subbands[Sb].PosCompact);
+  v3i SbDims = Unpack3Ints64(Ff->Subbands[Sb].DimsCompact);
   v3i Tile;
 #if defined(mg_CollectStats)
   FStats.SbStats[Sb].NumTiles3 = (SbDims + Ff->TileDims - 1) / Ff->TileDims;
