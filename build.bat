@@ -14,11 +14,12 @@ set "OLD_PATH=%PATH%"
 set "PATH=%LLVMPath%\bin;%VSBasePath%\bin\Hostx64\x64;%PATH%"
 
 :: Compiler flags
-:: TODO: add different build configurations (release, debug, etc)
+set INCLUDE_PATHS=-I../src
 set CFLAGS="Please provide a build config: Debug, FastDebug, Release"
 set COMMON_CFLAGS= -Xclang -flto-visibility-public-std -std=gnu++2a ^
-  -fdiagnostics-absolute-paths -fno-exceptions -fno-rtti -fopenmp -fopenmp-simd ^
-  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces ^
+  -fdiagnostics-absolute-paths -fopenmp -fopenmp-simd ^
+  -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors ^
+  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces ^
   -g -gcodeview -gno-column-info
 if %1==Release (set CFLAGS= -O2 -DNDEBUG -ftree-vectorize -march=native)
 if %1==FastDebug (set CFLAGS= -Og -DNDEBUG -ftree-vectorize -march=native)
@@ -52,7 +53,7 @@ if %1==Debug (set LDLIBS= libucrtd.lib libvcruntimed.lib libcmtd.lib libcpmtd.li
 ::@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
 md bin
 cd bin
-clang++.exe "../src/build.cpp" -o "build.o" -c %COMMON_CFLAGS% %CFLAGS% %COMMON_CDEFS% %CDEFS%
+clang++.exe "../src/build.cpp" -o "build.o" -c %INCLUDE_PATHS% %COMMON_CFLAGS% %CFLAGS% %COMMON_CDEFS% %CDEFS%
 
 :: Linking
 ::@set "LINK_FILES="
