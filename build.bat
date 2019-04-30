@@ -36,22 +36,16 @@ if %1==FastDebug (set LDFLAGS= )
 if %1==Debug (set LDFLAGS= )
 
 :: Linked libs
-set COMMON_LDLIBS= -libpath:"%VSBasePath%\lib\x64" ^
+set COMMON_LIB_PATHS= -libpath:"%VSBasePath%\lib\x64" ^
   -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\ucrt\x64" ^
   -libpath:"%WinSDKPath%\Lib\%WinSDKVersion%\um\x64" ^
   -libpath:"%LLVMPath%\lib"
-if %1==Release (set LDLIBS= ^
-  libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib kernel32.lib User32.lib ^
+set COMMON_LIBS= kernel32.lib User32.lib ^
   legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
-  libomp.lib dbghelp.lib)
-if %1==FastDebug (set LDLIBS= ^
-  libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib kernel32.lib User32.lib ^
-  legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
-  libomp.lib dbghelp.lib)
-if %1==Debug (set LDLIBS= ^
-  libucrtd.lib libvcruntimed.lib libcmtd.lib libcpmtd.lib kernel32.lib User32.lib ^
-  legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
-  libomp.lib dbghelp.lib)
+  libomp.lib dbghelp.lib
+if %1==Release (set LDLIBS= libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib)
+if %1==FastDebug (set LDLIBS= libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib)
+if %1==Debug (set LDLIBS= libucrtd.lib libvcruntimed.lib libcmtd.lib libcpmtd.lib)
 
 :: Compiling
 @echo on
@@ -67,7 +61,7 @@ clang++.exe "../src/build.cpp" -o "build.o" -c %COMMON_CFLAGS% %CFLAGS% %COMMON_
 ::lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
 ::lld-link.exe "build.o" -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
-link.exe "build.o" /DEBUG -out:"%OUTPUT%" %COMMON_LDFLAGS% %LDFLAGS% %COMMON_LDLIBS% %LDLIBS%
+link.exe "build.o" /DEBUG -out:"%OUTPUT%" %COMMON_LDFLAGS% %LDFLAGS% %COMMON_LIB_PATHS% %COMMON_LIBS% %LDLIBS%
 del "build.o"
 cd ..
 

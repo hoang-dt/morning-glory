@@ -7,7 +7,7 @@ set "VSBasePath=%VSPath%\VC\Tools\MSVC\%VSVersion%"
 set "OLD_PATH=%PATH%"
 set "PATH=%LLVMPath%\bin;%VSBasePath%\bin\Hostx64\x64;%PATH%"
 
-cmake -H. -Bbin -G Ninja^
+cmake -H. -Bbin -G Ninja -DCMAKE_BUILD_TYPE=Release^
   -DCMAKE_C_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe"^
   -DCMAKE_CXX_COMPILER="C:/Program Files/LLVM/bin/clang-cl.exe"^
   -DCMAKE_LINKER:PATH="C:/Program Files/LLVM/bin/lld-link.exe"^

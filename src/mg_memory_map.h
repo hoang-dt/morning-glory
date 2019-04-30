@@ -1,7 +1,6 @@
 #pragma once
 
 #include "mg_types.h"
-#include "mg_bitops.h"
 #include "mg_enum.h"
 #include "mg_error.h"
 
