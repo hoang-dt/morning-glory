@@ -15,19 +15,19 @@ mg_ForceInline
 extent::extent(v3i Dims)
   : PosCompact(Pack3Ints64(v3i(0, 0, 0)))
   , DimsCompact(Pack3Ints64(Dims))
-  , StrideCompact(Pack3Ints64(v3i(1, 1, 1))) {}
+  , StridesCompact(Pack3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
 extent::extent(v3i Pos, v3i Dims)
   : PosCompact(Pack3Ints64(Pos))
   , DimsCompact(Pack3Ints64(Dims))
-  , StrideCompact(Pack3Ints64(v3i(1, 1, 1))) {}
+  , StridesCompact(Pack3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
 extent::extent(v3i Pos, v3i Dims, v3i Stride)
   : PosCompact(Pack3Ints64(Pos))
   , DimsCompact(Pack3Ints64(Dims))
-  , StrideCompact(Pack3Ints64(Stride)) {}
+  , StridesCompact(Pack3Ints64(Stride)) {}
 
 //mg_ForceInline
 //bool IsPoint(extent Ext) {
@@ -61,7 +61,7 @@ v3i Dims(extent Ext) {
 
 mg_ForceInline
 v3i Strides(extent Ext) {
-  return Unpack3Ints64(Ext.StrideCompact);
+  return Unpack3Ints64(Ext.StridesCompact);
 }
 
 mg_ForceInline

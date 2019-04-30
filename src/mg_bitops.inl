@@ -36,8 +36,9 @@ t FlipBit(t Val, int I) {
 
 // TODO: replace bsr with the faster intrinsic
 
-/* Return the bit plane of the most significant one-bit. Counting starts from the least significant
-bit plane. Examples: Bsr(0) = -1, Bsr(2) = 1, Bsr(5) = 2, Bsr(8) = 3 */
+/* Return the bit plane of the most significant one-bit. Counting starts from
+the least significant bit plane.
+Examples: Bsr(0) = -1, Bsr(2) = 1, Bsr(5) = 2, Bsr(8) = 3 */
 #if defined(__clang__) || defined(__GNUC__)
 mg_ForceInline
 i8 Msb(u32 V) {

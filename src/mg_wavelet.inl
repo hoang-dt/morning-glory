@@ -13,32 +13,45 @@
 #define mg_IdxY(y, x, z, N) i64(z) * N.X * N.Y + i64(y) * N.X + (x)
 #define mg_IdxZ(z, x, y, N) i64(z) * N.X * N.Y + i64(y) * N.X + (x)
 
+/* Translate a wavelet coordinate to a storage coordinate */
+#define TX(N, X) ((X) <= N.X ? (X) : (N.X + Log2Floor(X - N.X)))
+#define TY(N, Y) ((Y) <= N.Y ? (Y) : (N.Y + Log2Floor(Y - N.Y)))
+#define TZ(N, Z) ((Z) <= N.Z ? (Z) : (N.Z + Log2Floor(Z - N.Z)))
+
 /* Async forward lifting */
 #define mg_FLiftCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-stlab::future<void> FLiftCdf53##x(const volume& Vol) {\
-  v3i P = Pos(Vol.Extent), D = SmallDims(Vol.Extent), S = Strides(Vol.Extent);\
-  v3i N = BigDims(Vol.Extent);\
+void FLiftCdf53##x(const volume& Vol, const extent& Ext) {\
+  v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
+  v3i N = BigDims(Vol), M = SmallDims(Vol);\
   mg_Assert(IsEven(P.x));\
   mg_Assert(IsOdd(D.x));\
+  mg_Assert(P.x + S.x * D.x <= N.x);\
   typed_buffer<t> F(Vol.Buffer);\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-  for (int x = P.x + 1; x < P.x + S.x * D.x; x += 2 * S.x) {\
-    t & Val = F[mg_Idx##x(x, y, z, N)];\
-    Val -= F[mg_Idx##x((x - 1), y, z, N)] / 2;\
-    Val -= F[mg_Idx##x((x + 1), y, z, N)] / 2;\
+  for (int x = P.x + S.x; x < P.x + S.x * D.x; x += 2 * S.x) {\
+    printf("%d %d %d %d\n", T##x(M, x), T##x(M, x + S.x), T##y(M, y), T##z(M, z));\
+    int yy = T##y(M, y), zz = T##z(M, z);\
+    t & Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
+    Val -= F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] / 2;\
+    Val -= F[mg_Idx##x(T##x(M, x + S.x), yy, zz, N)] / 2;\
   }}}\
+  printf("hello\n");\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-  for (int x = P.x + 1; x < P.x + S.x * M.x; x += 2 * s.x) {\
-    t Val = F[mg_Idx##x(x, y, z, N)];\
-    F[mg_Idx##x((x - 1), y, z, N)] += Val / 4;\
-    F[mg_Idx##x((x + 1), y, z, N)] += Val / 4;\
+  for (int x = P.x + S.x; x < P.x + S.x * D.x; x += 2 * S.x) {\
+    printf("%d %d %d %d\n", T##x(M, x), T##x(M, x + S.x), T##y(M, y), T##z(M, z));\
+    int yy = T##y(M, y), zz = T##z(M, z);\
+    t Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
+    F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] += Val / 4;\
+    F[mg_Idx##x(T##x(M, x + S.x), yy, zz, N)] += Val / 4;\
   }}}\
+  printf("hello2\n");\
 }\
 } // namespace mg
+
 mg_FLiftCdf53(Z, Y, X) // X forward lifting
 mg_FLiftCdf53(Z, X, Y) // Y forward lifting
 mg_FLiftCdf53(Y, X, Z) // Z forward lifting
@@ -47,46 +60,36 @@ mg_FLiftCdf53(Y, X, Z) // Z forward lifting
 #define mg_ILiftCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-void ILiftCdf53##x(t* F, v3i N, v3i L) {\
-  v3i P(1 << L.X, 1 << L.Y, 1 << L.Z);\
-  v3i M = (N + P - 1) / P;\
-  if (M.x <= 1)\
-    return;\
-  mg_HeapArray(Temp, t, M.x / 2);\
-  int S##x = (M.x + 1) >> 1;\
-  for (int z = 0; z < M.z; ++z) {\
-  for (int y = 0; y < M.y; ++y) {\
-    for (int x = 0; x < (M.x / 2); ++x)\
-      Temp[x] = F[mg_Idx##x(S##x + x, y, z, N)];\
-    if (IsOdd(M.x))\
-      F[mg_Idx##x(M.x - 1, y, z, N)] = F[mg_Idx##x(M.x >> 1, y, z, N)];\
-    for (int x = (M.x / 2) * 2 - 1; x >= 1; x -= 2) {\
-      F[mg_Idx##x(x - 1, y, z, N)] = F[mg_Idx##x(x >> 1, y, z, N)];\
-      F[mg_Idx##x(x    , y, z, N)] = Temp[x / 2];\
-    }\
-  }}\
-  _Pragma("omp parallel for collapse(2)")\
-  for (int z = 0; z < M.z; ++z   ) {\
-  for (int y = 0; y < M.y; ++y   ) {\
-  for (int x = 1; x < M.x; x += 2) {\
-    int XLeft = x - 1;\
-    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
-    t Val = F[mg_Idx##x(x, y, z, N)];\
-    F[mg_Idx##x(XLeft, y, z, N)] -= Val / 4;\
-    F[mg_Idx##x(XRight, y, z, N)] -= Val / 4;\
+stlab::future<void> ILiftCdf53##x(const volume& Vol, const extent& Ext) {\
+  v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
+  v3i N = BigDims(Vol), M = SmallDims(Vol);\
+  mg_Assert(IsEven(P.x));\
+  mg_Assert(IsOdd(D.x));\
+  mg_Assert(P.x + S.x * D.x <= N.x);\
+  typed_buffer<t> F(Vol.Buffer);\
+  for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
+  for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
+  for (int x = P.x; x < P.x + S.x * D.x; x += S.x * 2) {\
+    int yy = T##y(M, y), zz = T##z(M, z);\
+    t Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
+    F[mg_Idx##x(T##x(M, x - 1), yy, zz, N)] -= Val / 4;\
+    F[mg_Idx##x(T##x(M, x + 1), yy, zz, N)] -= Val / 4;\
   }}}\
-  _Pragma("omp parallel for collapse(2)")\
-  for (int z = 0; z < M.z; ++z   ) {\
-  for (int y = 0; y < M.y; ++y   ) {\
-  for (int x = 1; x < M.x; x += 2) {\
-    int XLeft = x - 1;\
-    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
-    t & Val = F[mg_Idx##x(x, y, z, N)];\
-    Val += F[mg_Idx##x(XLeft, y, z, N)] / 2;\
-    Val += F[mg_Idx##x(XRight, y, z, N)] / 2;\
+  for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
+  for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
+  for (int x = P.x; x < P.x + S.x * D.x; x += S.x * 2) {\
+    int yy = T##y(M, y), zz = T##z(M, z);\
+    t & Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
+    Val += F[mg_Idx##x(T##x(M, x - 1), yy, zz, N)] / 2;\
+    Val += F[mg_Idx##x(T##x(M, x + 1), yy, zz, N)] / 2;\
   }}}\
 }\
 } // namespace mg
+
+mg_ILiftCdf53(Z, Y, X) // X forward lifting
+mg_ILiftCdf53(Z, X, Y) // Y forward lifting
+mg_ILiftCdf53(Y, X, Z) // Z forward lifting
+#undef mg_ILiftCdf53
 
 /* Forward x lifting */
 #define mg_ForwardLiftCdf53(z, y, x)\
@@ -117,19 +120,6 @@ void ForwardLiftCdf53##x(t* F, v3i N, v3i L) {\
     F[mg_Idx##x(XLeft, y, z, N)] += Val / 4;\
     F[mg_Idx##x(XRight, y, z, N)] += Val / 4;\
   }}}\
-  mg_HeapArray(Temp, t, M.x / 2);\
-  int S##x = (M.x + 1) / 2;\
-  for (int z = 0; z < M.z; ++z) {\
-  for (int y = 0; y < M.y; ++y) {\
-    for (int x = 1; x < M.x; x += 2) {\
-      Temp[x / 2] = F[mg_Idx##x(x    , y, z, N)];\
-      F[mg_Idx##x(x / 2, y, z, N)] = F[mg_Idx##x(x - 1, y, z, N)];\
-    }\
-    if (IsOdd(M.x))\
-      F[mg_Idx##x(M.x / 2, y, z, N)] = F[mg_Idx##x(M.x - 1, y, z, N)];\
-    for (int x = 0; x < (M.x / 2); ++x)\
-      F[mg_Idx##x(S##x + x, y, z, N)] = Temp[x];\
-  }}\
 }\
 } // namespace mg
 

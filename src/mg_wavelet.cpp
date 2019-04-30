@@ -118,14 +118,58 @@ void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
   Reverse(Begin(*Subbands), End(*Subbands));
 }
 
+/* This version assumes the coefficients were not moved */
+void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
+  int NDims = NumDims(N);
+  const array<u8, 8>& Order = SubbandOrders[NDims];
+  Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
+  v3i M = N; // dimensions of all the subbands at the current level
+  v3i S(1, 1, 1); // strides
+  for (int I = 0; I < NLevels; ++I) {
+    S = S * 2;
+    v3i P((M.X + 1) >> 1, (M.Y + 1) >> 1, (M.Z + 1) >> 1); // next dimensions
+    for (int J = (1 << NDims) - 1; J > 0; --J) { // for each subband
+      u8 Z = Order[J] & 1u,
+         Y = (Order[J] >> (NDims - 2)) & 1u, // TODO: what if NDims == 1?
+         X = (Order[J] >> (NDims - 1)) & 1u;
+      v3i Sm((X == 0) ? P.X : M.X - P.X, // dimensions of the current subband
+             (Y == 0) ? P.Y : M.Y - P.Y,
+             (Z == 0) ? P.Z : M.Z - P.Z);
+      if (NDims == 3 && Sm.X != 0 && Sm.Y != 0 && Sm.Z != 0) // subband exists
+        PushBack(Subbands, extent(v3i(X, Y, Z) * S / 2, Sm, S));
+      else if (NDims == 2 && Sm.X != 0 && Sm.Y != 0)
+        PushBack(Subbands, extent(v3i(X, Y, 0) * S / 2, v3i(Sm.X, Sm.Y, 1), S));
+    }
+    M = P;
+  }
+  if (NDims == 2) mg_Assert(M.Z == 1);
+  PushBack(Subbands, extent(v3i(0, 0, 0), M, S)); // final (coarsest) subband
+  Reverse(Begin(*Subbands), End(*Subbands));
+}
+
 /* Here we assume the wavelet transform is done in X, then Y, then Z */
 int LevelToSubband(v3i Level) {
   if (Level.X + Level.Y + Level.Z == 0)
     return 0;
-  static constexpr int8_t Table[] = { 0, 1, 2, 4, 3, 5, 6, 7 };
+  static constexpr i8 Table[] = { 0, 1, 2, 4, 3, 5, 6, 7 };
   int Lvl = Max(Max(Level.X, Level.Y), Level.Z);
-  return 7 * (Lvl - 1) + Table[4*(Level.X == Lvl) + 2 * (Level.Y == Lvl) + 1 * (Level.Z == Lvl)];
+  return 7 * (Lvl - 1) + Table[4 * (Level.X == Lvl) +
+                               2 * (Level.Y == Lvl) +
+                               1 * (Level.Z == Lvl)];
 }
+
+//v3i SubbandToLevel(int S) {
+//  if (S == 0)
+//    return v3i(0, 0, 0);
+//  /* handle level 0 which has only 1 subband (other levels have 7 subbands) */
+//  int Lvl = (S + 6) / 7;
+//  /* subtract all subbands on previous levels (except the subband 0);
+//  basically it reduces the case to the 2x2x2 case where subband 0 is in corner */
+//  S -= 7 * (Lvl - 1);
+//  /* bit 0 -> x axis offset; bit 1 -> y axis offset; bit 2 -> z axis offset
+//  we subtract from Lvl as it corresponds to the +x, +y, +z corner */
+//  return v3i(Lvl - !bm::bit_test(i, 0), lvl - !bm::bit_test(i, 1), lvl - !bm::bit_test(i, 2));
+//}
 
 } // namespace mg
 

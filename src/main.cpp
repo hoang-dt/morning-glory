@@ -119,14 +119,47 @@ void TestMemMap(const char* Input) {
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
 }
 
+void TestNewWaveletCode() {
+  double A[] = { 56, 40, 8, 24, 48, 48, 40, 16, 30 };
+  double B[] = { 56, 40, 8, 24, 48, 48, 40, 16, 30 };
+  volume Vol;
+  Vol.Buffer.Data = (byte*)A;
+  Vol.Buffer.Bytes = sizeof(A);
+  Vol.DimsCompact = Pack3Ints64(v3i(sizeof(A) / sizeof(double), 1, 1));
+  Vol.Type = data_type::float64;
+  Vol.Extent.PosCompact = 0;
+  Vol.Extent.DimsCompact = Pack3Ints64(v3i(sizeof(A) / sizeof(double), 1, 1));
+  Vol.Extent.StridesCompact = Pack3Ints64(v3i(1, 1, 1));
+  extent Ext = Vol.Extent;
+  FLiftCdf53X<double>(Vol, Ext);
+  ForwardLiftCdf53X(B, v3i(sizeof(A) / sizeof(double), 1, 1), v3i(0, 0, 0));
+  printf("hello3\n");
+  for (int I = 0; I < sizeof(A) / sizeof(double); ++I) {
+    printf("%f ", A[I]);
+  }
+  printf("\n");
+  for (int I = 0; I < sizeof(B) / sizeof(double); ++I) {
+    printf("%f ", B[I]);
+  }
+}
+
 #include <iostream>
 #include <new>
 
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
-  if (Argc < 2)
-    mg_Abort("Prove a file path");
-  TestMemMap(Argv[1]);
+  TestNewWaveletCode();
+  dynamic_array<extent> Subbands;
+  BuildSubbandsInPlace(v3i(16, 16, 1), 3, &Subbands);
+  for (int I = 0; I < Size(Subbands); ++I) {
+    printf("----------- Subband %d\n", I);
+    v3i Pos = Unpack3Ints64(Subbands[I].PosCompact);
+    v3i Dims = Unpack3Ints64(Subbands[I].DimsCompact);
+    v3i Strides = Unpack3Ints64(Subbands[I].StridesCompact);
+    printf("Pos %d %d %d\n", Pos.X, Pos.Y, Pos.Z);
+    printf("Dims %d %d %d\n", Dims.X, Dims.Y, Dims.Z);
+    printf("Strides %d %d %d\n", Strides.X, Strides.Y, Strides.Z);
+  }
   return 0;
   //int ChunkSize, BlockBegin, BlockEnd;
   //ToInt(Argv[1], &ChunkSize);

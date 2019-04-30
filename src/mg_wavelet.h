@@ -31,6 +31,7 @@ template <typename t>
 struct dynamic_array;
 struct extent;
 void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands);
+void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<extent>* Subbands);
 
 /* Utilities */
 

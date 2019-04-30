@@ -10,7 +10,7 @@ namespace mg {
 struct extent {
   u64 PosCompact;
   u64 DimsCompact;
-  u64 StrideCompact;
+  u64 StridesCompact;
   extent();
   extent(v3i Dims);
   extent(v3i Pos, v3i Dims);
