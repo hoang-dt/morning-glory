@@ -239,8 +239,8 @@ void Encode(const f64* Data, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   int NumBlocksEncoded = 0;
   int ToleranceExp = Exponent(Tolerance);
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = Unpack3Ints64(Subbands[S].PosCompact);
-    v3i SubbandDims = Unpack3Ints64(Subbands[S].DimsCompact);
+    v3i SubbandPos = Unpack3Ints64(Subbands[S].PosPacked);
+    v3i SubbandDims = Unpack3Ints64(Subbands[S].DimsPacked);
     mg_Assert(TileDims.X <= SubbandDims.X && TileDims.Y <= SubbandDims.Y && TileDims.Z <= SubbandDims.Z);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
@@ -311,8 +311,8 @@ void Decode(cstr FileName, v3i Dims, v3i TileDims, int Bits, f64 Tolerance,
   int NumBlocksDecoded = 0;
   int ToleranceExp = Exponent(Tolerance);
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = Unpack3Ints64(Subbands[S].PosCompact);
-    v3i SubbandDims = Unpack3Ints64(Subbands[S].DimsCompact);
+    v3i SubbandPos = Unpack3Ints64(Subbands[S].PosPacked);
+    v3i SubbandDims = Unpack3Ints64(Subbands[S].DimsPacked);
     mg_Assert(TileDims.X <= SubbandDims.X &&
               TileDims.Y <= SubbandDims.Y &&
               TileDims.Z <= SubbandDims.Z);
@@ -376,8 +376,8 @@ void EncodeFast(const f64* Data, v3i Dims, v3i TileDims, int Bits,
   InitWrite(&Bs, Buf);
   int NumBlocksEncoded = 0;
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = Unpack3Ints64(Subbands[S].PosCompact);
-    v3i SubbandDims = Unpack3Ints64(Subbands[S].DimsCompact);
+    v3i SubbandPos = Unpack3Ints64(Subbands[S].PosPacked);
+    v3i SubbandDims = Unpack3Ints64(Subbands[S].DimsPacked);
     mg_Assert(TileDims <= SubbandDims);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {
@@ -442,8 +442,8 @@ void DecodeFast(cstr FileName, v3i Dims, v3i TileDims, int Bits,
   InitRead(&Bs, Buf);
   int NumBlocksDecoded = 0;
   for (int S = 0; S < Size(Subbands); ++S) {
-    v3i SubbandPos = Unpack3Ints64(Subbands[S].PosCompact);
-    v3i SubbandDims = Unpack3Ints64(Subbands[S].DimsCompact);
+    v3i SubbandPos = Unpack3Ints64(Subbands[S].PosPacked);
+    v3i SubbandDims = Unpack3Ints64(Subbands[S].DimsPacked);
     mg_Assert(TileDims <= SubbandDims);
     /* loop through the tiles within the subband */
     for (int TZ = SubbandPos.Z; TZ < SubbandPos.Z + SubbandDims.Z; TZ += TileDims.Z) {

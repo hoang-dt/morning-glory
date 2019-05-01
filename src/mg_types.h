@@ -96,10 +96,10 @@ struct v2 {
   v2();
   explicit v2(t V);
   v2(t X, t Y);
-  template <typename u> v2(v2<u> Other);
+  template <typename u> v2(const v2<u>& Other);
   t& operator[](int Idx);
   t operator[](int Idx) const;
-  template <typename u> v2& operator=(v2<u> other);
+  template <typename u> v2& operator=(const v2<u>& other);
 };
 using v2i  = v2<i32>;
 using v2u  = v2<u32>;
@@ -126,10 +126,10 @@ struct v3 {
   v3();
   explicit v3(t V);
   v3(t X, t Y, t Z);
-  template <typename u> v3(v3<u> Other);
+  template <typename u> v3(const v3<u>& Other);
   t& operator[](int Idx);
   t operator[](int Idx) const;
-  template <typename u> v3& operator=(v3<u> other);
+  template <typename u> v3& operator=(const v3<u>& other);
 };
 #pragma GCC diagnostic pop
 using v3i  = v3<i32>;
@@ -153,8 +153,8 @@ struct buffer {
   i64 Bytes = 0;
   allocator* Alloc = nullptr;
   buffer();
-  buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn);
-  template<typename t> buffer(typed_buffer<t> Buf);
+  buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn = nullptr);
+  template<typename t> buffer(const typed_buffer<t>& Buf);
   byte& operator[](i64 Idx);
   byte operator[](i64 Idx) const;
 };
@@ -165,15 +165,15 @@ struct typed_buffer {
   i64 Size = 0;
   allocator* Alloc = nullptr;
   typed_buffer();
-  typed_buffer(t* Data, i64 Size, allocator* Alloc);
-  typed_buffer(buffer Buf);
+  typed_buffer(t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
+  typed_buffer(const buffer& Buf);
   t& operator[](i64 Idx);
   const t& operator[](i64 Idx) const;
 };
 template <typename t>
-i64 Size(typed_buffer<t> Buf);
+i64 Size(const typed_buffer<t>& Buf);
 template <typename t>
-i64 Bytes(typed_buffer<t> Buf);
+i64 Bytes(const typed_buffer<t>& Buf);
 
 } // namespace mg
 

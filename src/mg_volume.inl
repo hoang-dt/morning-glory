@@ -7,27 +7,37 @@
 
 namespace mg {
 
-
 mg_ForceInline
 extent::extent() = default;
 
 mg_ForceInline
-extent::extent(v3i Dims)
-  : PosCompact(Pack3Ints64(v3i(0, 0, 0)))
-  , DimsCompact(Pack3Ints64(Dims))
-  , StridesCompact(Pack3Ints64(v3i(1, 1, 1))) {}
+extent::extent(const v3i& Dims)
+  : PosPacked(Pack3Ints64(v3i(0, 0, 0)))
+  , DimsPacked(Pack3Ints64(Dims))
+  , StridesPacked(Pack3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
-extent::extent(v3i Pos, v3i Dims)
-  : PosCompact(Pack3Ints64(Pos))
-  , DimsCompact(Pack3Ints64(Dims))
-  , StridesCompact(Pack3Ints64(v3i(1, 1, 1))) {}
+extent::extent(const v3i& Pos, const v3i& Dims)
+  : PosPacked(Pack3Ints64(Pos))
+  , DimsPacked(Pack3Ints64(Dims))
+  , StridesPacked(Pack3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
-extent::extent(v3i Pos, v3i Dims, v3i Stride)
-  : PosCompact(Pack3Ints64(Pos))
-  , DimsCompact(Pack3Ints64(Dims))
-  , StridesCompact(Pack3Ints64(Stride)) {}
+extent::extent(const v3i& Pos, const v3i& Dims, const v3i& Stride)
+  : PosPacked(Pack3Ints64(Pos))
+  , DimsPacked(Pack3Ints64(Dims))
+  , StridesPacked(Pack3Ints64(Stride)) {}
+
+mg_ForceInline
+volume::volume() = default;
+
+mg_ForceInline
+volume::volume(const buffer& BufIn, const extent& ExtIn, const v3i& DimsIn,
+               data_type TypeIn)
+  : Buffer(BufIn)
+  , Extent(ExtIn)
+  , DimsPacked(Pack3Ints64(DimsIn))
+  , Type(TypeIn) {}
 
 //mg_ForceInline
 //bool IsPoint(extent Ext) {
@@ -50,33 +60,24 @@ extent::extent(v3i Pos, v3i Dims, v3i Stride)
 //}
 
 mg_ForceInline
-v3i Pos(extent Ext) {
-  return Unpack3Ints64(Ext.PosCompact);
-}
+v3i Pos(const extent& Ext) { return Unpack3Ints64(Ext.PosPacked); }
+mg_ForceInline
+v3i Dims(const extent& Ext) { return Unpack3Ints64(Ext.DimsPacked); }
+mg_ForceInline
+v3i Strides(const extent& Ext) { return Unpack3Ints64(Ext.StridesPacked); }
+mg_ForceInline
+void SetPos(extent* Ext, const v3i& Pos) { Ext->PosPacked = Pack3Ints64(Pos); };
+mg_ForceInline
+void SetDims(extent* Ext, const v3i& Dims) { Ext->DimsPacked = Pack3Ints64(Dims); };
+mg_ForceInline
+void SetStrides(extent* Ext, const v3i& Strides) { Ext->StridesPacked = Pack3Ints64(Strides); };
 
 mg_ForceInline
-v3i Dims(extent Ext) {
-  return Unpack3Ints64(Ext.DimsCompact);
-}
-
+v3i BigDims(const volume& Vol) { return Unpack3Ints64(Vol.DimsPacked); }
 mg_ForceInline
-v3i Strides(extent Ext) {
-  return Unpack3Ints64(Ext.StridesCompact);
-}
-
+v3i SmallDims(const volume& Vol) { return Dims(Vol.Extent); }
 mg_ForceInline
-v3i BigDims(const volume& Vol) {
-  return Unpack3Ints64(Vol.DimsCompact);
-}
-mg_ForceInline
-v3i SmallDims(const volume& Vol) {
-  return Dims(Vol.Extent);
-}
-
-mg_ForceInline
-i64 Size(const volume& Vol) {
-  return Prod<i64>(SmallDims(Vol));
-}
+i64 Size(const volume& Vol) { return Prod<i64>(SmallDims(Vol)); }
 
 //template <typename t> mg_ForceInline
 //t& At(volume& Vol, v3i MyPos) {
@@ -101,19 +102,19 @@ i64 Size(const volume& Vol) {
 //}
 
 mg_ForceInline
-i64 XyzToI(v3i N, v3i P) {
+i64 XyzToI(const v3i& N, const v3i& P) {
   return i64(P.Z) * N.X * N.Y + i64(P.Y) * N.X + P.X;
 }
 
 mg_ForceInline
-v3i IToXyz(i64 I, v3i N) {
+v3i IToXyz(i64 I, const v3i& N) {
   i32 Z = i32(I / (N.X * N.Y));
   i32 XY = i32(I % (N.X * N.Y));
   return v3i(XY % N.X, XY / N.X, Z);
 }
 
 mg_ForceInline
-int NumDims(v3i N) {
+int NumDims(const v3i& N) {
   return (N.X > 1) + (N.Y > 1) + (N.Z > 1);
 }
 

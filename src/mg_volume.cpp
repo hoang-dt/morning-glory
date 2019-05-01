@@ -10,11 +10,11 @@
 
 namespace mg {
 
-error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
+error<> ReadVolume(cstr FileName, const v3i& Dims, data_type Type, volume* Volume) {
   error Ok = ReadFile(FileName, &Volume->Buffer);
   if (Ok.Code != err_code::NoError)
     return Ok;
-  Volume->DimsCompact = Pack3Ints64(Dims);
+  Volume->DimsPacked = Pack3Ints64(Dims);
   Volume->Extent = extent(Dims);
   Volume->Type = Type;
   return mg_Error(err_code::NoError);
@@ -22,7 +22,7 @@ error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume) {
 
 void Copy(volume* Dst, const volume& Src) {
 #define Body(type)\
-  mg_Assert(Src.Extent.DimsCompact == Dst->Extent.DimsCompact);\
+  mg_Assert(Src.Extent.DimsPacked == Dst->Extent.DimsPacked);\
   mg_Assert(Dst->Buffer.Data && Src.Buffer.Data);\
   mg_Assert(Dst->Type == Src.Type);\
   type* DstBuf = (type*)Dst->Buffer.Data;\
@@ -56,12 +56,12 @@ void Copy(volume* Dst, const volume& Src) {
 
 void Clone(volume* Dst, const volume& Src, allocator* Alloc) {
   Clone(&Dst->Buffer, Src.Buffer, Alloc);
-  Dst->DimsCompact = Src.DimsCompact;
+  Dst->DimsPacked = Src.DimsPacked;
   Dst->Type = Src.Type;
   Dst->Extent = Src.Extent;
 }
 
-array<extent, 8> Split3D(v3i Dims) {
+array<extent, 8> Split3D(const v3i& Dims) {
   mg_Assert(Dims.X > 1 && Dims.Y > 1 && Dims.Z > 1);
   array<extent, 8> Vols;
   Vols[0] = extent(v3i(0, 0, 0), v3i(1, 1, 1));

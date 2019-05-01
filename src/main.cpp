@@ -139,18 +139,13 @@ void TestNewWaveletCode() {
   double A[] = Array;
   double C[] = Array;
   double B[] = Array;
+  double D[17 * 17] = {};
+  volume VolD;
   v3i N(10, 10, 1);
   int NLevels = 3;
   v3i NLarge = ExpandDomain(N, NLevels);
   printf("%d %d %d\n", NLarge.X, NLarge.Y, NLarge.Z);
-  volume Vol;
-  Vol.Buffer.Data = (byte*)A;
-  Vol.Buffer.Bytes = sizeof(A);
-  Vol.DimsCompact = Pack3Ints64(NLarge);
-  Vol.Type = data_type::float64;
-  Vol.Extent.PosCompact = 0;
-  Vol.Extent.DimsCompact = Pack3Ints64(N);
-  Vol.Extent.StridesCompact = Pack3Ints64(v3i(1, 1, 1));
+  volume Vol(buffer((byte*)A, sizeof(A)), extent(N), NLarge, data_type::float64);
   extent Ext = Vol.Extent;
   volume Vol2 = Vol;
   Vol2.Buffer.Data = (byte*)C;
@@ -170,7 +165,7 @@ void TestNewWaveletCode() {
     FLiftCdf53X<double>(Vol, Ext);
     v3i Dims3 = Dims(Ext);
     Dims3.X += IsEven(Dims3.X);
-    Ext.DimsCompact = Pack3Ints64(Dims3);
+    SetDims(&Ext, Dims3);
     printf("\n--------A (after pass X):\n");
     for (int Y = 0; Y < NLarge.Y; ++Y) {
       for (int X = 0; X < NLarge.X; ++X) {
@@ -187,20 +182,20 @@ void TestNewWaveletCode() {
       printf("\n");
     }
     Dims3.Y += IsEven(Dims3.Y);
-    Ext.DimsCompact = Pack3Ints64(Dims3);
+    SetDims(&Ext, Dims3);
     Extents[I] = Ext;
     printf("dims %d %d %d\n", Dims(Extents[I]).X, Dims(Extents[I]).Y, Dims(Extents[I]).Z);
     printf("stride %d %d %d\n", Strides(Extents[I]).X, Strides(Extents[I]).Y, Strides(Extents[I]).Z);
-    Ext.DimsCompact = Pack3Ints64((Dims3 + 1) / 2);
-    Ext.StridesCompact = Pack3Ints64(Strides(Ext) * 2);
+    SetDims(&Ext, (Dims3 + 1) / 2);
+    SetStrides(&Ext, Strides(Ext) * 2);
   }
   printf("inverse transform\n");
   // inverse transform
   for (int I = NLevels - 1; I >= 0; --I) {
     printf("dims %d %d %d\n", Dims(Extents[I]).X, Dims(Extents[I]).Y, Dims(Extents[I]).Z);
     printf("stride %d %d %d\n", Strides(Extents[I]).X, Strides(Extents[I]).Y, Strides(Extents[I]).Z);
-    ILiftCdf53Y<double>(Vol, Extents[I]);
-    ILiftCdf53X<double>(Vol, Extents[I]);
+    ILiftCdf53Y<double>(Vol, Extents[I], 0);
+    ILiftCdf53X<double>(Vol, Extents[I], 1);
   }
   //FormSubbands(&Vol2, Vol, NLevels);
   printf("hello3\n");

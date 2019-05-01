@@ -8,39 +8,45 @@
 namespace mg {
 
 struct extent {
-  u64 PosCompact;
-  u64 DimsCompact;
-  u64 StridesCompact;
+  u64 PosPacked;
+  u64 DimsPacked;
+  u64 StridesPacked;
   extent();
-  extent(v3i Dims);
-  extent(v3i Pos, v3i Dims);
-  extent(v3i Pos, v3i Dims, v3i Stride);
+  extent(const v3i& Dims);
+  extent(const v3i& Pos, const v3i& Dims);
+  extent(const v3i& Pos, const v3i& Dims, const v3i& Stride);
 };
 
 struct volume {
   buffer Buffer;
   extent Extent;
-  u64 DimsCompact;
+  u64 DimsPacked;
   data_type Type;
+  volume();
+  volume(const buffer& BufIn, const extent& ExtIn, const v3i& DimsIn,
+         data_type TypeIn);
 };
 
-v3i Pos(extent Ext);
-v3i Dims(extent Ext);
-v3i Strides(extent Ext);
+v3i Pos(const extent& Ext);
+v3i Dims(const extent& Ext);
+v3i Strides(const extent& Ext);
 v3i BigDims(const volume& Vol);
 v3i SmallDims(const volume& Vol);
 i64 Size(const volume& Vol);
+void SetPos(extent* Ext, const v3i& Pos);
+void SetDims(extent* Ext, const v3i& Dims);
+void SetStrides(extent* Ext, const v3i& Strides);
 
 volume SubVolume(); // TODO: extract a subvolume from a volume
 
 //template <typename t> t& At(volume& Vol, i64 I);
 //template <typename t> t At(const volume& Vol, i64 I);
 
-i64 XyzToI(v3i N, v3i P);
-v3i IToXyz(i64 I, v3i N);
+i64 XyzToI(const v3i& N, const v3i& P);
+v3i IToXyz(i64 I, const v3i& N);
 
 /* Read a volume from a file */
-error<> ReadVolume(cstr FileName, v3i Dims, data_type Type, volume* Volume);
+error<> ReadVolume(cstr FileName, const v3i& Dims, data_type Type, volume* Volume);
 
 /* Copy a region of the first volume to a region of the second volume */
 void Copy(volume* Dst, const volume& Src);
@@ -48,16 +54,16 @@ void Copy(volume* Dst, const volume& Src);
 void Clone(volume* Dst, const volume& Src, allocator* Alloc = &Mallocator());
 
 /* Split a volume into 8 parts: 1 voxel, 3 lines, 3 faces, and one sub volume */
-array<extent, 8> Split3D(v3i Dims);
+array<extent, 8> Split3D(const v3i& Dims);
 
 /* Return the number of dimensions, given a volume size */
-int NumDims(v3i N);
+int NumDims(const v3i& N);
 
-bool IsPoint(extent Ext);
+bool IsPoint(const extent& Ext);
 /* Note: must test for IsPoint() first */
-bool IsLine(extent Ext);
+bool IsLine(const extent& Ext);
 /* Note: must test for IsLine() first */
-bool IsFace(extent Ext);
+bool IsFace(const extent& Ext);
 
 } // namespace mg
 

@@ -18,11 +18,11 @@ bool IsOdd(int X) {
   return (X & 1) != 0;
 }
 mg_ForceInline
-v3i IsEven(v3i P) {
+v3i IsEven(const v3i& P) {
   return v3i(IsEven(P.X), IsEven(P.Y), IsEven(P.Z));
 }
 mg_ForceInline
-v3i IsOdd(v3i P) {
+v3i IsOdd(const v3i& P) {
   return v3i(IsOdd(P.X), IsOdd(P.Y), IsOdd(P.Z));
 }
 
@@ -53,77 +53,77 @@ int Exponent(t Val) {
 }
 
 template <typename t = int, typename u> mg_ForceInline
-t Prod(v3<u> Vec) {
+t Prod(const v3<u>& Vec) {
   return t(Vec.X) * t(Vec.Y) * t(Vec.Z);
 }
 
 template <typename t> mg_ForceInline
-v3<t> operator+(v3<t> Lhs, v3<t> Rhs) {
+v3<t> operator+(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>{ Lhs.X + Rhs.X, Lhs.Y + Rhs.Y, Lhs.Z + Rhs.Z };
 }
 
 template <typename t> mg_ForceInline
-v3<t> operator+(v3<t> Lhs, t Val) {
+v3<t> operator+(const v3<t>& Lhs, t Val) {
   return v3<t>{ Lhs.X + Val, Lhs.Y + Val, Lhs.Z + Val };
 }
 
 template <typename t> mg_ForceInline
-v3<t> operator-(v3<t> Lhs, v3<t> Rhs) {
+v3<t> operator-(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>{ Lhs.X - Rhs.X, Lhs.Y - Rhs.Y, Lhs.Z - Rhs.Z };
 }
 
 template <typename t> mg_ForceInline
-v3<t> operator-(v3<t> Lhs, t Val) {
+v3<t> operator-(const v3<t>& Lhs, t Val) {
   return v3<t>{ Lhs.X - Val, Lhs.Y - Val, Lhs.Z - Val };
 }
 
 template <typename t> mg_ForceInline
-v3<t> operator*(v3<t> Lhs, v3<t> Rhs) {
+v3<t> operator*(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>{ Lhs.X * Rhs.X, Lhs.Y * Rhs.Y, Lhs.Z * Rhs.Z };
 }
 
 template <typename t> mg_ForceInline
-v3<t> operator*(v3<t> Lhs, t Val) {
+v3<t> operator*(const v3<t>& Lhs, t Val) {
   return v3<t>{ Lhs.X * Val, Lhs.Y * Val, Lhs.Z * Val };
 }
 
 template <typename t> mg_ForceInline
-v3<t> operator/(v3<t> Lhs, v3<t> Rhs) {
+v3<t> operator/(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>{ Lhs.X / Rhs.X, Lhs.Y / Rhs.Y, Lhs.Z / Rhs.Z };
 }
 
 template <typename t> mg_ForceInline
-v3<t> operator/(v3<t> Lhs, t Val) {
+v3<t> operator/(const v3<t>& Lhs, t Val) {
   return v3<t>{ Lhs.X / Val, Lhs.Y / Val, Lhs.Z / Val };
 }
 
 template <typename t> mg_ForceInline
-bool operator==(v3<t> Lhs, v3<t> Rhs) {
+bool operator==(const v3<t>& Lhs, const v3<t>& Rhs) {
   return Lhs.X == Rhs.X && Lhs.Y == Rhs.Y && Lhs.Z == Rhs.Z;
 }
 
 template <typename t> mg_ForceInline
-bool operator<=(v3<t> Lhs, v3<t> Rhs) {
+bool operator<=(const v3<t>& Lhs, const v3<t>& Rhs) {
   return Lhs.X <= Rhs.X && Lhs.Y <= Rhs.Y && Lhs.Z <= Rhs.Z;
 }
 
 template <typename t> mg_ForceInline
-bool operator<(v3<t> Lhs, v3<t> Rhs) {
+bool operator<(const v3<t>& Lhs, const v3<t>& Rhs) {
   return Lhs.X < Rhs.X && Lhs.Y < Rhs.Y && Lhs.Z < Rhs.Z;
 }
 
 template <typename t> mg_ForceInline
-bool operator>=(v3<t> Lhs, v3<t> Rhs) {
+bool operator>=(const v3<t>& Lhs, const v3<t>& Rhs) {
   return Lhs.X >= Rhs.X && Lhs.Y >= Rhs.Y && Lhs.Z >= Rhs.Z;
 }
 
 template <typename t> mg_ForceInline
-v3<t> Min(v3<t> Lhs, v3<t> Rhs) {
+v3<t> Min(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>(Min(Lhs.X, Rhs.X), Min(Lhs.Y, Rhs.Y), Min(Lhs.Z, Rhs.Z));
 }
 
 template <typename t> mg_ForceInline
-v3<t> Max(v3<t> Lhs, v3<t> Rhs) {
+v3<t> Max(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>(Max(Lhs.X, Rhs.X), Max(Lhs.Y, Rhs.Y), Max(Lhs.Z, Rhs.Z));
 }
 

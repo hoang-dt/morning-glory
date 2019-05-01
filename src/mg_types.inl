@@ -142,7 +142,7 @@ mg_ForceInline buffer::buffer() = default;
 mg_ForceInline buffer::buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn)
   : Data(DataIn), Bytes(BytesIn), Alloc(AllocIn) {}
 template<typename t> mg_ForceInline
-buffer::buffer(typed_buffer<t> Buf)
+buffer::buffer(const typed_buffer<t>& Buf)
   : Data(Buf.Data), Bytes(Buf.Size * sizeof(t)) {}
 
 mg_ForceInline
@@ -162,11 +162,11 @@ template <typename t> mg_ForceInline
 typed_buffer<t>::typed_buffer() = default;
 
 template <typename t> mg_ForceInline
-typed_buffer<t>::typed_buffer(t* Data, i64 Size, allocator* Alloc)
-  : Data(Data), Size(Size), Alloc(Alloc) {}
+typed_buffer<t>::typed_buffer(t* DataIn, i64 SizeIn, allocator* AllocIn)
+  : Data(DataIn), Size(SizeIn), Alloc(AllocIn) {}
 
 template <typename t> mg_ForceInline
-typed_buffer<t>::typed_buffer(buffer Buf)
+typed_buffer<t>::typed_buffer(const buffer& Buf)
   : Data((t*)Buf.Data), Size(Buf.Bytes / sizeof(t)) {}
 
 template <typename t> mg_ForceInline
@@ -180,11 +180,11 @@ const t& typed_buffer<t>::operator[](i64 Idx) const {
 }
 
 template <typename t> mg_ForceInline
-i64 Size(typed_buffer<t> Buf) {
+i64 Size(const typed_buffer<t>& Buf) {
   return Buf.Size;
 }
 template <typename t> mg_ForceInline
-i64 Bytes(typed_buffer<t> Buf) {
+i64 Bytes(const typed_buffer<t>& Buf) {
   return Buf.Size * sizeof(t);
 }
 
@@ -207,7 +207,7 @@ v2<t>::v2(t V): X(V), Y(V) {}
 template <typename t> mg_ForceInline
 v2<t>::v2(t X, t Y): X(X), Y(Y) {}
 template <typename t> template <typename u> mg_ForceInline
-v2<t>::v2(v2<u> Other): X(Other.X), Y(Other.Y) {}
+v2<t>::v2(const v2<u>& Other): X(Other.X), Y(Other.Y) {}
 
 template <typename t> mg_ForceInline
 t& v2<t>::operator[](int Idx) {
@@ -221,7 +221,7 @@ t v2<t>::operator[](int Idx) const {
 }
 
 template <typename t> template <typename u> mg_ForceInline
-v2<t>& v2<t>::operator=(v2<u> other) {
+v2<t>& v2<t>::operator=(const v2<u>& other) {
   X = other.X;
   Y = other.Y;
   return *this;
@@ -246,7 +246,7 @@ v3<t>::v3(t V): X(V), Y(V), Z(V) {}
 template <typename t> mg_ForceInline
 v3<t>::v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
 template <typename t> template <typename u> mg_ForceInline
-v3<t>::v3(v3<u> Other): X(Other.X), Y(Other.Y), Z(Other.Z) {}
+v3<t>::v3(const v3<u>& Other): X(Other.X), Y(Other.Y), Z(Other.Z) {}
 
 template <typename t> mg_ForceInline
 t& v3<t>::operator[](int Idx) {
@@ -259,7 +259,7 @@ t v3<t>::operator[](int Idx) const {
   return E[Idx];
 }
 template <typename t> template <typename u> mg_ForceInline
-v3<t>& v3<t>::operator=(v3<u> other) {
+v3<t>& v3<t>::operator=(const v3<u>& other) {
   X = other.X;
   Y = other.Y;
   Z = other.Z;

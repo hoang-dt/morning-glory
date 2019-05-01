@@ -62,7 +62,7 @@ mg_FLiftCdf53(Y, X, Z) // Z forward lifting
 #define mg_ILiftCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-void ILiftCdf53##x(const volume& Vol, const extent& Ext) {\
+void ILiftCdf53##x(const volume& Vol, const extent& Ext, int Pass) {\
   v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
   printf("N = %d %d %d\n", N.X, N.Y, N.Z);\
@@ -73,6 +73,12 @@ void ILiftCdf53##x(const volume& Vol, const extent& Ext) {\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
     int yy = T##y(M, y), zz = T##z(M, z);\
+    if (S.x == 1 && D.x > M.x) {/* */\
+      int yyy = Pass == 0 ? yy : y, zzz = Pass == 2 ? z : zz;\
+      int Start = P.x + ((N.x - P.x) / D.x + 1) * D.x;\
+      for (int x = Start; x < P.x + S.x * D.x; ++x)\
+        F[mg_Idx##x(x, yyy, zzz, N)] = F[mg_Idx##x(T##x(M, x), yyy, zzz, N)];\
+    }\
     for (int x = P.x + S.x; x < P.x + S.x * D.x; x += S.x * 2) {\
       t Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
       F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] -= Val / 4;\
