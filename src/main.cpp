@@ -119,7 +119,16 @@ void TestMemMap(const char* Input) {
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
 }
 
-#define Array { 56, 40, 8, 24, 48, 48, 40, 16, 30 }
+#define Array { 56, 40, 8, 24, 48, 48, 40, 16, 30,\
+                40, 8, 24, 48, 48, 40, 16, 30, 56,\
+                8, 24, 48, 48, 40, 16, 30, 56, 40,\
+                24, 48, 48, 40, 16, 30, 56, 40, 8,\
+                48, 48, 40, 16, 30, 56, 40, 8, 24,\
+                48, 40, 16, 30, 56, 40, 8, 24, 48,\
+                40, 16, 30, 56, 40, 8, 24, 48, 48,\
+                16, 30, 56, 40, 8, 24, 48, 48, 40,\
+                30, 56, 40, 8, 24, 48, 48, 40, 16 }
+
 
 void TestNewWaveletCode() {
   double A[] = Array;
@@ -128,19 +137,21 @@ void TestNewWaveletCode() {
   volume Vol;
   Vol.Buffer.Data = (byte*)A;
   Vol.Buffer.Bytes = sizeof(A);
-  Vol.DimsCompact = Pack3Ints64(v3i(sizeof(A) / sizeof(double), 1, 1));
+  Vol.DimsCompact = Pack3Ints64(v3i(9, 9, 1));
   Vol.Type = data_type::float64;
   Vol.Extent.PosCompact = 0;
-  Vol.Extent.DimsCompact = Pack3Ints64(v3i(sizeof(A) / sizeof(double), 1, 1));
+  Vol.Extent.DimsCompact = Pack3Ints64(v3i(9, 9, 1));
   Vol.Extent.StridesCompact = Pack3Ints64(v3i(1, 1, 1));
   extent Ext = Vol.Extent;
-  int NLevels = 2;
+  int NLevels = 3;
   volume Vol2 = Vol;
   Vol2.Buffer.Data = (byte*)C;
   Vol2.Buffer.Bytes = sizeof(C);
   for (int I = 0; I < NLevels; ++I) {
-    ForwardLiftCdf53X(B, v3i(sizeof(A) / sizeof(double), 1, 1), v3i(I, I, I));
+    ForwardLiftCdf53X(B, v3i(9, 9, 1), v3i(I, I, I));
+    ForwardLiftCdf53Y(B, v3i(9, 9, 1), v3i(I, I, I));
     FLiftCdf53X<double>(Vol, Ext);
+    FLiftCdf53Y<double>(Vol, Ext);
     Ext.StridesCompact = Pack3Ints64(Strides(Ext) * 2);
     Ext.DimsCompact = Pack3Ints64((Dims(Ext) + 1) / 2);
   }
