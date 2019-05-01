@@ -119,56 +119,106 @@ void TestMemMap(const char* Input) {
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
 }
 
-#define Array { 56, 40, 8, 24, 48, 48, 40, 16, 30,\
-                40, 8, 24, 48, 48, 40, 16, 30, 56,\
-                8, 24, 48, 48, 40, 16, 30, 56, 40,\
-                24, 48, 48, 40, 16, 30, 56, 40, 8,\
-                48, 48, 40, 16, 30, 56, 40, 8, 24,\
-                48, 40, 16, 30, 56, 40, 8, 24, 48,\
-                40, 16, 30, 56, 40, 8, 24, 48, 48,\
-                16, 30, 56, 40, 8, 24, 48, 48, 40,\
-                30, 56, 40, 8, 24, 48, 48, 40, 16 }
+#define Array { 56, 40, 8, 24, 48, 48, 40, 16, 30, 32, 0, 0, 0,\
+                40, 8, 24, 48, 48, 40, 16, 30, 32, 56, 0, 0, 0,\
+                8, 24, 48, 48, 40, 16, 30, 32, 56, 40, 0, 0, 0,\
+                24, 48, 48, 40, 16, 30, 32, 56, 40, 8, 0, 0, 0,\
+                48, 48, 40, 16, 30, 32, 56, 40, 8, 24, 0, 0, 0,\
+                48, 40, 16, 30, 32, 56, 40, 8, 24, 48, 0, 0, 0,\
+                40, 16, 30, 32, 56, 40, 8, 24, 48, 48, 0, 0, 0,\
+                16, 30, 32, 56, 40, 8, 24, 48, 48, 40, 0, 0, 0,\
+                30, 32, 56, 40, 8, 24, 48, 48, 40, 16, 0, 0, 0,\
+                32, 56, 40, 8, 24, 48, 48, 40, 16, 30, 0, 0, 0,\
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,\
+                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
 
 
 void TestNewWaveletCode() {
   double A[] = Array;
   double C[] = Array;
   double B[] = Array;
+  v3i N(10, 10, 1);
+  int NLevels = 3;
+  v3i NLarge = ExpandDomain(N, NLevels);
+  printf("%d %d %d\n", NLarge.X, NLarge.Y, NLarge.Z);
   volume Vol;
   Vol.Buffer.Data = (byte*)A;
   Vol.Buffer.Bytes = sizeof(A);
-  Vol.DimsCompact = Pack3Ints64(v3i(9, 9, 1));
+  Vol.DimsCompact = Pack3Ints64(NLarge);
   Vol.Type = data_type::float64;
   Vol.Extent.PosCompact = 0;
-  Vol.Extent.DimsCompact = Pack3Ints64(v3i(9, 9, 1));
+  Vol.Extent.DimsCompact = Pack3Ints64(N);
   Vol.Extent.StridesCompact = Pack3Ints64(v3i(1, 1, 1));
   extent Ext = Vol.Extent;
-  int NLevels = 3;
   volume Vol2 = Vol;
   Vol2.Buffer.Data = (byte*)C;
   Vol2.Buffer.Bytes = sizeof(C);
-  for (int I = 0; I < NLevels; ++I) {
-    ForwardLiftCdf53X(B, v3i(9, 9, 1), v3i(I, I, I));
-    ForwardLiftCdf53Y(B, v3i(9, 9, 1), v3i(I, I, I));
-    FLiftCdf53X<double>(Vol, Ext);
-    FLiftCdf53Y<double>(Vol, Ext);
-    Ext.StridesCompact = Pack3Ints64(Strides(Ext) * 2);
-    Ext.DimsCompact = Pack3Ints64((Dims(Ext) + 1) / 2);
+  dynamic_array<extent> Extents;
+  Resize(&Extents, NLevels);
+  printf("\n--------A:\n");
+  for (int Y = 0; Y < N.Y; ++Y) {
+    for (int X = 0; X < N.X; ++X) {
+      printf("%f ", A[Y * NLarge.X + X]);
+    }
+    printf("\n");
   }
-  FormSubbands(&Vol2, Vol, NLevels);
+  for (int I = 0; I < NLevels; ++I) {
+    //ForwardLiftCdf53X(B, v3i(9, 9, 1), v3i(I, I, I));
+    //ForwardLiftCdf53Y(B, v3i(9, 9, 1), v3i(I, I, I));
+    FLiftCdf53X<double>(Vol, Ext);
+    v3i Dims3 = Dims(Ext);
+    Dims3.X += IsEven(Dims3.X);
+    Ext.DimsCompact = Pack3Ints64(Dims3);
+    printf("\n--------A (after pass X):\n");
+    for (int Y = 0; Y < NLarge.Y; ++Y) {
+      for (int X = 0; X < NLarge.X; ++X) {
+        printf("%6.2f ", A[Y * NLarge.X + X]);
+      }
+      printf("\n");
+    }
+    FLiftCdf53Y<double>(Vol, Ext);
+    printf("\n--------A (after pass Y):\n");
+    for (int Y = 0; Y < NLarge.Y; ++Y) {
+      for (int X = 0; X < NLarge.X; ++X) {
+        printf("%6.2f ", A[Y * NLarge.X + X]);
+      }
+      printf("\n");
+    }
+    Dims3.Y += IsEven(Dims3.Y);
+    Ext.DimsCompact = Pack3Ints64(Dims3);
+    Extents[I] = Ext;
+    printf("dims %d %d %d\n", Dims(Extents[I]).X, Dims(Extents[I]).Y, Dims(Extents[I]).Z);
+    printf("stride %d %d %d\n", Strides(Extents[I]).X, Strides(Extents[I]).Y, Strides(Extents[I]).Z);
+    Ext.DimsCompact = Pack3Ints64((Dims3 + 1) / 2);
+    Ext.StridesCompact = Pack3Ints64(Strides(Ext) * 2);
+  }
+  printf("inverse transform\n");
+  // inverse transform
+  for (int I = NLevels - 1; I >= 0; --I) {
+    printf("dims %d %d %d\n", Dims(Extents[I]).X, Dims(Extents[I]).Y, Dims(Extents[I]).Z);
+    printf("stride %d %d %d\n", Strides(Extents[I]).X, Strides(Extents[I]).Y, Strides(Extents[I]).Z);
+    ILiftCdf53Y<double>(Vol, Extents[I]);
+    ILiftCdf53X<double>(Vol, Extents[I]);
+  }
+  //FormSubbands(&Vol2, Vol, NLevels);
   printf("hello3\n");
   printf("\n--------A:\n");
-  for (int I = 0; I < sizeof(A) / sizeof(double); ++I) {
-    printf("%f ", A[I]);
+  for (int Y = 0; Y < N.Y; ++Y) {
+    for (int X = 0; X < N.X; ++X) {
+      printf("%f ", A[Y * NLarge.X + X]);
+    }
+    printf("\n");
   }
-  printf("\n--------B:\n");
-  for (int I = 0; I < sizeof(B) / sizeof(double); ++I) {
-    printf("%f ", B[I]);
-  }
-  printf("\n--------C:\n");
-  for (int I = 0; I < sizeof(C) / sizeof(double); ++I) {
-    printf("%f ", C[I]);
-  }
+  //printf("\n--------B:\n");
+  //for (int I = 0; I < sizeof(B) / sizeof(double); ++I) {
+  //  printf("%f ", B[I]);
+  //}
+  //printf("\n--------C:\n");
+  //for (int I = 0; I < sizeof(C) / sizeof(double); ++I) {
+  //  printf("%f ", C[I]);
+  //}
 }
 
 #include <iostream>

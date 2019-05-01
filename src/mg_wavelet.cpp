@@ -189,6 +189,17 @@ void FormSubbands(volume* Dst, volume Src, int NLevels) {
 //  return v3i(Lvl - !bm::bit_test(i, 0), lvl - !bm::bit_test(i, 1), lvl - !bm::bit_test(i, 2));
 //}
 
+v3i ExpandDomain(v3i N, int NLevels) {
+  v3i Count(0, 0, 0);
+  v3i M = N;
+  for (int I = 0; I < NLevels; ++I) {
+    v3i Add(IsEven(M.X), IsEven(M.Y), IsEven(M.Z));
+    Count = Count + Add;
+    M = (M + Add + 1) / 2;
+  }
+  return N + Count;
+}
+
 } // namespace mg
 
 

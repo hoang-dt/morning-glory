@@ -10,6 +10,8 @@ const int (&Power(int Base))[N];
 
 bool IsEven(int X);
 bool IsOdd(int X);
+v3i IsEven(v3i P);
+v3i IsOdd(v3i P);
 
 template <typename t>
 int Exponent(t Val);

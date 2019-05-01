@@ -14,9 +14,9 @@
 #define mg_IdxZ(z, x, y, N) i64(z) * N.X * N.Y + i64(y) * N.X + (x)
 
 /* Translate a wavelet coordinate to a storage coordinate */
-#define TX(N, X) ((X) <= N.X ? (X) : (N.X + Log2Floor(X - N.X)))
-#define TY(N, Y) ((Y) <= N.Y ? (Y) : (N.Y + Log2Floor(Y - N.Y)))
-#define TZ(N, Z) ((Z) <= N.Z ? (Z) : (N.Z + Log2Floor(Z - N.Z)))
+#define TX(N, x) ((x) <= N.X ? (x) : (N.X + Log2Floor(x - N.X)))
+#define TY(N, y) ((y) <= N.Y ? (y) : (N.Y + Log2Floor(y - N.Y)))
+#define TZ(N, z) ((z) <= N.Z ? (z) : (N.Z + Log2Floor(z - N.Z)))
 
 /* Async forward lifting */
 #define mg_FLiftCdf53(z, y, x)\
@@ -26,29 +26,31 @@ void FLiftCdf53##x(const volume& Vol, const extent& Ext) {\
   v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
   mg_Assert(IsEven(P.x));\
-  mg_Assert(IsOdd(D.x));\
   mg_Assert(P.x + S.x * (D.x - 1) < N.x);\
   typed_buffer<t> F(Vol.Buffer);\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-  for (int x = P.x + S.x; x < P.x + S.x * D.x; x += 2 * S.x) {\
-    printf("%d %d %d %d\n", T##x(M, x), T##x(M, x + S.x), T##y(M, y), T##z(M, z));\
     int yy = T##y(M, y), zz = T##z(M, z);\
-    t & Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
-    Val -= F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] / 2;\
-    Val -= F[mg_Idx##x(T##x(M, x + S.x), yy, zz, N)] / 2;\
-  }}}\
-  printf("hello\n");\
+    if (IsEven(D.x)) {\
+      t A = F[mg_Idx##x(T##x(M, P.x + S.x * (D.x - 2)), yy, zz, N)];\
+      t B = F[mg_Idx##x(T##x(M, P.x + S.x * (D.x - 1)), yy, zz, N)];\
+      F[mg_Idx##x(T##x(M, P.x + S.x * D.x), yy, zz, N)] = 2 * B - A;\
+    }\
+    for (int x = P.x + S.x; x < P.x + S.x * D.x; x += 2 * S.x) {\
+      t & Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
+      Val -= F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] / 2;\
+      Val -= F[mg_Idx##x(T##x(M, x + S.x), yy, zz, N)] / 2;\
+    }\
+  }}\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-  for (int x = P.x + S.x; x < P.x + S.x * D.x; x += 2 * S.x) {\
-    printf("%d %d %d %d\n", T##x(M, x), T##x(M, x + S.x), T##y(M, y), T##z(M, z));\
     int yy = T##y(M, y), zz = T##z(M, z);\
-    t Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
-    F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] += Val / 4;\
-    F[mg_Idx##x(T##x(M, x + S.x), yy, zz, N)] += Val / 4;\
-  }}}\
-  printf("hello2\n");\
+    for (int x = P.x + S.x; x < P.x + S.x * D.x; x += 2 * S.x) {\
+      t Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
+      F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] += Val / 4;\
+      F[mg_Idx##x(T##x(M, x + S.x), yy, zz, N)] += Val / 4;\
+    }\
+  }}\
 }\
 } // namespace mg
 
@@ -60,35 +62,38 @@ mg_FLiftCdf53(Y, X, Z) // Z forward lifting
 #define mg_ILiftCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-stlab::future<void> ILiftCdf53##x(const volume& Vol, const extent& Ext) {\
+void ILiftCdf53##x(const volume& Vol, const extent& Ext) {\
   v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
+  printf("N = %d %d %d\n", N.X, N.Y, N.Z);\
+  printf("M = %d %d %d\n", M.X, M.Y, M.Z);\
   mg_Assert(IsEven(P.x));\
-  mg_Assert(IsOdd(D.x));\
-  mg_Assert(P.x + S.x * (D.x - 1) < N.x);\
+  mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
   typed_buffer<t> F(Vol.Buffer);\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-  for (int x = P.x; x < P.x + S.x * D.x; x += S.x * 2) {\
     int yy = T##y(M, y), zz = T##z(M, z);\
-    t Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
-    F[mg_Idx##x(T##x(M, x - 1), yy, zz, N)] -= Val / 4;\
-    F[mg_Idx##x(T##x(M, x + 1), yy, zz, N)] -= Val / 4;\
-  }}}\
+    for (int x = P.x + S.x; x < P.x + S.x * D.x; x += S.x * 2) {\
+      t Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
+      F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] -= Val / 4;\
+      F[mg_Idx##x(T##x(M, x + S.x), yy, zz, N)] -= Val / 4;\
+    }\
+  }}\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-  for (int x = P.x; x < P.x + S.x * D.x; x += S.x * 2) {\
     int yy = T##y(M, y), zz = T##z(M, z);\
-    t & Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
-    Val += F[mg_Idx##x(T##x(M, x - 1), yy, zz, N)] / 2;\
-    Val += F[mg_Idx##x(T##x(M, x + 1), yy, zz, N)] / 2;\
-  }}}\
+    for (int x = P.x + S.x; x < P.x + S.x * D.x; x += S.x * 2) {\
+      t & Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
+      Val += F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] / 2;\
+      Val += F[mg_Idx##x(T##x(M, x + S.x), yy, zz, N)] / 2;\
+    }\
+  }}\
 }\
 } // namespace mg
 
-mg_ILiftCdf53(Z, Y, X) // X forward lifting
-mg_ILiftCdf53(Z, X, Y) // Y forward lifting
-mg_ILiftCdf53(Y, X, Z) // Z forward lifting
+mg_ILiftCdf53(Z, Y, X) // X inverse lifting
+mg_ILiftCdf53(Z, X, Y) // Y inverse lifting
+mg_ILiftCdf53(Y, X, Z) // Z inverse lifting
 #undef mg_ILiftCdf53
 
 /* Forward x lifting */

@@ -37,6 +37,7 @@ void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<extent>* Subbands);
 
 void FormSubbands(volume* Dst, volume Src, int NLevels);
 int LevelToSubband(v3i Level);
+v3i ExpandDomain(v3i N, int NLevels);
 
 } // namespace mg
 

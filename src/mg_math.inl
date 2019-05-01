@@ -13,10 +13,17 @@ mg_ForceInline
 bool IsEven(int X) {
   return (X & 1) == 0;
 }
-
 mg_ForceInline
 bool IsOdd(int X) {
   return (X & 1) != 0;
+}
+mg_ForceInline
+v3i IsEven(v3i P) {
+  return v3i(IsEven(P.X), IsEven(P.Y), IsEven(P.Z));
+}
+mg_ForceInline
+v3i IsOdd(v3i P) {
+  return v3i(IsOdd(P.X), IsOdd(P.Y), IsOdd(P.Z));
 }
 
 mg_ForceInline
