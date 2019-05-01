@@ -100,9 +100,9 @@ void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
   for (int I = 0; I < NLevels; ++I) {
     v3i P((M.X + 1) >> 1, (M.Y + 1) >> 1, (M.Z + 1) >> 1);
     for (int J = (1 << NDims) - 1; J > 0; --J) {
-      u8 Z = Order[J] & 1u,
-         Y = (Order[J] >> (NDims - 2)) & 1u,
-         X = (Order[J] >> (NDims - 1)) & 1u;
+      u8 Z = CheckBit(Order[J], Max(NDims - 3, 0)),
+         Y = CheckBit(Order[J], Max(NDims - 2, 0)),
+         X = CheckBit(Order[J], Max(NDims - 1, 0));
       v3i Sm((X == 0) ? P.X : M.X - P.X,
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
@@ -110,10 +110,11 @@ void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
         PushBack(Subbands, extent(v3i(X, Y, Z) * P, Sm));
       else if (NDims == 2 && Sm.X != 0 && Sm.Y != 0)
         PushBack(Subbands, extent(v3i(X * P.X, Y * P.Y, 0), v3i(Sm.X, Sm.Y, 1)));
+      else
+        PushBack(Subbands, extent(v3i(X * P.X, 0, 0), v3i(Sm.X, 1, 1)));
     }
     M = P;
   }
-  if (NDims == 2) mg_Assert(M.Z == 1);
   PushBack(Subbands, extent(v3i(0, 0, 0), M));
   Reverse(Begin(*Subbands), End(*Subbands));
 }
@@ -129,9 +130,9 @@ void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
     S = S * 2;
     v3i P((M.X + 1) >> 1, (M.Y + 1) >> 1, (M.Z + 1) >> 1); // next dimensions
     for (int J = (1 << NDims) - 1; J > 0; --J) { // for each subband
-      u8 Z = Order[J] & 1u,
-         Y = (Order[J] >> (NDims - 2)) & 1u, // TODO: what if NDims == 1?
-         X = (Order[J] >> (NDims - 1)) & 1u;
+      u8 Z = CheckBit(Order[J], Max(NDims - 3, 0)),
+         Y = CheckBit(Order[J], Max(NDims - 2, 0)),
+         X = CheckBit(Order[J], Max(NDims - 1, 0));
       v3i Sm((X == 0) ? P.X : M.X - P.X, // dimensions of the current subband
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
@@ -139,10 +140,11 @@ void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
         PushBack(Subbands, extent(v3i(X, Y, Z) * S / 2, Sm, S));
       else if (NDims == 2 && Sm.X != 0 && Sm.Y != 0)
         PushBack(Subbands, extent(v3i(X, Y, 0) * S / 2, v3i(Sm.X, Sm.Y, 1), S));
+      else if (NDims == 1 && Sm.X != 0)
+        PushBack(Subbands, extent(v3i(X, 0, 0) * S / 2, v3i(Sm.X, 1, 1), S));
     }
     M = P;
   }
-  if (NDims == 2) mg_Assert(M.Z == 1);
   PushBack(Subbands, extent(v3i(0, 0, 0), M, S)); // final (coarsest) subband
   Reverse(Begin(*Subbands), End(*Subbands));
 }
@@ -156,6 +158,22 @@ int LevelToSubband(v3i Level) {
   return 7 * (Lvl - 1) + Table[4 * (Level.X == Lvl) +
                                2 * (Level.Y == Lvl) +
                                1 * (Level.Z == Lvl)];
+}
+
+/* Copy samples from Src to Dst (in Dst, samples are organized into subbands) */
+void FormSubbands(volume* Dst, volume Src, int NLevels) {
+  mg_Assert(Dst->Extent.DimsCompact == Src.Extent.DimsCompact);
+  mg_Assert(Dst->Type == Src.Type);
+  v3i Dims = SmallDims(Src);
+  dynamic_array<extent> Subbands;
+  dynamic_array<extent> SubbandsInPlace;
+  BuildSubbands(Dims, NLevels, &Subbands);
+  BuildSubbandsInPlace(Dims, NLevels, &SubbandsInPlace);
+  for (int I = 0; I < Size(Subbands); ++I) {
+    Dst->Extent = Subbands[I];
+    Src.Extent = SubbandsInPlace[I];
+    Copy(Dst, Src);
+  }
 }
 
 //v3i SubbandToLevel(int S) {
@@ -172,4 +190,5 @@ int LevelToSubband(v3i Level) {
 //}
 
 } // namespace mg
+
 

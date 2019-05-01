@@ -27,7 +27,7 @@ void FLiftCdf53##x(const volume& Vol, const extent& Ext) {\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
   mg_Assert(IsEven(P.x));\
   mg_Assert(IsOdd(D.x));\
-  mg_Assert(P.x + S.x * D.x <= N.x);\
+  mg_Assert(P.x + S.x * (D.x - 1) < N.x);\
   typed_buffer<t> F(Vol.Buffer);\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
@@ -65,7 +65,7 @@ stlab::future<void> ILiftCdf53##x(const volume& Vol, const extent& Ext) {\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
   mg_Assert(IsEven(P.x));\
   mg_Assert(IsOdd(D.x));\
-  mg_Assert(P.x + S.x * D.x <= N.x);\
+  mg_Assert(P.x + S.x * (D.x - 1) < N.x);\
   typed_buffer<t> F(Vol.Buffer);\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
@@ -120,6 +120,19 @@ void ForwardLiftCdf53##x(t* F, v3i N, v3i L) {\
     F[mg_Idx##x(XLeft, y, z, N)] += Val / 4;\
     F[mg_Idx##x(XRight, y, z, N)] += Val / 4;\
   }}}\
+  mg_HeapArray(Temp, t, M.x / 2);\
+  int S##x = (M.x + 1) / 2;\
+  for (int z = 0; z < M.z; ++z) {\
+  for (int y = 0; y < M.y; ++y) {\
+    for (int x = 1; x < M.x; x += 2) {\
+      Temp[x / 2] = F[mg_Idx##x(x    , y, z, N)];\
+      F[mg_Idx##x(x / 2, y, z, N)] = F[mg_Idx##x(x - 1, y, z, N)];\
+    }\
+    if (IsOdd(M.x))\
+      F[mg_Idx##x(M.x / 2, y, z, N)] = F[mg_Idx##x(M.x - 1, y, z, N)];\
+    for (int x = 0; x < (M.x / 2); ++x)\
+      F[mg_Idx##x(S##x + x, y, z, N)] = Temp[x];\
+  }}\
 }\
 } // namespace mg
 

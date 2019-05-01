@@ -119,9 +119,12 @@ void TestMemMap(const char* Input) {
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
 }
 
+#define Array { 56, 40, 8, 24, 48, 48, 40, 16, 30 }
+
 void TestNewWaveletCode() {
-  double A[] = { 56, 40, 8, 24, 48, 48, 40, 16, 30 };
-  double B[] = { 56, 40, 8, 24, 48, 48, 40, 16, 30 };
+  double A[] = Array;
+  double C[] = Array;
+  double B[] = Array;
   volume Vol;
   Vol.Buffer.Data = (byte*)A;
   Vol.Buffer.Bytes = sizeof(A);
@@ -131,15 +134,29 @@ void TestNewWaveletCode() {
   Vol.Extent.DimsCompact = Pack3Ints64(v3i(sizeof(A) / sizeof(double), 1, 1));
   Vol.Extent.StridesCompact = Pack3Ints64(v3i(1, 1, 1));
   extent Ext = Vol.Extent;
-  FLiftCdf53X<double>(Vol, Ext);
-  ForwardLiftCdf53X(B, v3i(sizeof(A) / sizeof(double), 1, 1), v3i(0, 0, 0));
+  int NLevels = 2;
+  volume Vol2 = Vol;
+  Vol2.Buffer.Data = (byte*)C;
+  Vol2.Buffer.Bytes = sizeof(C);
+  for (int I = 0; I < NLevels; ++I) {
+    ForwardLiftCdf53X(B, v3i(sizeof(A) / sizeof(double), 1, 1), v3i(I, I, I));
+    FLiftCdf53X<double>(Vol, Ext);
+    Ext.StridesCompact = Pack3Ints64(Strides(Ext) * 2);
+    Ext.DimsCompact = Pack3Ints64((Dims(Ext) + 1) / 2);
+  }
+  FormSubbands(&Vol2, Vol, NLevels);
   printf("hello3\n");
+  printf("\n--------A:\n");
   for (int I = 0; I < sizeof(A) / sizeof(double); ++I) {
     printf("%f ", A[I]);
   }
-  printf("\n");
+  printf("\n--------B:\n");
   for (int I = 0; I < sizeof(B) / sizeof(double); ++I) {
     printf("%f ", B[I]);
+  }
+  printf("\n--------C:\n");
+  for (int I = 0; I < sizeof(C) / sizeof(double); ++I) {
+    printf("%f ", C[I]);
   }
 }
 
@@ -150,16 +167,16 @@ void TestNewWaveletCode() {
 int main(int Argc, const char** Argv) {
   TestNewWaveletCode();
   dynamic_array<extent> Subbands;
-  BuildSubbandsInPlace(v3i(16, 16, 1), 3, &Subbands);
-  for (int I = 0; I < Size(Subbands); ++I) {
-    printf("----------- Subband %d\n", I);
-    v3i Pos = Unpack3Ints64(Subbands[I].PosCompact);
-    v3i Dims = Unpack3Ints64(Subbands[I].DimsCompact);
-    v3i Strides = Unpack3Ints64(Subbands[I].StridesCompact);
-    printf("Pos %d %d %d\n", Pos.X, Pos.Y, Pos.Z);
-    printf("Dims %d %d %d\n", Dims.X, Dims.Y, Dims.Z);
-    printf("Strides %d %d %d\n", Strides.X, Strides.Y, Strides.Z);
-  }
+  BuildSubbandsInPlace(v3i(16, 16, 16), 3, &Subbands);
+  //for (int I = 0; I < Size(Subbands); ++I) {
+  //  printf("----------- Subband %d\n", I);
+  //  v3i Pos = Unpack3Ints64(Subbands[I].PosCompact);
+  //  v3i Dims = Unpack3Ints64(Subbands[I].DimsCompact);
+  //  v3i Strides = Unpack3Ints64(Subbands[I].StridesCompact);
+  //  printf("Pos %d %d %d\n", Pos.X, Pos.Y, Pos.Z);
+  //  printf("Dims %d %d %d\n", Dims.X, Dims.Y, Dims.Z);
+  //  printf("Strides %d %d %d\n", Strides.X, Strides.Y, Strides.Z);
+  //}
   return 0;
   //int ChunkSize, BlockBegin, BlockEnd;
   //ToInt(Argv[1], &ChunkSize);

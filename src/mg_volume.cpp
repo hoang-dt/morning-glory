@@ -37,13 +37,13 @@ void Copy(volume* Dst, const volume& Src) {
   v3i PosSrc = StartSrc;\
   v3i PosDst = StartDst;\
   for (PosSrc.Z = StartSrc.Z, PosDst.Z = StartDst.Z;\
-       PosSrc.Z < StartSrc.Z + CopyDims.Z;\
+       PosSrc.Z < StartSrc.Z + StrideSrc.Z * CopyDims.Z;\
        PosSrc.Z += StrideSrc.Z, PosDst.Z += StrideDst.Z) {\
   for (PosSrc.Y = StartSrc.Y, PosDst.Y = StartDst.Y;\
-       PosSrc.Y < StartSrc.Y + CopyDims.Y;\
+       PosSrc.Y < StartSrc.Y + StrideSrc.Y * CopyDims.Y;\
        PosSrc.Y += StrideSrc.Y, PosDst.Y += StrideDst.Y) {\
   for (PosSrc.X = StartSrc.X, PosDst.X = StartDst.X;\
-       PosSrc.X < StartSrc.X + CopyDims.X;\
+       PosSrc.X < StartSrc.X + StrideSrc.X * CopyDims.X;\
        PosSrc.X += StrideSrc.X, PosDst.X += StrideDst.X) {\
     i64 I = XyzToI(BigDimsSrc, PosSrc);\
     i64 J = XyzToI(BigDimsDst, PosDst);\
