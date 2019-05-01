@@ -153,6 +153,8 @@ struct buffer {
   i64 Bytes = 0;
   allocator* Alloc = nullptr;
   buffer();
+  template <typename t, int N>
+  buffer(t (&Arr)[N]);
   buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn = nullptr);
   template<typename t> buffer(const typed_buffer<t>& Buf);
   byte& operator[](i64 Idx);
@@ -165,6 +167,8 @@ struct typed_buffer {
   i64 Size = 0;
   allocator* Alloc = nullptr;
   typed_buffer();
+  template <int N>
+  typed_buffer(t (&Arr)[N]);
   typed_buffer(t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
   typed_buffer(const buffer& Buf);
   t& operator[](i64 Idx);

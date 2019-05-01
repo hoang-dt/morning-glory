@@ -139,13 +139,15 @@ void TestNewWaveletCode() {
   double A[] = Array;
   double C[] = Array;
   double B[] = Array;
-  double D[17 * 17] = {};
-  volume VolD;
+  v3i ND(17, 17, 1);
   v3i N(10, 10, 1);
   int NLevels = 3;
   v3i NLarge = ExpandDomain(N, NLevels);
+  double D[17 * 17 * 1] = {};
+  volume VolA(buffer(A), extent(N), NLarge, data_type::float64);
+  volume VolD(buffer(D), extent(N), ND, data_type::float64);
   printf("%d %d %d\n", NLarge.X, NLarge.Y, NLarge.Z);
-  volume Vol(buffer((byte*)A, sizeof(A)), extent(N), NLarge, data_type::float64);
+  volume Vol(buffer(A), extent(N), NLarge, data_type::float64);
   extent Ext = Vol.Extent;
   volume Vol2 = Vol;
   Vol2.Buffer.Data = (byte*)C;
@@ -155,65 +157,31 @@ void TestNewWaveletCode() {
   printf("\n--------A:\n");
   for (int Y = 0; Y < N.Y; ++Y) {
     for (int X = 0; X < N.X; ++X) {
-      printf("%f ", A[Y * NLarge.X + X]);
+      printf("%6.1f ", A[Y * NLarge.X + X]);
     }
     printf("\n");
   }
   for (int I = 0; I < NLevels; ++I) {
-    //ForwardLiftCdf53X(B, v3i(9, 9, 1), v3i(I, I, I));
-    //ForwardLiftCdf53Y(B, v3i(9, 9, 1), v3i(I, I, I));
     FLiftCdf53X<double>(Vol, Ext);
     v3i Dims3 = Dims(Ext);
     Dims3.X += IsEven(Dims3.X);
     SetDims(&Ext, Dims3);
-    printf("\n--------A (after pass X):\n");
-    for (int Y = 0; Y < NLarge.Y; ++Y) {
-      for (int X = 0; X < NLarge.X; ++X) {
-        printf("%6.2f ", A[Y * NLarge.X + X]);
-      }
-      printf("\n");
-    }
     FLiftCdf53Y<double>(Vol, Ext);
-    printf("\n--------A (after pass Y):\n");
-    for (int Y = 0; Y < NLarge.Y; ++Y) {
-      for (int X = 0; X < NLarge.X; ++X) {
-        printf("%6.2f ", A[Y * NLarge.X + X]);
-      }
-      printf("\n");
-    }
     Dims3.Y += IsEven(Dims3.Y);
     SetDims(&Ext, Dims3);
     Extents[I] = Ext;
-    printf("dims %d %d %d\n", Dims(Extents[I]).X, Dims(Extents[I]).Y, Dims(Extents[I]).Z);
-    printf("stride %d %d %d\n", Strides(Extents[I]).X, Strides(Extents[I]).Y, Strides(Extents[I]).Z);
     SetDims(&Ext, (Dims3 + 1) / 2);
     SetStrides(&Ext, Strides(Ext) * 2);
   }
+  Copy(&VolD, VolA);
   printf("inverse transform\n");
   // inverse transform
   for (int I = NLevels - 1; I >= 0; --I) {
-    printf("dims %d %d %d\n", Dims(Extents[I]).X, Dims(Extents[I]).Y, Dims(Extents[I]).Z);
-    printf("stride %d %d %d\n", Strides(Extents[I]).X, Strides(Extents[I]).Y, Strides(Extents[I]).Z);
-    ILiftCdf53Y<double>(Vol, Extents[I], 0);
-    ILiftCdf53X<double>(Vol, Extents[I], 1);
+    ILiftCdf53Y<double>(VolD, Extents[I]);
+    ILiftCdf53X<double>(VolD, Extents[I]);
+
   }
   //FormSubbands(&Vol2, Vol, NLevels);
-  printf("hello3\n");
-  printf("\n--------A:\n");
-  for (int Y = 0; Y < N.Y; ++Y) {
-    for (int X = 0; X < N.X; ++X) {
-      printf("%f ", A[Y * NLarge.X + X]);
-    }
-    printf("\n");
-  }
-  //printf("\n--------B:\n");
-  //for (int I = 0; I < sizeof(B) / sizeof(double); ++I) {
-  //  printf("%f ", B[I]);
-  //}
-  //printf("\n--------C:\n");
-  //for (int I = 0; I < sizeof(C) / sizeof(double); ++I) {
-  //  printf("%f ", C[I]);
-  //}
 }
 
 #include <iostream>

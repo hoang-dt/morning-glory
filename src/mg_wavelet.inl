@@ -62,23 +62,15 @@ mg_FLiftCdf53(Y, X, Z) // Z forward lifting
 #define mg_ILiftCdf53(z, y, x)\
 namespace mg {\
 template <typename t>\
-void ILiftCdf53##x(const volume& Vol, const extent& Ext, int Pass) {\
+void ILiftCdf53##x(const volume& Vol, const extent& Ext) {\
   v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
-  printf("N = %d %d %d\n", N.X, N.Y, N.Z);\
-  printf("M = %d %d %d\n", M.X, M.Y, M.Z);\
   mg_Assert(IsEven(P.x));\
   mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
   typed_buffer<t> F(Vol.Buffer);\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
     int yy = T##y(M, y), zz = T##z(M, z);\
-    if (S.x == 1 && D.x > M.x) {/* */\
-      int yyy = Pass == 0 ? yy : y, zzz = Pass == 2 ? z : zz;\
-      int Start = P.x + ((N.x - P.x) / D.x + 1) * D.x;\
-      for (int x = Start; x < P.x + S.x * D.x; ++x)\
-        F[mg_Idx##x(x, yyy, zzz, N)] = F[mg_Idx##x(T##x(M, x), yyy, zzz, N)];\
-    }\
     for (int x = P.x + S.x; x < P.x + S.x * D.x; x += S.x * 2) {\
       t Val = F[mg_Idx##x(T##x(M, x), yy, zz, N)];\
       F[mg_Idx##x(T##x(M, x - S.x), yy, zz, N)] -= Val / 4;\
@@ -101,6 +93,36 @@ mg_ILiftCdf53(Z, Y, X) // X inverse lifting
 mg_ILiftCdf53(Z, X, Y) // Y inverse lifting
 mg_ILiftCdf53(Y, X, Z) // Z inverse lifting
 #undef mg_ILiftCdf53
+
+#define mg_Unpack(z, y, x)\
+namespace mg {\
+template <typename t>\
+void Unpack##x(const volume& Vol, const extent& Ext, int Pass) {\
+  v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
+  v3i N = BigDims(Vol), M = SmallDims(Vol);\
+  mg_Assert(IsEven(P.x));\
+  mg_Assert(M.x > P.x);\
+  mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
+  typed_buffer<t> F(Vol.Buffer);\
+  int Start = P.x + ((M.x - P.x) / S.x + 1) * S.x;\
+  if (P.x + S.x * (D.x - 1) >= M.x) {\
+    for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
+    for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
+      int yy = T##y(M, y), zz = T##z(M, z);\
+      /* NOTE: the code below is correct for transform order (X, Y, Z), but */\
+      /* for transform order (Z, Y, X), the following must be used */\
+      /* int yyy = Pass == 0 ? yy : y, zzz = Pass == 2 ? z : zz; */\
+      int yyy = Pass == 2 ? y : yy, zzz = Pass == 0 ? zz : z;\
+      for (int x = P.x + S.x * (D.x - 1); x >= Start; x -= S.x)\
+        F[mg_Idx##x(x, yyy, zzz, N)] = F[mg_Idx##x(T##x(M, x), yyy, zzz, N)];\
+    }}\
+  }\
+}\
+} // namespace mg
+mg_Unpack(Z, Y, X) // X unpacking
+mg_Unpack(Z, X, Y) // Y unpacking
+mg_Unpack(Y, X, Z) // Z unpacking
+#undef mg_Unpack
 
 /* Forward x lifting */
 #define mg_ForwardLiftCdf53(z, y, x)\

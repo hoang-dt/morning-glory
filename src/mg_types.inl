@@ -141,6 +141,8 @@ TemplateArr mg_ForceInline int Size(array<t, N>&) {
 mg_ForceInline buffer::buffer() = default;
 mg_ForceInline buffer::buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn)
   : Data(DataIn), Bytes(BytesIn), Alloc(AllocIn) {}
+template <typename t, int N> mg_ForceInline
+buffer::buffer(t (&Arr)[N]) : Data((byte*)&Arr[0]), Bytes(sizeof(Arr)) {}
 template<typename t> mg_ForceInline
 buffer::buffer(const typed_buffer<t>& Buf)
   : Data(Buf.Data), Bytes(Buf.Size * sizeof(t)) {}
@@ -160,6 +162,9 @@ byte buffer::operator[](i64 Idx) const {
 /* typed_buffer stuffs */
 template <typename t> mg_ForceInline
 typed_buffer<t>::typed_buffer() = default;
+
+template <typename t> template <int N> mg_ForceInline
+typed_buffer<t>::typed_buffer(t (&Arr)[N]) : Data(&Arr[0]), Size(N) {}
 
 template <typename t> mg_ForceInline
 typed_buffer<t>::typed_buffer(t* DataIn, i64 SizeIn, allocator* AllocIn)
