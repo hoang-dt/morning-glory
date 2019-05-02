@@ -13,6 +13,7 @@ int Pow(int Base, int Exp) {
   return Result;
 }
 
+// TODO: when n is already a power of two plus one, do not increase n
 int NextPow2(int Val) {
   mg_Assert(Val >= 0);
   if (Val == 0)

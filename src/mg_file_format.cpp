@@ -358,7 +358,7 @@ ff_err ParseMeta(file_format* Ff, metadata* Meta) {
              &Meta->Dims.X, &Meta->Dims.Y, &Meta->Dims.Z) != 3)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Dims corrupted");
   Ff->Volume.DimsPacked = Pack3Ints64(Meta->Dims);
-  Ff->Volume.Extent = extent(Meta->Dims);
+  Ff->Volume.Extent = grid(Meta->Dims);
   char Type[16];
   if (fscanf(Fp, "type = %s\n", Type) != 1)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Type corrupted");

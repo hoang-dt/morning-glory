@@ -139,27 +139,34 @@ void TestNewWaveletCode() {
   double A[] = Array;
   double C[] = Array;
   double B[] = Array;
-  v3i ND(17, 17, 1);
+  v3i NPow2(17, 17, 1);
   v3i N(10, 10, 1);
   int NLevels = 3;
   v3i NLarge = ExpandDomain(N, NLevels);
   double D[17 * 17 * 1] = {};
-  volume VolA(buffer(A), extent(N), NLarge, data_type::float64);
-  volume VolD(buffer(D), extent(N), ND, data_type::float64);
+  volume VolA(buffer(A), grid(NLarge), NLarge, data_type::float64);
+  volume VolD(buffer(D), grid(NLarge), NPow2, data_type::float64);
   printf("%d %d %d\n", NLarge.X, NLarge.Y, NLarge.Z);
-  volume Vol(buffer(A), extent(N), NLarge, data_type::float64);
-  extent Ext = Vol.Extent;
+  volume Vol(buffer(A), grid(N), NLarge, data_type::float64);
+  grid Ext = Vol.Extent;
   volume Vol2 = Vol;
-  Vol2.Buffer.Data = (byte*)C;
-  Vol2.Buffer.Bytes = sizeof(C);
-  dynamic_array<extent> Extents;
+  Vol2.Buffer = buffer(C);
+  dynamic_array<grid> Extents, Extents2;
   Resize(&Extents, NLevels);
+  Resize(&Extents2, NLevels);
   printf("\n--------A:\n");
   for (int Y = 0; Y < N.Y; ++Y) {
     for (int X = 0; X < N.X; ++X) {
       printf("%6.1f ", A[Y * NLarge.X + X]);
     }
     printf("\n");
+  }
+  v3i DimsP = NPow2;
+  v3i StridesP(1, 1, 1);
+  for (int I = 0; I < NLevels; ++I) {
+    Extents2[I] = grid(v3i(0, 0, 0), DimsP, StridesP);
+    DimsP = (DimsP + 1) / 2;
+    StridesP = StridesP * 2;
   }
   for (int I = 0; I < NLevels; ++I) {
     FLiftCdf53X<double>(Vol, Ext);
@@ -177,9 +184,63 @@ void TestNewWaveletCode() {
   printf("inverse transform\n");
   // inverse transform
   for (int I = NLevels - 1; I >= 0; --I) {
-    ILiftCdf53Y<double>(VolD, Extents[I]);
-    ILiftCdf53X<double>(VolD, Extents[I]);
-
+    ILiftCdf53Y<double>(Vol, Extents[I]);
+    printf("\n--------A (after Y pass):\n");
+    for (int Y = 0; Y < NLarge.Y; ++Y) {
+      for (int X = 0; X < NLarge.X; ++X) {
+        printf("%6.1f ", A[Y * NLarge.X + X]);
+      }
+      printf("\n");
+    }
+    ILiftCdf53X<double>(Vol, Extents[I]);
+    printf("\n--------A (after X pass):\n");
+    for (int Y = 0; Y < NLarge.Y; ++Y) {
+      for (int X = 0; X < NLarge.X; ++X) {
+        printf("%6.1f ", A[Y * NLarge.X + X]);
+      }
+      printf("\n");
+    }
+    printf("-----------------------------------------\n");
+  }
+  printf("\n--------A:\n");
+  for (int Y = 0; Y < N.Y; ++Y) {
+    for (int X = 0; X < N.X; ++X) {
+      printf("%6.1f ", A[Y * NLarge.X + X]);
+    }
+    printf("\n");
+  }
+  printf("\n--------D (initially):\n");
+  for (int Y = 0; Y < NPow2.Y; ++Y) {
+    for (int X = 0; X < NPow2.X; ++X) {
+      printf("%6.1f ", D[Y * NPow2.X + X]);
+    }
+    printf("\n");
+  }
+  for (int I = NLevels - 1; I >= 0; --I) {
+    ILiftUnpackCdf53Y<double>(VolD, Extents2[I], 0);
+    printf("\n--------D (after Y pass):\n");
+    for (int Y = 0; Y < NPow2.Y; ++Y) {
+      for (int X = 0; X < NPow2.X; ++X) {
+        printf("%6.1f ", D[Y * NPow2.X + X]);
+      }
+      printf("\n");
+    }
+    ILiftUnpackCdf53X<double>(VolD, Extents2[I], 1);
+    printf("\n--------D (after X pass) :\n");
+    for (int Y = 0; Y < NPow2.Y; ++Y) {
+      for (int X = 0; X < NPow2.X; ++X) {
+        printf("%6.1f ", D[Y * NPow2.X + X]);
+      }
+      printf("\n");
+    }
+    printf("-----------------------------------------\n");
+  }
+  printf("\n--------D:\n");
+  for (int Y = 0; Y < NPow2.Y; ++Y) {
+    for (int X = 0; X < NPow2.X; ++X) {
+      printf("%6.1f ", D[Y * NPow2.X + X]);
+    }
+    printf("\n");
   }
   //FormSubbands(&Vol2, Vol, NLevels);
 }
@@ -190,7 +251,7 @@ void TestNewWaveletCode() {
 // TODO: handle float/int/int64/etc
 int main(int Argc, const char** Argv) {
   TestNewWaveletCode();
-  dynamic_array<extent> Subbands;
+  dynamic_array<grid> Subbands;
   BuildSubbandsInPlace(v3i(16, 16, 16), 3, &Subbands);
   //for (int I = 0; I < Size(Subbands); ++I) {
   //  printf("----------- Subband %d\n", I);

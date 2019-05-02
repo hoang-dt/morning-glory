@@ -29,9 +29,9 @@ void Cdf53InverseExtrapolate(volume* Vol);
 
 template <typename t>
 struct dynamic_array;
-struct extent;
-void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands);
-void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<extent>* Subbands);
+struct grid;
+void BuildSubbands(v3i N, int NLevels, dynamic_array<grid>* Subbands);
+void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<grid>* Subbands);
 
 /* Utilities */
 

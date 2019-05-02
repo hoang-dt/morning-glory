@@ -92,7 +92,7 @@ array<u8, 8> SubbandOrders[4] = {
 };
 
 /* Here we assume the wavelet transform is done in X, then Y, then Z */
-void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
+void BuildSubbands(v3i N, int NLevels, dynamic_array<grid>* Subbands) {
   int NDims = NumDims(N);
   const array<u8, 8>& Order = SubbandOrders[NDims];
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
@@ -107,20 +107,20 @@ void BuildSubbands(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
       if (NDims == 3 && Sm.X != 0 && Sm.Y != 0 && Sm.Z != 0) // child exists
-        PushBack(Subbands, extent(v3i(X, Y, Z) * P, Sm));
+        PushBack(Subbands, grid(v3i(X, Y, Z) * P, Sm));
       else if (NDims == 2 && Sm.X != 0 && Sm.Y != 0)
-        PushBack(Subbands, extent(v3i(X * P.X, Y * P.Y, 0), v3i(Sm.X, Sm.Y, 1)));
+        PushBack(Subbands, grid(v3i(X * P.X, Y * P.Y, 0), v3i(Sm.X, Sm.Y, 1)));
       else
-        PushBack(Subbands, extent(v3i(X * P.X, 0, 0), v3i(Sm.X, 1, 1)));
+        PushBack(Subbands, grid(v3i(X * P.X, 0, 0), v3i(Sm.X, 1, 1)));
     }
     M = P;
   }
-  PushBack(Subbands, extent(v3i(0, 0, 0), M));
+  PushBack(Subbands, grid(v3i(0, 0, 0), M));
   Reverse(Begin(*Subbands), End(*Subbands));
 }
 
 /* This version assumes the coefficients were not moved */
-void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
+void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<grid>* Subbands) {
   int NDims = NumDims(N);
   const array<u8, 8>& Order = SubbandOrders[NDims];
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
@@ -137,15 +137,15 @@ void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<extent>* Subbands) {
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
       if (NDims == 3 && Sm.X != 0 && Sm.Y != 0 && Sm.Z != 0) // subband exists
-        PushBack(Subbands, extent(v3i(X, Y, Z) * S / 2, Sm, S));
+        PushBack(Subbands, grid(v3i(X, Y, Z) * S / 2, Sm, S));
       else if (NDims == 2 && Sm.X != 0 && Sm.Y != 0)
-        PushBack(Subbands, extent(v3i(X, Y, 0) * S / 2, v3i(Sm.X, Sm.Y, 1), S));
+        PushBack(Subbands, grid(v3i(X, Y, 0) * S / 2, v3i(Sm.X, Sm.Y, 1), S));
       else if (NDims == 1 && Sm.X != 0)
-        PushBack(Subbands, extent(v3i(X, 0, 0) * S / 2, v3i(Sm.X, 1, 1), S));
+        PushBack(Subbands, grid(v3i(X, 0, 0) * S / 2, v3i(Sm.X, 1, 1), S));
     }
     M = P;
   }
-  PushBack(Subbands, extent(v3i(0, 0, 0), M, S)); // final (coarsest) subband
+  PushBack(Subbands, grid(v3i(0, 0, 0), M, S)); // final (coarsest) subband
   Reverse(Begin(*Subbands), End(*Subbands));
 }
 
@@ -165,8 +165,8 @@ void FormSubbands(volume* Dst, volume Src, int NLevels) {
   mg_Assert(Dst->Extent.DimsPacked == Src.Extent.DimsPacked);
   mg_Assert(Dst->Type == Src.Type);
   v3i Dims = SmallDims(Src);
-  dynamic_array<extent> Subbands;
-  dynamic_array<extent> SubbandsInPlace;
+  dynamic_array<grid> Subbands;
+  dynamic_array<grid> SubbandsInPlace;
   BuildSubbands(Dims, NLevels, &Subbands);
   BuildSubbandsInPlace(Dims, NLevels, &SubbandsInPlace);
   for (int I = 0; I < Size(Subbands); ++I) {

@@ -8,22 +8,22 @@
 namespace mg {
 
 mg_ForceInline
-extent::extent() = default;
+grid::grid() = default;
 
 mg_ForceInline
-extent::extent(const v3i& Dims)
+grid::grid(const v3i& Dims)
   : PosPacked(Pack3Ints64(v3i(0, 0, 0)))
   , DimsPacked(Pack3Ints64(Dims))
   , StridesPacked(Pack3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
-extent::extent(const v3i& Pos, const v3i& Dims)
+grid::grid(const v3i& Pos, const v3i& Dims)
   : PosPacked(Pack3Ints64(Pos))
   , DimsPacked(Pack3Ints64(Dims))
   , StridesPacked(Pack3Ints64(v3i(1, 1, 1))) {}
 
 mg_ForceInline
-extent::extent(const v3i& Pos, const v3i& Dims, const v3i& Stride)
+grid::grid(const v3i& Pos, const v3i& Dims, const v3i& Stride)
   : PosPacked(Pack3Ints64(Pos))
   , DimsPacked(Pack3Ints64(Dims))
   , StridesPacked(Pack3Ints64(Stride)) {}
@@ -32,7 +32,7 @@ mg_ForceInline
 volume::volume() = default;
 
 mg_ForceInline
-volume::volume(const buffer& BufIn, const extent& ExtIn, const v3i& DimsIn,
+volume::volume(const buffer& BufIn, const grid& ExtIn, const v3i& DimsIn,
                data_type TypeIn)
   : Buffer(BufIn)
   , Extent(ExtIn)
@@ -60,17 +60,17 @@ volume::volume(const buffer& BufIn, const extent& ExtIn, const v3i& DimsIn,
 //}
 
 mg_ForceInline
-v3i Pos(const extent& Ext) { return Unpack3Ints64(Ext.PosPacked); }
+v3i Pos(const grid& Ext) { return Unpack3Ints64(Ext.PosPacked); }
 mg_ForceInline
-v3i Dims(const extent& Ext) { return Unpack3Ints64(Ext.DimsPacked); }
+v3i Dims(const grid& Ext) { return Unpack3Ints64(Ext.DimsPacked); }
 mg_ForceInline
-v3i Strides(const extent& Ext) { return Unpack3Ints64(Ext.StridesPacked); }
+v3i Strides(const grid& Ext) { return Unpack3Ints64(Ext.StridesPacked); }
 mg_ForceInline
-void SetPos(extent* Ext, const v3i& Pos) { Ext->PosPacked = Pack3Ints64(Pos); };
+void SetPos(grid* Ext, const v3i& Pos) { Ext->PosPacked = Pack3Ints64(Pos); };
 mg_ForceInline
-void SetDims(extent* Ext, const v3i& Dims) { Ext->DimsPacked = Pack3Ints64(Dims); };
+void SetDims(grid* Ext, const v3i& Dims) { Ext->DimsPacked = Pack3Ints64(Dims); };
 mg_ForceInline
-void SetStrides(extent* Ext, const v3i& Strides) { Ext->StridesPacked = Pack3Ints64(Strides); };
+void SetStrides(grid* Ext, const v3i& Strides) { Ext->StridesPacked = Pack3Ints64(Strides); };
 
 mg_ForceInline
 v3i BigDims(const volume& Vol) { return Unpack3Ints64(Vol.DimsPacked); }

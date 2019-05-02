@@ -7,35 +7,41 @@
 
 namespace mg {
 
-struct extent {
+// struct subvolume? but must operate like a volume
+// subvolume consists of a volume and a box
+// a grid can be part of a bigger grid
+// struct 
+
+
+struct grid {
   u64 PosPacked;
   u64 DimsPacked;
   u64 StridesPacked;
-  extent();
-  extent(const v3i& Dims);
-  extent(const v3i& Pos, const v3i& Dims);
-  extent(const v3i& Pos, const v3i& Dims, const v3i& Stride);
+  grid();
+  grid(const v3i& Dims);
+  grid(const v3i& Pos, const v3i& Dims);
+  grid(const v3i& Pos, const v3i& Dims, const v3i& Stride);
 };
 
 struct volume {
   buffer Buffer;
-  extent Extent;
+  grid Extent;
   u64 DimsPacked;
   data_type Type;
   volume();
-  volume(const buffer& BufIn, const extent& ExtIn, const v3i& DimsIn,
+  volume(const buffer& BufIn, const grid& ExtIn, const v3i& DimsIn,
          data_type TypeIn);
 };
 
-v3i Pos(const extent& Ext);
-v3i Dims(const extent& Ext);
-v3i Strides(const extent& Ext);
+v3i Pos(const grid& Ext);
+v3i Dims(const grid& Ext);
+v3i Strides(const grid& Ext);
 v3i BigDims(const volume& Vol);
 v3i SmallDims(const volume& Vol);
 i64 Size(const volume& Vol);
-void SetPos(extent* Ext, const v3i& Pos);
-void SetDims(extent* Ext, const v3i& Dims);
-void SetStrides(extent* Ext, const v3i& Strides);
+void SetPos(grid* Ext, const v3i& Pos);
+void SetDims(grid* Ext, const v3i& Dims);
+void SetStrides(grid* Ext, const v3i& Strides);
 
 volume SubVolume(); // TODO: extract a subvolume from a volume
 
@@ -54,16 +60,16 @@ void Copy(volume* Dst, const volume& Src);
 void Clone(volume* Dst, const volume& Src, allocator* Alloc = &Mallocator());
 
 /* Split a volume into 8 parts: 1 voxel, 3 lines, 3 faces, and one sub volume */
-array<extent, 8> Split3D(const v3i& Dims);
+array<grid, 8> Split3D(const v3i& Dims);
 
 /* Return the number of dimensions, given a volume size */
 int NumDims(const v3i& N);
 
-bool IsPoint(const extent& Ext);
+bool IsPoint(const grid& Ext);
 /* Note: must test for IsPoint() first */
-bool IsLine(const extent& Ext);
+bool IsLine(const grid& Ext);
 /* Note: must test for IsLine() first */
-bool IsFace(const extent& Ext);
+bool IsFace(const grid& Ext);
 
 } // namespace mg
 
