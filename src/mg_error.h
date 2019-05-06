@@ -1,7 +1,8 @@
 #pragma once
 
+#include "mg_common.h"
 #include "mg_error_codes.h"
-#include "mg_types.h"
+#include "mg_macros.h"
 
 namespace mg {
 
@@ -18,20 +19,19 @@ struct error {
   inline thread_local static i16 Lines[64]; // Store line numbers up the stack
 }; // struct err_template
 
-template <typename t>
-cstr ToString(const error<t>& Err, bool Force = false);
-
+mg_T(t) cstr ToString(const error<t>& Err, bool Force = false);
 struct printer;
-template <typename t>
-void PrintStacktrace(printer* Pr, const error<t>& Err);
-
-template <typename t>
-bool ErrorExists(const error<t>& Err);
+mg_T(t) void PrintStacktrace(printer* Pr, const error<t>& Err);
+mg_T(t) bool ErrorExists(const error<t>& Err);
 
 } // namespace mg
 
+/* Use this to quickly return an error with line number and file name */
 #define mg_Error(ErrCode, ...)
-// Use this to record file and line information in Error when propagating it up the stack
+
+/*
+Use this to record file and line information in Error when propagating it up
+the stack */
 #define mg_PropagateError(Error)
 
 #include "mg_error.inl"

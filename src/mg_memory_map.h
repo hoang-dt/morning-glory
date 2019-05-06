@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mg_types.h"
+#include "mg_common.h"
 #include "mg_enum.h"
 #include "mg_error.h"
 
@@ -37,11 +37,22 @@ struct mmap_file {
   buffer Buf;
 };
 
-error<mmap_err_code> open_file(const char* Name, map_mode Mode, mmap_file* MMap);
-error<mmap_err_code> map_file(mmap_file* MMap, i64 Bytes = 0);
-error<mmap_err_code> flush_file(mmap_file* MMap, byte* Start = nullptr, i64 Bytes = 0);
-error<mmap_err_code> sync_file(mmap_file* MMap);
-error<mmap_err_code> unmap_file(mmap_file* MMap);
-error<mmap_err_code> close_file(mmap_file* MMap);
+error<mmap_err_code>
+open_file(char* Name, map_mode Mode, mmap_file* MMap);
+
+error<mmap_err_code>
+map_file(mmap_file* MMap, i64 Bytes = 0);
+
+error<mmap_err_code>
+flush_file(mmap_file* MMap, byte* Start = nullptr, i64 Bytes = 0);
+
+error<mmap_err_code>
+sync_file(mmap_file* MMap);
+
+error<mmap_err_code>
+unmap_file(mmap_file* MMap);
+
+error<mmap_err_code>
+close_file(mmap_file* MMap);
 
 } // namespace mg

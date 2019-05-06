@@ -5,7 +5,7 @@
 #include "mg_error.h"
 #include "mg_linked_list.h"
 #include "mg_volume.h"
-#include "mg_types.h"
+#include "mg_common.h"
 
 mg_Enum(ff_err_code, int, mg_CommonErrs,
   InvalidTileDims, InvalidChunkSize, ChunkReadFailed)
@@ -17,20 +17,20 @@ struct chunk_stats {
   int Where;
   u64 FirstEightBytes;
   int ActualSize;
-  dynamic_array<int> Sizes;
+  array<int> Sizes;
 };
 struct tile_stats {
   int LocalId;
-  dynamic_array<i16> EMaxes;
-  dynamic_array<chunk_stats> CkStats;
+  array<i16> EMaxes;
+  array<chunk_stats> CkStats;
 };
 struct subband_stats {
   int Sb;
   v3i NumTiles3;
-  dynamic_array<tile_stats> TlStats;
+  array<tile_stats> TlStats;
 };
 struct file_stats {
-  dynamic_array<subband_stats> SbStats;
+  array<subband_stats> SbStats;
 };
 inline file_stats FStats;
 void Log(cstr FileName);
@@ -46,7 +46,7 @@ struct file_format {
   /* First index is by subband, second index is by tiles within each subband */
   volume Volume;
   typed_buffer<typed_buffer<list<buffer>>> Chunks;
-  dynamic_array<grid> Subbands;
+  array<grid<>> Subbands;
   typed_buffer<u64> TileHeaders;
   v3i TileDims = v3i(32, 32, 32);
   cstr FileName = nullptr;

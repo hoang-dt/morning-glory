@@ -1,7 +1,8 @@
 #pragma once
 
+#include "mg_macros.h"
 #include "mg_memory.h"
-#include "mg_types.h"
+#include "mg_common.h"
 
 namespace mg {
 
@@ -12,66 +13,37 @@ namespace mg {
  * them as if they were independent from the original object (i.e., a
  * dynamic_array does not assume ownership of its memory buffer)
 */
-template <typename t>
-struct dynamic_array {
+mg_T(t)
+struct array {
   buffer Buffer;
   i64 Size = 0;
   i64 Capacity = 0;
   allocator* Alloc = nullptr;
-  dynamic_array(allocator* Alloc = &Mallocator());
-  const t& operator[](i64 Idx) const;
+  array(allocator* Alloc = &Mallocator());
   t& operator[](i64 Idx);
 };
 
-template <typename t>
-void Init(dynamic_array<t>* Array, i64 Size);
+mg_T(t) void Init(array<t>* Array, i64 Size);
+mg_T(t) void Init(array<t>* Array, i64 Size, const t& Val);
 
-template <typename t>
-void Init(dynamic_array<t>* Array, i64 Size, const t& Val);
+mg_T(t) i64 Size(array<t>& Array);
 
-template <typename t>
-i64 Size(const dynamic_array<t>& Array);
+mg_T(t) t& Front(array<t>& Array);
+mg_T(t) t& Back(array<t>& Array);
+mg_T(t) t* Begin(array<t>& Array);
+mg_T(t) t* End(array<t>& Array);
 
-template <typename t>
-const t& Front(const dynamic_array<t>& Array);
+mg_T(t) void Clone(array<t>* Dst, array<t>& Src);
+mg_T(t) void Relocate(array<t>* Array, buffer Buf);
 
-template <typename t>
-t& Front(dynamic_array<t>& Array);
+mg_T(t) void SetCapacity(array<t>* Array, i64 NewCapacity = 0);
+mg_T(t) void Resize(array<t>* Array, i64 NewSize);
+mg_T(t) void Reserve(array<t>* Array, i64 Capacity);
+mg_T(t) void Clear(array<t>* Array);
 
-template <typename t>
-const t& Back(const dynamic_array<t>& Array);
+mg_T(t) void PushBack(array<t>* Array, const t& Item);
 
-template <typename t>
-t& Back(dynamic_array<t>& Array);
-
-template <typename t> t* Begin(dynamic_array<t>& Array);
-template <typename t> t* End(dynamic_array<t>& Array);
-template <typename t> const t* ConstBegin(const dynamic_array<t>& Array);
-template <typename t> const t* ConstEnd(const dynamic_array<t>& Array);
-
-template <typename t>
-void MoveToNewBuffer(dynamic_array<t>* Array, buffer Buf);
-
-template <typename t>
-void IncreaseCapacity(dynamic_array<t>* Array, i64 NewCapacity = 0);
-
-template <typename t>
-void PushBack(dynamic_array<t>* Array, const t& Item);
-
-template <typename t>
-void Clear(dynamic_array<t>* Array);
-
-template <typename t>
-void Resize(dynamic_array<t>* Array, i64 NewSize);
-
-template <typename t>
-void Reserve(dynamic_array<t>* Array, i64 Capacity);
-
-template <typename t>
-void Clone(dynamic_array<t>* Dst, const dynamic_array<t>& Src);
-
-template <typename t>
-void Dealloc(dynamic_array<t>* Array);
+mg_T(t) void Dealloc(array<t>* Array);
 
 } // namespace mg
 

@@ -1,6 +1,8 @@
 #pragma once
 
+#include "mg_common.h"
 #include "mg_error.h"
+#include "mg_macros.h"
 
 namespace mg {
 
@@ -13,23 +15,21 @@ struct expected {
   };
   bool Ok = false;
   expected();
-  expected(const t& Val);
-  expected(error<u> Err);
+  expected(const t& ValIn);
+  expected(const error<u>& ErrIn);
 
   /* Get the value through the pointer syntax */
   t& operator*();
-  const t& operator*() const;
   /* Mimic pointer semantics */
   t* operator->();
-  const t* operator->() const;
   /* Bool operator */
   explicit operator bool() const;
 }; // struct expected
 
-template <typename t, typename u> t& Value(expected<t, u>& E);
-template <typename t, typename u> const t& Value(const expected<t, u>& E);
+mg_T2(t, u) t& Value(expected<t, u>& E);
+mg_T2(t, u) error<u>& Error(expected<t, u>& E);
 
-}// namespace mg
+} // namespace mg
 
 #include "mg_expected.inl"
 

@@ -2,76 +2,72 @@
 
 #pragma once
 
-#include "mg_types.h"
+#include "mg_common.h"
 
 namespace mg {
 
 /* Useful to create a string_ref out of a literal string */
-#define mg_StringRef(x) mg::str_ref((x), sizeof(x) - 1)
+#define mg_StringRef(x) mg::stref((x), sizeof(x) - 1)
 
-/* A "view" into a (usually bigger) null-terminated string. A string_ref itself
- * is not null-terminated.
- * There are two preferred ways to construct a string_ref from a char[] array:
- *  - Use the mg_StringRef macro to make string_ref refer to the entire array
- *  - Use the string_ref(const char*) constructor to refer up to the first NULL */
-struct str_ref {
+/*
+A "view" into a (usually bigger) null-terminated string. A string_ref itself is
+not null-terminated.
+There are two preferred ways to construct a string_ref from a char[] array:
+  - Use the mg_StringRef macro to make string_ref refer to the entire array
+  - Use the string_ref(const char*) constructor to refer up to the first NULL */
+struct stref {
   union {
     str Ptr = nullptr;
     cstr ConstPtr ;
   };
   int Size = 0;
 
-  str_ref();
-  str_ref(cstr PtrIn, int SizeIn);
-  str_ref(cstr PtrIn);
+  stref();
+  stref(cstr PtrIn, int SizeIn);
+  stref(cstr PtrIn);
   char& operator[](int Idx);
-  char operator[](int Idx) const;
   operator bool() const;
 }; // struct string_ref
 
-str ToString(str_ref Str);
-str Begin(str_ref Str);
-cstr ConstBegin(str_ref Str);
-str End(str_ref Str);
-cstr ConstEnd(str_ref Str);
-str ReverseBegin(str_ref Str);
-cstr ConstReverseBegin(str_ref Str);
-str ReverseEnd(str_ref Str);
-const char* ConstReverseEnd(str_ref Str);
-bool operator==(str_ref Lhs, str_ref Rhs);
+str  ToString(stref Str);
+str  Begin(stref Str);
+str  End(stref Str);
+str  RevBegin(stref Str);
+str  RevEnd(stref Str);
+bool operator==(stref Lhs, stref Rhs);
 
 /* Remove spaces at the start of a string */
-str_ref TrimLeft(str_ref Str);
-str_ref TrimRight(str_ref Str);
-str_ref Trim(str_ref Str);
-/* Return a substring of a given string. The substring starts at Begin and has
- * length Size. Return the empty string if no proper substring can be constructed
- * (e.g. Begin >= Str.Size).
- */
-str_ref SubString(str_ref Str, int Begin, int Size);
-/* Copy the underlying buffer referred to by Src to the one referred to by Dst.
- * AddNull should be true whenever dst represents a whole string (as opposed to
- * a substring). If Src is larger than Dst, we copy as many characters as we can.
- * We always assume that the null character can be optionally added without
- * overflowing the memory of Dst.
- */
-void Copy(str_ref Dst, str_ref Src, bool AddNull = true);
+stref TrimLeft(stref Str);
+stref TrimRight(stref Str);
+stref Trim(stref Str);
+/*
+Return a substring of a given string. The substring starts at Begin and has
+length Size. Return the empty string if no proper substring can be constructed
+(e.g. Begin >= Str.Size). */
+stref SubString(stref Str, int Begin, int Size);
+/*
+Copy the underlying buffer referred to by Src to the one referred to by Dst.
+AddNull should be true whenever dst represents a whole string (as opposed to a
+substring). If Src is larger than Dst, we copy as many characters as we can. We
+always assume that the null character can be optionally added without
+overflowing the memory of Dst. */
+void Copy(stref Dst, stref Src, bool AddNull = true);
 /* Parse a string_ref and return a number */
-bool ToInt(str_ref Str, int* Result);
-bool ToDouble(str_ref Str, f64* Result);
+bool ToInt(stref Str, int* Result);
+bool ToDouble(stref Str, f64* Result);
 
 /* Tokenize strings without allocating memory */
 struct tokenizer {
-  str_ref Input;
-  str_ref Delims;
+  stref Input;
+  stref Delims;
   int Pos = 0;
 
   tokenizer();
-  tokenizer(str_ref InputIn, str_ref DelimsIn = " \n\t");
+  tokenizer(stref InputIn, stref DelimsIn = " \n\t");
 }; // struct tokenizer
 
-void Init(tokenizer* Tk, str_ref Input, str_ref Delims = " \n\t");
-str_ref Next(tokenizer* Tk);
+void Init(tokenizer* Tk, stref Input, stref Delims = " \n\t");
+stref Next(tokenizer* Tk);
 void Reset(tokenizer* Tk);
 
 } // namespace mg

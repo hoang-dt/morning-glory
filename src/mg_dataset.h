@@ -1,15 +1,13 @@
 #pragma once
 
-#include "mg_common_types.h"
+#include "mg_common.h"
+#include "mg_data_types.h"
 #include "mg_error.h"
-#include "mg_io.h"
-#include "mg_memory.h"
-#include "mg_string.h"
-#include "mg_types.h"
 
 namespace mg {
 
-/* In string form:
+/* 
+In string form:
 file = C:/My Data/my file.raw
 name = combustion
 field = o2
@@ -26,6 +24,6 @@ struct metadata {
 
 cstr ToString(const metadata& Meta);
 error<> ReadMeta(cstr FileName, metadata* Meta);
-error<> ParseMeta(str_ref FilePath, metadata* Meta);
+error<> ParseMeta(stref FilePath, metadata* Meta);
 
 } // namespace mg

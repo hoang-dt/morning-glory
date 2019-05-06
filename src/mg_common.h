@@ -1,10 +1,9 @@
 #pragma once
 
-#include "mg_macros.h"
 #include <inttypes.h>
 #include <float.h>
 #include <stdint.h>
-#include <stdio.h>
+#include "mg_macros.h"
 
 namespace mg {
 
@@ -36,20 +35,8 @@ using f64     = float64;
 using str     = char*;
 using cstr    = const char*;
 
-#define CloneFunc(type) mg_ForceInline void Clone(type* B, type A) { *B = A; }
-CloneFunc(i8)
-CloneFunc(u8)
-CloneFunc(i16)
-CloneFunc(u16)
-CloneFunc(i32)
-CloneFunc(u32)
-CloneFunc(i64)
-CloneFunc(u64)
-CloneFunc(f32)
-CloneFunc(f64)
-
-template <typename t>
-struct Traits {
+mg_T(t)
+struct traits {
   // using signed_t =
   // using unsigned_t =
   // using integral_t =
@@ -58,33 +45,40 @@ struct Traits {
   // static constexpr int ExpBias
 };
 
-template <typename T1, typename T2>
-struct IsSameType{ enum { Result = false }; };
-template< typename T>
-struct IsSameType<T, T> { enum { Result = true }; };
+mg_T2(t1, t2)
+struct is_same_type { enum { Value = false }; };
+mg_T(t)
+struct is_same_type<t, t> { enum { Value = true }; };
+mg_T(t)
+struct is_pointer { static constexpr bool Value = false; };
+mg_T(t)
+struct is_pointer<t*> { static constexpr bool Value = true; };
+mg_T(t) auto&
+Value(t T);
 
 /* Something to replace std::array */
 template <typename t, int N>
-struct array {
+struct stack_array {
   static_assert(N > 0);
   t Arr[N];
   t& operator[](int Idx);
-  const t& operator[](int Idx) const;
 };
-template <typename t, int N> t* Begin(array<t, N>& A);
-template <typename t, int N> const t* ConstBegin(const array<t, N>& A);
-template <typename t, int N> t* End(array<t, N>& A);
-template <typename t, int N> const t* ConstEnd(const array<t, N>& A);
-template <typename t, int N> t* ReverseBegin(array<t, N>& A);
-template <typename t, int N> const t* ConstReverseBegin(const array<t, N>& A);
-template <typename t, int N> t* ReverseEnd(array<t, N>& A);
-template <typename t, int N> const t* ConstReverseEnd(const array<t, N>& A);
-template <typename t, int N> int Size(array<t, N>&);
+
+template <typename t, int N> t*
+Begin(stack_array<t, N>& A);
+template <typename t, int N> t*
+End(stack_array<t, N>& A);
+template <typename t, int N> t*
+RevBegin(stack_array<t, N>& A);
+template <typename t, int N> t*
+RevEnd(stack_array<t, N>& A);
+template <typename t, int N> int
+Size(const stack_array<t, N>& A);
 
 /* Vector in 2D, supports .X, .UV, and [] */
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
-template <typename t>
+mg_T(t)
 struct v2 {
   union {
     struct { t X, Y; };
@@ -96,10 +90,9 @@ struct v2 {
   v2();
   explicit v2(t V);
   v2(t X, t Y);
-  template <typename u> v2(const v2<u>& Other);
+  mg_T(u) v2(const v2<u>& Other);
   t& operator[](int Idx);
-  t operator[](int Idx) const;
-  template <typename u> v2& operator=(const v2<u>& other);
+  mg_T(u) v2& operator=(const v2<u>& Rhs);
 };
 using v2i  = v2<i32>;
 using v2u  = v2<u32>;
@@ -109,7 +102,7 @@ using v2f  = v2<f32>;
 using v2d  = v2<f64>;
 
 /* Vector in 3D, supports .X, .XY, .UV, .RGB and [] */
-template <typename t>
+mg_T(t)
 struct v3 {
   union {
     struct { t X, Y, Z; };
@@ -126,10 +119,9 @@ struct v3 {
   v3();
   explicit v3(t V);
   v3(t X, t Y, t Z);
-  template <typename u> v3(const v3<u>& Other);
+  mg_T(u) v3(const v3<u>& Other);
   t& operator[](int Idx);
-  t operator[](int Idx) const;
-  template <typename u> v3& operator=(const v3<u>& other);
+  mg_T(u) v3& operator=(const v3<u>& Rhs);
 };
 #pragma GCC diagnostic pop
 using v3i  = v3<i32>;
@@ -144,7 +136,7 @@ using v3d  = v3<f64>;
 #define mg_EndFor3
 #define mg_BeginFor3Lockstep(C1, B1, E1, S1, C2, B2, E2, S2)
 
-template <typename t>
+mg_T(t)
 struct typed_buffer;
 
 struct allocator;
@@ -156,12 +148,12 @@ struct buffer {
   template <typename t, int N>
   buffer(t (&Arr)[N]);
   buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn = nullptr);
-  template<typename t> buffer(const typed_buffer<t>& Buf);
+  mg_T(t) buffer(typed_buffer<t> Buf);
   byte& operator[](i64 Idx);
-  byte operator[](i64 Idx) const;
+  explicit operator bool() const;
 };
 
-template <typename t>
+mg_T(t)
 struct typed_buffer {
   t* Data = nullptr;
   i64 Size = 0;
@@ -170,15 +162,17 @@ struct typed_buffer {
   template <int N>
   typed_buffer(t (&Arr)[N]);
   typed_buffer(t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
-  typed_buffer(const buffer& Buf);
+  typed_buffer(buffer Buf);
   t& operator[](i64 Idx);
-  const t& operator[](i64 Idx) const;
+  explicit operator bool() const;
 };
-template <typename t>
-i64 Size(const typed_buffer<t>& Buf);
-template <typename t>
-i64 Bytes(const typed_buffer<t>& Buf);
+
+mg_T(t) i64
+Size(const typed_buffer<t>& Buf);
+mg_T(t) i64
+Bytes(const typed_buffer<t>& Buf);
+
 
 } // namespace mg
 
-#include "mg_types.inl"
+#include "mg_common.inl"

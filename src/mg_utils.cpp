@@ -1,12 +1,12 @@
 #include "mg_utils.h"
-#include "mg_types.h"
+#include "mg_common.h"
 
 namespace mg {
 
-u32 Murmur3_32(const u8* Key, int Len, u32 Seed) {
+u32 Murmur3_32(u8* Key, int Len, u32 Seed) {
   u32 H = Seed;
   if (Len > 3) {
-    const u32* Key_x4 = (const u32*)Key;
+    u32* Key_x4 = (u32*)Key;
     int I = Len >> 2;
     do {
       u32 K = *Key_x4++;
@@ -17,7 +17,7 @@ u32 Murmur3_32(const u8* Key, int Len, u32 Seed) {
       H = (H << 13) | (H >> 19);
       H = (H * 5) + 0xe6546b64;
     } while (--I);
-    Key = (const u8*)Key_x4;
+    Key = (u8*)Key_x4;
   }
   if (Len & 3) {
     int I = Len & 3;

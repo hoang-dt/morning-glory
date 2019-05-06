@@ -1,8 +1,7 @@
 #pragma once
 
-#include <stdio.h>
-#include "mg_error_codes.h"
-#include "mg_types.h"
+#include "mg_common.h"
+#include "mg_error.h"
 
 #define mg_FSeek
 #define mg_FTell
@@ -21,14 +20,13 @@ struct printer {
 
 void Reset(printer* Pr, char* Buf, int Size);
 void Reset(printer* Pr, FILE* File);
+
 #define mg_Print(PrinterPtr, Format, ...)
 
-/* Read a text file from disk into a buffer. The buffer can be nullptr or it
- * can be initialized in advance, in which case the existing memory will be
- * reused if the file can fit in it. The caller is responsible to deallocate
- * the memory. */
-
-template <typename t> struct error;
+/*
+Read a text file from disk into a buffer. The buffer can be nullptr or it can be
+initialized in advance, in which case the existing memory will be reused if the
+file can fit in it. The caller is responsible to deallocate the memory. */
 error<err_code> ReadFile(cstr FileName, buffer* Buf);
 error<err_code> WriteFile(cstr FileName, const buffer& Buf);
 

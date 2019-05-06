@@ -2,120 +2,118 @@
 
 #include "mg_assert.h"
 #include "mg_bitops.h"
-#include "mg_common_types.h"
-#include "mg_types.h"
 
 namespace mg {
 
-mg_ForceInline
-grid::grid() = default;
+mg_Ti(t) extent<t>::
+extent() = default;
 
-mg_ForceInline
-grid::grid(const v3i& Dims)
-  : PosPacked(Pack3Ints64(v3i(0, 0, 0)))
-  , DimsPacked(Pack3Ints64(Dims))
-  , StridesPacked(Pack3Ints64(v3i(1, 1, 1))) {}
+mg_Ti(t) extent<t>::
+extent(const v3i& Dims3)
+  : From(Pack3i64(v3i::Zero()))
+  , Dims(Pack3i64(Dims3)) {}
 
-mg_ForceInline
-grid::grid(const v3i& Pos, const v3i& Dims)
-  : PosPacked(Pack3Ints64(Pos))
-  , DimsPacked(Pack3Ints64(Dims))
-  , StridesPacked(Pack3Ints64(v3i(1, 1, 1))) {}
+mg_Ti(t) extent<t>::
+extent(const v3i& From3, const v3i& Dims3)
+  : From(Pack3i64(From3))
+  , Dims(Pack3i64(Dims3)) {}
 
-mg_ForceInline
-grid::grid(const v3i& Pos, const v3i& Dims, const v3i& Stride)
-  : PosPacked(Pack3Ints64(Pos))
-  , DimsPacked(Pack3Ints64(Dims))
-  , StridesPacked(Pack3Ints64(Stride)) {}
+mg_Ti(t) grid<t>::
+grid() = default;
 
-mg_ForceInline
-volume::volume() = default;
+mg_Ti(t) grid<t>::
+grid(const v3i& Dims3)
+  : From(Pack3i64(v3i::Zero()))
+  , Dims(Pack3i64(Dims3))
+  , Strd(Pack3i64(v3i::One())) {}
 
-mg_ForceInline
-volume::volume(const buffer& BufIn, const grid& ExtIn, const v3i& DimsIn,
-               data_type TypeIn)
-  : Buffer(BufIn)
-  , Extent(ExtIn)
-  , DimsPacked(Pack3Ints64(DimsIn))
+mg_Ti(t) grid<t>::
+grid(const v3i& From3, const v3i& Dims3)
+  : From(Pack3i64(From3))
+  , Dims(Pack3i64(Dims3))
+  , Strd(Pack3i64(v3i::One())) {}
+
+mg_Ti(t) grid<t>::
+grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3)
+  : From(Pack3i64(From3))
+  , Dims(Pack3i64(Dims3))
+  , Strd(Pack3i64(Strd3)) {}
+
+mg_T(t) mg_Ti(u) grid<t>::
+grid(const extent<u>& Ext)
+  : From(Ext.From)
+  , Dims(Ext.Dims)
+  , Strd(Pack3i64(v3i::One())) {}
+
+mg_Inline volume::
+volume() = default;
+
+mg_Inline volume::
+volume(const buffer& Buf, const v3i& Dims3, data_type TypeIn)
+  : Buffer(Buf)
+  , Dims(Pack3i64(Dims3))
   , Type(TypeIn) {}
 
-//mg_ForceInline
-//bool IsPoint(extent Ext) {
-//  v3i MyDims = Dims(Ext);
-//  return Dims.X == 1 && Dims.Y == 1 && Dims.Z == 1;
-//}
-//
-//mg_ForceInline
-//bool IsLine(extent Ext) {
-//  v3i MyDims = Dims(Ext);
-//  return !IsPoint(Ext) && ((MyDims.X * MyDims.Y == 1) ||
-//                           (MyDims.Y * MyDims.Z == 1) ||
-//                           (MyDims.X * MyDims.Z == 1));
-//}
-//
-//mg_ForceInline
-//bool IsFace(extent Ext) {
-//  v3i ExtDims = Dims(Ext);
-//  return !IsLine(Ext) && (Dims.X == 1 || Dims.Y == 1 || Dims.Z == 1);
-//}
+mg_Ti(t) v3i From(const extent<t>& Ext) { return Unpack3i64(Ext.From); }
+mg_Ti(t) v3i Dims(const extent<t>& Ext) { return Unpack3i64(Ext.Dims); }
+mg_Ti(t) v3i Strd(const extent<t>& Ext) { return v3i::One(); }
+mg_Ti(t) void SetFrom(extent<t>* Ext, const v3i& From3) { Ext->From = Pack3i64(From3); };
+mg_Ti(t) void SetDims(extent<t>* Ext, const v3i& Dims3) { Ext->Dims = Pack3i64(Dims3); };
 
-mg_ForceInline
-v3i Pos(const grid& Ext) { return Unpack3Ints64(Ext.PosPacked); }
-mg_ForceInline
-v3i Dims(const grid& Ext) { return Unpack3Ints64(Ext.DimsPacked); }
-mg_ForceInline
-v3i Strides(const grid& Ext) { return Unpack3Ints64(Ext.StridesPacked); }
-mg_ForceInline
-void SetPos(grid* Ext, const v3i& Pos) { Ext->PosPacked = Pack3Ints64(Pos); };
-mg_ForceInline
-void SetDims(grid* Ext, const v3i& Dims) { Ext->DimsPacked = Pack3Ints64(Dims); };
-mg_ForceInline
-void SetStrides(grid* Ext, const v3i& Strides) { Ext->StridesPacked = Pack3Ints64(Strides); };
+mg_Ti(t) v3i From(const grid<t>& Grid) { return Unpack3i64(Grid.From); }
+mg_Ti(t) v3i Dims(const grid<t>& Grid) { return Unpack3i64(Grid.Dims); }
+mg_Ti(t) v3i Strd(const grid<t>& Grid) { return Unpack3i64(Grid.Strd); }
+mg_Ti(t) void SetFrom(grid<t>* Grid, const v3i& From3) { Grid->From = Pack3i64(From3); };
+mg_Ti(t) void SetDims(grid<t>* Grid, const v3i& Dims3) { Grid->Dims = Pack3i64(Dims3); };
+mg_Ti(t) void SetStrd(grid<t>* Grid, const v3i& Strd3) { Grid->Strd = Pack3i64(Strd3); };
 
-mg_ForceInline
-v3i BigDims(const volume& Vol) { return Unpack3Ints64(Vol.DimsPacked); }
-mg_ForceInline
-v3i SmallDims(const volume& Vol) { return Dims(Vol.Extent); }
-mg_ForceInline
-i64 Size(const volume& Vol) { return Prod<i64>(SmallDims(Vol)); }
+mg_Inline v3i Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
+mg_Inline i64 Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
+mg_Inline void SetDims(volume* Vol, const v3i& Dims3) { Vol->Dims = Pack3i64(Dims3); }
+mg_Inline void SetType(volume* Vol, data_type Type) { Vol->Type = Type; }
 
-//template <typename t> mg_ForceInline
-//t& At(volume& Vol, v3i MyPos) {
-//  mg_Assert(MatchTypes<t>(Vol.Type));
-//  auto MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
-//  mg_Assert(MyPos < SmallDims(Vol));
-//  i64 I = XyzToI(BigDims(Vol), MyPos);
-//  t* Ptr = (t*)Vol.Buffer.Data;
-//  mg_Assert(I * (i64)sizeof(t) < Vol.Buffer.Bytes);
-//  return Ptr[I];
-//}
-//
-//template <typename t> mg_ForceInline
-//t At(const volume& Vol, i64 I) {
-//  mg_Assert(MatchTypes<t>(Vol.Type));
-//  auto MyPos = Pos(Vol.Extent) + MyPos * Stride(Vol.Extent);
-//  mg_Assert(MyPos < SmallDims(Vol));
-//  i64 I = XyzToI(BigDims(Vol), MyPos);
-//  const t* Ptr = (t*)Vol.Buffer.Data;
-//  mg_Assert(I * (i64)sizeof(t) < Vol.Buffer.Bytes);
-//  return Ptr[I];
-//}
-
-mg_ForceInline
-i64 XyzToI(const v3i& N, const v3i& P) {
-  return i64(P.Z) * N.X * N.Y + i64(P.Y) * N.X + P.X;
+/* assumption: Grid1 is on top of Grid2 */
+grid<volume>
+GridVolume(grid<volume>& Grid1, grid<volume>& Grid2) {
+  grid<volume> Result;
+  v3i From1 = From(Grid1), Dims1 = Dims(Grid1), Strd1 = Strd(Grid1);
+  v3i From2 = From(Grid2), Dims2 = Dims(Grid2), Strd2 = Strd(Grid2);
+  mg_Assert(Dims1 <= Dims2);
+  SetFrom(&Result, From2 + Strd2 * From1);
+  SetStrd(&Result, Strd1 * Strd2);
+  SetDims(&Result, Dims1);
+  Result.Base = Grid2.Base;
+  mg_Assert(From(Result) + Strd(Result) * (Dims(Result) - 1) <= Dims(Result.Base) - 1);
+  return Result;
 }
 
-mg_ForceInline
-v3i IToXyz(i64 I, const v3i& N) {
+mg_T(t) grid<volume>
+GridVolume(const extent<t>& Ext) {
+  grid<volume> MyGrid(Ext);
+  grid<volume> BaseGrid = Ext.HasBase() ? GridVolume(Value(Ext.Base)) : MyGrid;
+  return GridVolume(MyGrid, BaseGrid);
+}
+
+mg_T(t) grid<volume>
+GridVolume(const grid<t>& Grid) {
+  grid<volume> BaseGrid = Grid.HasBase() ? GridVolume(Value(Grid.Base)) : Grid;
+  return GridVolume(Grid, BaseGrid);
+}
+
+mg_T(t) grid<volume>
+GridVolume(const volume& Volume) { return grid<volume>(Dims(Volume)); }
+
+mg_Inline i64
+Row(const v3i& N, const v3i& P) { return i64(P.Z) * N.X * N.Y + i64(P.Y) * N.X + P.X; }
+
+mg_Inline v3i
+InvRow(i64 I, const v3i& N) {
   i32 Z = i32(I / (N.X * N.Y));
   i32 XY = i32(I % (N.X * N.Y));
   return v3i(XY % N.X, XY / N.X, Z);
 }
 
-mg_ForceInline
-int NumDims(const v3i& N) {
-  return (N.X > 1) + (N.Y > 1) + (N.Z > 1);
-}
+mg_Inline int
+NDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
 
 } // namespace mg

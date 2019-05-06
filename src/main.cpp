@@ -3,7 +3,7 @@
 #include "mg_assert.h"
 #include "mg_bitops.h"
 #include "mg_bitstream.h"
-#include "mg_common_types.h"
+#include "mg_data_types.h"
 #include "mg_dataset.h"
 #include "mg_encode.h"
 #include "mg_enum.h"
@@ -21,7 +21,7 @@
 #include "mg_signal_processing.h"
 #include "mg_dataset.h"
 #include "mg_timer.h"
-#include "mg_types.h"
+#include "mg_common.h"
 #include "mg_volume.h"
 #include "mg_zfp.h"
 #include "mg_wavelet.h"
@@ -49,7 +49,7 @@ struct params {
 // TODO: when decoding, construct the raw file name from info embedded inside
 // the compressed file
 // TODO: add --precision for decoding
-params ParseParams(int Argc, const char** Argv) {
+params ParseParams(int Argc, char** Argv) {
   params P;
   if (OptionExists(Argc, Argv, "--encode"))
     P.Action = action::Encode;
@@ -57,34 +57,34 @@ params ParseParams(int Argc, const char** Argv) {
     P.Action = action::Decode;
   else
     mg_Abort("Provide either --encode or --decode");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--compressed_file", &P.CompressedFile),
+  mg_AbortIf(!OptionValue(Argc, Argv, "--compressed_file", &P.CompressedFile),
     "Provide --compressed_files");
-  mg_AbortIf(!GetOptionValue(Argc, Argv, "--raw_file", &P.DataFile),
+  mg_AbortIf(!OptionValue(Argc, Argv, "--raw_file", &P.DataFile),
     "Provide --raw_file");
   error Err = ParseMeta(P.DataFile, &P.Meta);
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
-  mg_AbortIf(Prod<i64>(P.Meta.Dims) > Traits<i32>::Max,
+  mg_AbortIf(Prod<i64>(P.Meta.Dims) > traits<i32>::Max,
     "Data dimensions too big");
   mg_AbortIf(P.Meta.Type != data_type::float32 &&
              P.Meta.Type != data_type::float64, "Data type not supported");
   if (P.Action == action::Encode) {
-    mg_AbortIf(!GetOptionValue(Argc, Argv, "--num_levels", &P.NLevels),
+    mg_AbortIf(!OptionValue(Argc, Argv, "--num_levels", &P.NLevels),
       "Provide --num_levels");
-    mg_AbortIf(!GetOptionValue(Argc, Argv, "--tile_dims", &P.TileDims),
+    mg_AbortIf(!OptionValue(Argc, Argv, "--tile_dims", &P.TileDims),
       "Provide --tile_dims");
-    mg_AbortIf(!GetOptionValue(Argc, Argv, "--chunk_bytes", &P.ChunkBytes),
+    mg_AbortIf(!OptionValue(Argc, Argv, "--chunk_bytes", &P.ChunkBytes),
       "Provide --chunk_bytes");
-    mg_AbortIf(!GetOptionValue(Argc, Argv, "--precision", &P.NBitPlanes),
+    mg_AbortIf(!OptionValue(Argc, Argv, "--precision", &P.NBitPlanes),
       "Provide --precision");
     mg_AbortIf(P.NBitPlanes > BitSizeOf(P.Meta.Type),
       "precision too high");
-    mg_AbortIf(!GetOptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
+    mg_AbortIf(!OptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
       "Provide --tolerance");
   }
   return P;
 }
 
-void TestMemMap(const char* Input) {
+void TestMemMap(char* Input) {
   /* test write */
   mmap_file MMap;
   auto Err = open_file("test.raw", map_mode::Write, &MMap);
@@ -136,122 +136,122 @@ void TestMemMap(const char* Input) {
 
 
 void TestNewWaveletCode() {
-  double A[] = Array;
-  double C[] = Array;
-  double B[] = Array;
-  v3i NPow2(17, 17, 1);
-  v3i N(10, 10, 1);
-  int NLevels = 3;
-  v3i NLarge = ExpandDomain(N, NLevels);
-  double D[17 * 17 * 1] = {};
-  volume VolA(buffer(A), grid(NLarge), NLarge, data_type::float64);
-  volume VolD(buffer(D), grid(NLarge), NPow2, data_type::float64);
-  printf("%d %d %d\n", NLarge.X, NLarge.Y, NLarge.Z);
-  volume Vol(buffer(A), grid(N), NLarge, data_type::float64);
-  grid Ext = Vol.Extent;
-  volume Vol2 = Vol;
-  Vol2.Buffer = buffer(C);
-  dynamic_array<grid> Extents, Extents2;
-  Resize(&Extents, NLevels);
-  Resize(&Extents2, NLevels);
-  printf("\n--------A:\n");
-  for (int Y = 0; Y < N.Y; ++Y) {
-    for (int X = 0; X < N.X; ++X) {
-      printf("%6.1f ", A[Y * NLarge.X + X]);
-    }
-    printf("\n");
-  }
-  v3i DimsP = NPow2;
-  v3i StridesP(1, 1, 1);
-  for (int I = 0; I < NLevels; ++I) {
-    Extents2[I] = grid(v3i(0, 0, 0), DimsP, StridesP);
-    DimsP = (DimsP + 1) / 2;
-    StridesP = StridesP * 2;
-  }
-  for (int I = 0; I < NLevels; ++I) {
-    FLiftCdf53X<double>(Vol, Ext);
-    v3i Dims3 = Dims(Ext);
-    Dims3.X += IsEven(Dims3.X);
-    SetDims(&Ext, Dims3);
-    FLiftCdf53Y<double>(Vol, Ext);
-    Dims3.Y += IsEven(Dims3.Y);
-    SetDims(&Ext, Dims3);
-    Extents[I] = Ext;
-    SetDims(&Ext, (Dims3 + 1) / 2);
-    SetStrides(&Ext, Strides(Ext) * 2);
-  }
-  Copy(&VolD, VolA);
-  printf("inverse transform\n");
-  // inverse transform
-  for (int I = NLevels - 1; I >= 0; --I) {
-    ILiftCdf53Y<double>(Vol, Extents[I]);
-    printf("\n--------A (after Y pass):\n");
-    for (int Y = 0; Y < NLarge.Y; ++Y) {
-      for (int X = 0; X < NLarge.X; ++X) {
-        printf("%6.1f ", A[Y * NLarge.X + X]);
-      }
-      printf("\n");
-    }
-    ILiftCdf53X<double>(Vol, Extents[I]);
-    printf("\n--------A (after X pass):\n");
-    for (int Y = 0; Y < NLarge.Y; ++Y) {
-      for (int X = 0; X < NLarge.X; ++X) {
-        printf("%6.1f ", A[Y * NLarge.X + X]);
-      }
-      printf("\n");
-    }
-    printf("-----------------------------------------\n");
-  }
-  printf("\n--------A:\n");
-  for (int Y = 0; Y < N.Y; ++Y) {
-    for (int X = 0; X < N.X; ++X) {
-      printf("%6.1f ", A[Y * NLarge.X + X]);
-    }
-    printf("\n");
-  }
-  printf("\n--------D (initially):\n");
-  for (int Y = 0; Y < NPow2.Y; ++Y) {
-    for (int X = 0; X < NPow2.X; ++X) {
-      printf("%6.1f ", D[Y * NPow2.X + X]);
-    }
-    printf("\n");
-  }
-  for (int I = NLevels - 1; I >= 0; --I) {
-    ILiftUnpackCdf53Y<double>(VolD, Extents2[I], 0);
-    printf("\n--------D (after Y pass):\n");
-    for (int Y = 0; Y < NPow2.Y; ++Y) {
-      for (int X = 0; X < NPow2.X; ++X) {
-        printf("%6.1f ", D[Y * NPow2.X + X]);
-      }
-      printf("\n");
-    }
-    ILiftUnpackCdf53X<double>(VolD, Extents2[I], 1);
-    printf("\n--------D (after X pass) :\n");
-    for (int Y = 0; Y < NPow2.Y; ++Y) {
-      for (int X = 0; X < NPow2.X; ++X) {
-        printf("%6.1f ", D[Y * NPow2.X + X]);
-      }
-      printf("\n");
-    }
-    printf("-----------------------------------------\n");
-  }
-  printf("\n--------D:\n");
-  for (int Y = 0; Y < NPow2.Y; ++Y) {
-    for (int X = 0; X < NPow2.X; ++X) {
-      printf("%6.1f ", D[Y * NPow2.X + X]);
-    }
-    printf("\n");
-  }
-  //FormSubbands(&Vol2, Vol, NLevels);
+  //double A[] = Array;
+  //double C[] = Array;
+  //double B[] = Array;
+  //v3i NPow2(17, 17, 1);
+  //v3i N(10, 10, 1);
+  //int NLevels = 3;
+  //v3i NLarge = ExpandDomain(N, NLevels);
+  //double D[17 * 17 * 1] = {};
+  //volume VolA(buffer(A), grid(NLarge), NLarge, data_type::float64);
+  //volume VolD(buffer(D), grid(NLarge), NPow2, data_type::float64);
+  //printf("%d %d %d\n", NLarge.X, NLarge.Y, NLarge.Z);
+  //volume Vol(buffer(A), grid(N), NLarge, data_type::float64);
+  //grid Ext = Vol.Extent;
+  //volume Vol2 = Vol;
+  //Vol2.Buffer = buffer(C);
+  //array<grid> Extents, Extents2;
+  //Resize(&Extents, NLevels);
+  //Resize(&Extents2, NLevels);
+  //printf("\n--------A:\n");
+  //for (int Y = 0; Y < N.Y; ++Y) {
+  //  for (int X = 0; X < N.X; ++X) {
+  //    printf("%6.1f ", A[Y * NLarge.X + X]);
+  //  }
+  //  printf("\n");
+  //}
+  //v3i DimsP = NPow2;
+  //v3i StridesP(1, 1, 1);
+  //for (int I = 0; I < NLevels; ++I) {
+  //  Extents2[I] = grid(v3i(0, 0, 0), DimsP, StridesP);
+  //  DimsP = (DimsP + 1) / 2;
+  //  StridesP = StridesP * 2;
+  //}
+  //for (int I = 0; I < NLevels; ++I) {
+  //  FLiftCdf53X<double>(Vol, Ext);
+  //  v3i Dims3 = Dims(Ext);
+  //  Dims3.X += IsEven(Dims3.X);
+  //  SetDims(&Ext, Dims3);
+  //  FLiftCdf53Y<double>(Vol, Ext);
+  //  Dims3.Y += IsEven(Dims3.Y);
+  //  SetDims(&Ext, Dims3);
+  //  Extents[I] = Ext;
+  //  SetDims(&Ext, (Dims3 + 1) / 2);
+  //  SetStrides(&Ext, Strides(Ext) * 2);
+  //}
+  //Copy(&VolD, VolA);
+  //printf("inverse transform\n");
+  //// inverse transform
+  //for (int I = NLevels - 1; I >= 0; --I) {
+  //  ILiftCdf53Y<double>(Vol, Extents[I]);
+  //  printf("\n--------A (after Y pass):\n");
+  //  for (int Y = 0; Y < NLarge.Y; ++Y) {
+  //    for (int X = 0; X < NLarge.X; ++X) {
+  //      printf("%6.1f ", A[Y * NLarge.X + X]);
+  //    }
+  //    printf("\n");
+  //  }
+  //  ILiftCdf53X<double>(Vol, Extents[I]);
+  //  printf("\n--------A (after X pass):\n");
+  //  for (int Y = 0; Y < NLarge.Y; ++Y) {
+  //    for (int X = 0; X < NLarge.X; ++X) {
+  //      printf("%6.1f ", A[Y * NLarge.X + X]);
+  //    }
+  //    printf("\n");
+  //  }
+  //  printf("-----------------------------------------\n");
+  //}
+  //printf("\n--------A:\n");
+  //for (int Y = 0; Y < N.Y; ++Y) {
+  //  for (int X = 0; X < N.X; ++X) {
+  //    printf("%6.1f ", A[Y * NLarge.X + X]);
+  //  }
+  //  printf("\n");
+  //}
+  //printf("\n--------D (initially):\n");
+  //for (int Y = 0; Y < NPow2.Y; ++Y) {
+  //  for (int X = 0; X < NPow2.X; ++X) {
+  //    printf("%6.1f ", D[Y * NPow2.X + X]);
+  //  }
+  //  printf("\n");
+  //}
+  //for (int I = NLevels - 1; I >= 0; --I) {
+  //  ILiftUnpackCdf53Y<double>(VolD, Extents2[I], 0);
+  //  printf("\n--------D (after Y pass):\n");
+  //  for (int Y = 0; Y < NPow2.Y; ++Y) {
+  //    for (int X = 0; X < NPow2.X; ++X) {
+  //      printf("%6.1f ", D[Y * NPow2.X + X]);
+  //    }
+  //    printf("\n");
+  //  }
+  //  ILiftUnpackCdf53X<double>(VolD, Extents2[I], 1);
+  //  printf("\n--------D (after X pass) :\n");
+  //  for (int Y = 0; Y < NPow2.Y; ++Y) {
+  //    for (int X = 0; X < NPow2.X; ++X) {
+  //      printf("%6.1f ", D[Y * NPow2.X + X]);
+  //    }
+  //    printf("\n");
+  //  }
+  //  printf("-----------------------------------------\n");
+  //}
+  //printf("\n--------D:\n");
+  //for (int Y = 0; Y < NPow2.Y; ++Y) {
+  //  for (int X = 0; X < NPow2.X; ++X) {
+  //    printf("%6.1f ", D[Y * NPow2.X + X]);
+  //  }
+  //  printf("\n");
+  //}
+  ////FormSubbands(&Vol2, Vol, NLevels);
 }
 
 #include <iostream>
 #include <new>
 
 // TODO: handle float/int/int64/etc
-int main(int Argc, const char** Argv) {
+int main(int Argc, char** Argv) {
   TestNewWaveletCode();
-  dynamic_array<grid> Subbands;
+  array<grid> Subbands;
   BuildSubbandsInPlace(v3i(16, 16, 16), 3, &Subbands);
   //for (int I = 0; I < Size(Subbands); ++I) {
   //  printf("----------- Subband %d\n", I);

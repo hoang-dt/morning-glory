@@ -1,75 +1,84 @@
 #pragma once
 
-#include "mg_common_types.h"
+#include "mg_common.h"
+#include "mg_data_types.h"
 #include "mg_error.h"
+#include "mg_macros.h"
 #include "mg_memory.h"
-#include "mg_types.h"
 
 namespace mg {
 
-// struct subvolume? but must operate like a volume
-// subvolume consists of a volume and a box
-// a grid can be part of a bigger grid
-// struct 
+/* parent's type can be extent*, grid*, volume*, extent, grid, volume */
+template <typename t = void*>
+struct extent {
+  u64 From, Dims;
+  t Base = {};
+  extent();
+  extent(const v3i& Dims3);
+  extent(const v3i& From3, const v3i& Dims3);
+  bool HasBase() const { return (void*)Base == nullptr; }
+};
 
-
+/* parent's type can be extent*, grid*, volume*, extent, grid, volume */
+template <typename t = void*>
 struct grid {
-  u64 PosPacked;
-  u64 DimsPacked;
-  u64 StridesPacked;
+  u64 From, Dims, Strd; // packed from, dims, strides
+  t Base = {};
   grid();
-  grid(const v3i& Dims);
-  grid(const v3i& Pos, const v3i& Dims);
-  grid(const v3i& Pos, const v3i& Dims, const v3i& Stride);
+  grid(const v3i& Dims3);
+  grid(const v3i& From3, const v3i& Dims3);
+  grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3);
+  template <typename u>
+  grid(const extent<u>& Ext);
+  bool HasBase() const { return (void*)Base == nullptr; }
+};
+
+struct grid_indexer {
+  //gird_indexer(v3i );
 };
 
 struct volume {
   buffer Buffer;
-  grid Extent;
-  u64 DimsPacked;
+  u64 Dims;
   data_type Type;
   volume();
-  volume(const buffer& BufIn, const grid& ExtIn, const v3i& DimsIn,
-         data_type TypeIn);
+  volume(const buffer& Buf, const v3i& Dims3, data_type TypeIn);
+  bool HasBase() const { return false; }
 };
 
-v3i Pos(const grid& Ext);
-v3i Dims(const grid& Ext);
-v3i Strides(const grid& Ext);
-v3i BigDims(const volume& Vol);
-v3i SmallDims(const volume& Vol);
-i64 Size(const volume& Vol);
-void SetPos(grid* Ext, const v3i& Pos);
-void SetDims(grid* Ext, const v3i& Dims);
-void SetStrides(grid* Ext, const v3i& Strides);
+mg_T(t) grid<volume> GridVol(const extent<t>& Extent);
+mg_T(t) grid<volume> GridVol(const grid<t>& Grid);
+mg_T(t) grid<volume> GridVol(const volume& Volume);
 
-volume SubVolume(); // TODO: extract a subvolume from a volume
+mg_T(t) v3i From(const extent<t>& Ext);
+mg_T(t) v3i Dims(const extent<t>& Ext);
+mg_T(t) v3i Strd(const extent<t>& Ext);
 
-//template <typename t> t& At(volume& Vol, i64 I);
-//template <typename t> t At(const volume& Vol, i64 I);
+mg_T(t) v3i From(const grid<t>& Grid);
+mg_T(t) v3i Dims(const grid<t>& Grid);
+mg_T(t) v3i Strd(const grid<t>& Grid);
+mg_T(t) void SetFrom(grid<t>* Grid, const v3i& From3);
+mg_T(t) void SetDims(grid<t>* Grid, const v3i& Dims3);
+mg_T(t) void SetStrd(grid<t>* Grid, const v3i& Strd3);
 
-i64 XyzToI(const v3i& N, const v3i& P);
-v3i IToXyz(i64 I, const v3i& N);
+v3i  Dims(const volume& Vol);
+void SetDims(volume* Vol, const v3i& Dims);
+void SetType(volume* Vol, data_type Type);
+i64  Size(const volume& Vol);
+
+i64 Row(const v3i& N, const v3i& P);
+v3i InvRow(i64 I, const v3i& N);
 
 /* Read a volume from a file */
-error<> ReadVolume(cstr FileName, const v3i& Dims, data_type Type, volume* Volume);
+error<> ReadVolume(cstr FileName, const v3i& Dims3, data_type Type, volume* Vol);
 
 /* Copy a region of the first volume to a region of the second volume */
-void Copy(volume* Dst, const volume& Src);
-/* Clone a volume */
-void Clone(volume* Dst, const volume& Src, allocator* Alloc = &Mallocator());
+void Copy(volume* Dst, volume& Src);
 
-/* Split a volume into 8 parts: 1 voxel, 3 lines, 3 faces, and one sub volume */
-array<grid, 8> Split3D(const v3i& Dims);
+void Clone(volume* Dst, volume& Src, allocator* Alloc = &Mallocator());
 
 /* Return the number of dimensions, given a volume size */
-int NumDims(const v3i& N);
-
-bool IsPoint(const grid& Ext);
-/* Note: must test for IsPoint() first */
-bool IsLine(const grid& Ext);
-/* Note: must test for IsLine() first */
-bool IsFace(const grid& Ext);
+int NDims(const v3i& N);
 
 } // namespace mg
 

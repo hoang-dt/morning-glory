@@ -1,39 +1,36 @@
 #pragma once
 
-#include "mg_common_types.h"
-#include "mg_types.h"
+#include "mg_common.h"
 #include "mg_volume.h"
 
 // TODO: make these functions take in volume instead of raw pointers
 
 namespace mg {
 
-template <typename t> void ForwardLiftCdf53X(t* F, v3i N, v3i L);
-template <typename t> void ForwardLiftCdf53Y(t* F, v3i N, v3i L);
-template <typename t> void ForwardLiftCdf53Z(t* F, v3i N, v3i L);
-template <typename t> void InverseLiftCdf53X(t* F, v3i N, v3i L);
-template <typename t> void InverseLiftCdf53Y(t* F, v3i N, v3i L);
-template <typename t> void InverseLiftCdf53Z(t* F, v3i N, v3i L);
+/* Normal lifting which uses mirroring at the boundary */
+mg_T(t) void FLiftCdf53X(t* F, v3i N, v3i L);
+mg_T(t) void FLiftCdf53Y(t* F, v3i N, v3i L);
+mg_T(t) void FLiftCdf53Z(t* F, v3i N, v3i L);
+mg_T(t) void ILiftCdf53X(t* F, v3i N, v3i L);
+mg_T(t) void ILiftCdf53Y(t* F, v3i N, v3i L);
+mg_T(t) void ILiftCdf53Z(t* F, v3i N, v3i L);
 
-template <typename t> void ForwardLiftExtrapolateCdf53X(t* F, v3i N, v3i NBig, v3i L);
-template <typename t> void ForwardLiftExtrapolateCdf53Y(t* F, v3i N, v3i NBig, v3i L);
-template <typename t> void ForwardLiftExtrapolateCdf53Z(t* F, v3i N, v3i NBig, v3i L);
-template <typename t> void InverseLiftExtrapolateCdf53X(t* F, v3i N, v3i NBig, v3i L);
-template <typename t> void InverseLiftExtrapolateCdf53Y(t* F, v3i N, v3i NBig, v3i L);
-template <typename t> void InverseLiftExtrapolateCdf53Z(t* F, v3i N, v3i NBig, v3i L);
+/* Lifting with extrapolation */
+mg_T(t) void FLiftExtCdf53X(t* F, v3i N, v3i NBig, v3i L);
+mg_T(t) void FLiftExtCdf53Y(t* F, v3i N, v3i NBig, v3i L);
+mg_T(t) void FLiftExtCdf53Z(t* F, v3i N, v3i NBig, v3i L);
+mg_T(t) void ILiftExtCdf53X(t* F, v3i N, v3i NBig, v3i L);
+mg_T(t) void ILiftExtCdf53Y(t* F, v3i N, v3i NBig, v3i L);
+mg_T(t) void ILiftExtCdf53Z(t* F, v3i N, v3i NBig, v3i L);
 
-void Cdf53Forward(volume* Vol, int NLevels);
-void Cdf53Inverse(volume* Vol, int NLevels);
-void Cdf53ForwardExtrapolate(volume* Vol);
-void Cdf53InverseExtrapolate(volume* Vol);
+void ForwardCdf53(volume* Vol, int NLevels);
+void InverseCdf53(volume* Vol, int NLevels);
+void ForwardCdf53Ext(volume* Vol);
+void InverseCdf53Ext(volume* Vol);
 
-template <typename t>
-struct dynamic_array;
-struct grid;
-void BuildSubbands(v3i N, int NLevels, dynamic_array<grid>* Subbands);
-void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<grid>* Subbands);
-
-/* Utilities */
+mg_T(t) struct array;
+void BuildSubbands(v3i N, int NLevels, array<grid<>>* Subbands);
+void BuildSubbandsInPlace(v3i N, int NLevels, array<grid<>>* Subbands);
 
 void FormSubbands(volume* Dst, volume Src, int NLevels);
 int LevelToSubband(v3i Level);

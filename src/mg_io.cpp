@@ -1,29 +1,35 @@
 #include "mg_assert.h"
-#include "mg_error.h"
 #include "mg_io.h"
 #include "mg_memory.h"
 #include "mg_scopeguard.h"
-#include "mg_types.h"
 
 namespace mg {
 
-printer::printer() = default;
-printer::printer(char* BufIn, int SizeIn) : Buf(BufIn), Size(SizeIn), File(nullptr) {}
-printer::printer(FILE* FileIn) : Buf(nullptr), Size(0), File(FileIn) {}
+printer::
+printer() = default;
 
-void Reset(printer* Pr, char* Buf, int Size) {
+printer::
+printer(char* BufIn, int SizeIn) : Buf(BufIn), Size(SizeIn), File(nullptr) {}
+
+printer::
+printer(FILE* FileIn) : Buf(nullptr), Size(0), File(FileIn) {}
+
+void
+Reset(printer* Pr, char* Buf, int Size) {
   Pr->Buf = Buf;
   Pr->Size = Size;
   Pr->File = nullptr;
 }
 
-void Reset(printer* Pr, FILE* File) {
+void
+Reset(printer* Pr, FILE* File) {
   Pr->Buf = nullptr;
   Pr->Size = 0;
   Pr->File = File;
 }
 
-error<> ReadFile(cstr FileName, buffer* Buf) {
+error<>
+ReadFile(cstr FileName, buffer* Buf) {
   mg_Assert((Buf->Data && Buf->Bytes) || (!Buf->Data && !Buf->Bytes));
 
   FILE* Fp = fopen(FileName, "rb");
@@ -51,7 +57,8 @@ error<> ReadFile(cstr FileName, buffer* Buf) {
   return mg_Error(err_code::NoError);
 }
 
-error<> WriteFile(cstr FileName, const buffer& Buf) {
+error<>
+WriteFile(cstr FileName, const buffer& Buf) {
   mg_Assert(Buf.Data && Buf.Bytes);
 
   FILE* Fp = fopen(FileName, "wb");

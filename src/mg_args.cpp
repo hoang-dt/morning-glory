@@ -1,12 +1,11 @@
 #include <string.h>
 #include "mg_args.h"
 #include "mg_string.h"
-#include "mg_types.h"
 
 namespace mg {
 
-bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, cstr* Value) {
-  for (int I = 0; I + 1 < NumArgs; ++I) {
+bool OptionValue(int NArgs, cstr* Args, cstr Option, cstr* Value) {
+  for (int I = 0; I + 1 < NArgs; ++I) {
     if (strncmp(Args[I], Option, 32) == 0) {
       *Value = Args[I + 1];
       return true;
@@ -15,16 +14,16 @@ bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, cstr* Value) {
   return false;
 }
 
-bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, int* Value) {
-  for (int I = 0; I + 1 < NumArgs; ++I) {
+bool OptionValue(int NArgs, cstr* Args, cstr Option, int* Value) {
+  for (int I = 0; I + 1 < NArgs; ++I) {
     if (strncmp(Args[I], Option, 32) == 0)
       return ToInt(Args[I + 1], Value);
   }
   return false;
 }
 
-bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, v3i* Value) {
-  for (int I = 0; I + 3 < NumArgs; ++I) {
+bool OptionValue(int NArgs, cstr* Args, cstr Option, v3i* Value) {
+  for (int I = 0; I + 3 < NArgs; ++I) {
     if (strncmp(Args[I], Option, 32) == 0) {
       return ToInt(Args[I + 1], &Value->X) &&
              ToInt(Args[I + 2], &Value->Y) &&
@@ -34,16 +33,16 @@ bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, v3i* Value) {
   return false;
 }
 
-bool GetOptionValue(int NumArgs, cstr* Args, cstr Option, f64* Value) {
-  for (int I = 0; I + 1 < NumArgs; ++I) {
+bool OptionValue(int NArgs, cstr* Args, cstr Option, f64* Value) {
+  for (int I = 0; I + 1 < NArgs; ++I) {
     if (strncmp(Args[I], Option, 32) == 0)
       return ToDouble(Args[I + 1], Value);
   }
   return false;
 }
 
-bool OptionExists(int NumArgs, cstr* Args, cstr Option) {
-  for (int I = 0; I < NumArgs; ++I) {
+bool OptionExists(int NArgs, cstr* Args, cstr Option) {
+  for (int I = 0; I < NArgs; ++I) {
     if (strcmp(Args[I], Option) == 0)
       return true;
   }

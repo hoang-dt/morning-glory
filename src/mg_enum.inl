@@ -4,31 +4,34 @@
 #include <ctype.h>
 #include <errno.h>
 #include <stdlib.h>
+#include "mg_common.h"
 #include "mg_macros.h"
-#include "mg_string.h"
-#include "mg_types.h"
 
 #undef mg_Enum
 #define mg_Enum(enum_name, type, ...)\
 namespace mg {\
+\
 enum class enum_name : type { __VA_ARGS__, __Invalid__ };\
+\
 struct mg_Cat(enum_name, _s) {\
   enum_name Val;\
   struct enum_item {\
-    str_ref Name;\
+    stref Name;\
     enum_name ItemVal;\
   };\
-  using name_map = array<enum_item, mg_NumArgs(__VA_ARGS__)>;\
+  \
+  using name_map = stack_array<enum_item, mg_NumArgs(__VA_ARGS__)>;\
+  \
   inline static name_map NameMap = []() {\
     name_map MyNameMap;\
     tokenizer Tk1(mg_Str(__VA_ARGS__), ",");\
     type CurrentVal = 0;\
     for (int I = 0; ; ++I, ++CurrentVal) {\
-      str_ref Token = Next(&Tk1);\
+      stref Token = Next(&Tk1);\
       if (!Token) break;\
       tokenizer Tk2(Token, " =");\
-      str_ref EnumStr = Next(&Tk2);\
-      str_ref EnumVal = Next(&Tk2);\
+      stref EnumStr = Next(&Tk2);\
+      stref EnumVal = Next(&Tk2);\
       if (EnumVal) {\
         char* EndPtr = nullptr;\
         errno = 0;\
@@ -48,42 +51,46 @@ struct mg_Cat(enum_name, _s) {\
   }();\
   \
   mg_Cat(enum_name, _s)() : mg_Cat(enum_name, _s)(enum_name::__Invalid__) {}\
+  \
   mg_Cat(enum_name, _s)(enum_name Value) {\
-    const auto* It = ConstBegin(NameMap);\
-    while (It != ConstEnd(NameMap)) {\
+    auto* It = Begin(NameMap);\
+    while (It != End(NameMap)) {\
       if (It->ItemVal == Value)\
         break;\
       ++It;\
     }\
-    this->Val = (It != ConstEnd(NameMap)) ? It->ItemVal : enum_name::__Invalid__;\
+    this->Val = (It != End(NameMap)) ? It->ItemVal : enum_name::__Invalid__;\
   }\
-  explicit mg_Cat(enum_name, _s)(str_ref Name) {\
-    const auto* It = ConstBegin(NameMap);\
-    while (It != ConstEnd(NameMap)) {\
+  \
+  explicit mg_Cat(enum_name, _s)(stref Name) {\
+    auto* It = Begin(NameMap);\
+    while (It != End(NameMap)) {\
       if (It->Name == Name)\
         break;\
       ++It;\
     }\
-    Val = (It != ConstEnd(NameMap)) ? It->ItemVal : enum_name::__Invalid__;\
+    Val = (It != End(NameMap)) ? It->ItemVal : enum_name::__Invalid__;\
   }\
+  \
   explicit operator bool() const { return Val != enum_name::__Invalid__; }\
-}; /* struct enum_name */\
+};\
 \
-inline str_ref ToString(enum_name Enum) {\
+inline stref \
+ToString(enum_name Enum) {\
   mg_Cat(enum_name, _s) EnumS(Enum);\
-  const auto* It = ConstBegin(EnumS.NameMap);\
-  while (It != ConstEnd(EnumS.NameMap)) {\
+  auto* It = Begin(EnumS.NameMap);\
+  while (It != End(EnumS.NameMap)) {\
     if (It->ItemVal == EnumS.Val)\
       break;\
     ++It;\
   }\
-  assert(It != ConstEnd(EnumS.NameMap));\
+  assert(It != End(EnumS.NameMap));\
   return It->Name;\
 }\
 \
 template <>\
 struct StringTo<enum_name> {\
-  enum_name operator()(str_ref Name) {\
+  enum_name operator()(stref Name) {\
     mg_Cat(enum_name, _s) EnumS(Name);\
     return EnumS.Val;\
   }\

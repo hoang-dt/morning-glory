@@ -1,10 +1,6 @@
-#include <stdio.h>
 #include <signal.h>
-#include <stdlib.h>
 #include "mg_assert.h"
-#include "mg_io.h"
-#include "mg_stacktrace.h"
-#include "mg_types.h"
+#include "mg_common.h"
 
 namespace mg {
 
@@ -20,16 +16,16 @@ void AbortHandler(int Signum) {
     case SIGFPE : Name = "SIGFPE" ; break;
   };
   if (Name)
-    fprintf( stderr, "Caught signal %d (%s)\n", Signum, Name);
+    fprintf(stderr, "Caught signal %d (%s)\n", Signum, Name);
   else
-    fprintf( stderr, "Caught signal %d\n", Signum);
+    fprintf(stderr, "Caught signal %d\n", Signum);
 
   printer Pr(stderr);
   PrintStacktrace(&Pr);
   exit(Signum);
 }
 
-void SetHandleAbortSignals(handler& Handler) {
+void SetHandleAbortSignals(const handler& Handler) {
   signal(SIGABRT, Handler);
   signal(SIGSEGV, Handler);
 #if !defined(_WIN32)

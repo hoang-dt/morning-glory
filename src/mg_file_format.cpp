@@ -21,10 +21,10 @@ void Log(cstr FileName) {
   FILE* Fp = fopen(FileName, "w");
   for (int Sb = 0; Sb < Size(FStats.SbStats); ++Sb) {
     fprintf(Fp, "Subband %d ----------------\n", Sb);
-    const subband_stats& SbStats = FStats.SbStats[Sb];
+    subband_stats& SbStats = FStats.SbStats[Sb];
     for (int Tl = 0; Tl < Size(SbStats.TlStats); ++Tl) {
       fprintf(Fp, "    Tile %d++++++++++++++++\n", Tl);
-      const tile_stats& TlStats = SbStats.TlStats[Tl];
+      tile_stats& TlStats = SbStats.TlStats[Tl];
       for (int I = 0; I < Size(TlStats.EMaxes); ++I) {
         fprintf(Fp, "%d ", TlStats.EMaxes[I]);
       }
@@ -60,25 +60,25 @@ struct tile_data {
   typed_buffer<i8> Ns;
 };
 
-i64 NTilesInSubbands(const file_format& Ff, int FromSb, int ToSb) {
+i64 NTilesInSubbands(file_format& Ff, int FromSb, int ToSb) {
   i64 NTiles = 0;
   for (int S = FromSb; S < ToSb; ++S) {
-    v3i SbDims = Unpack3Ints64(Ff.Subbands[S].DimsPacked);
+    v3i SbDims = Unpack3i64(Ff.Subbands[S].DimsP);
     NTiles += Prod<i64>((SbDims + Ff.TileDims - 1) / Ff.TileDims);
   }
   return NTiles;
 }
 
 // TODO: refactor to separate the copying of tile data from the encoding
-template <typename t>
-void CopyBlockForward(const file_format& Ff, tile_data* Tl, v3i Block, int K) {
-  v3i Dims = Unpack3Ints64(Ff.Volume.DimsPacked);
+mg_T(t)
+void CopyBlockForward(file_format& Ff, tile_data* Tl, v3i Block, int K) {
+  v3i Dims = Unpack3i64(Ff.Volume.Dims);
   v3i RealBlockDims = Min(Ff.TileDims - Block, ZDims);
-  const t* Data = (t*)Ff.Volume.Buffer.Data;
+  t* Data = (t*)Ff.Volume.Buffer.Data;
   v3i Voxel;
   mg_BeginFor3(Voxel, v3i::Zero(), RealBlockDims, v3i::One()) {
-    i64 I = XyzToI(Dims, Tl->Tile + Block + Voxel);
-    i64 J = K + XyzToI(ZDims, Voxel);
+    i64 I = Row(Dims, Tl->Tile + Block + Voxel);
+    i64 J = K + Row(ZDims, Voxel);
     Tl->Floats[J] = Data[I];
   } mg_EndFor3
   PadBlock(Tl->Floats.Data, RealBlockDims.X, 1);
@@ -87,26 +87,26 @@ void CopyBlockForward(const file_format& Ff, tile_data* Tl, v3i Block, int K) {
 }
 
 // TODO: refactor to separate the copying from the decoding
-template <typename t>
+mg_T(t)
 void CopyBlockInverse(file_format* Ff, tile_data* Tl, v3i Block, int K) {
-  v3i Dims = Unpack3Ints64(Ff->Volume.DimsPacked);
+  v3i Dims = Unpack3i64(Ff->Volume.Dims);
   v3i RealBlockDims = Min(Tl->RealDims - Block, ZDims);
   v3i Voxel;
   t* Data = (t*)Ff->Volume.Buffer.Data;
   mg_BeginFor3(Voxel, v3i::Zero(), RealBlockDims, v3i::One()) {
-    i64 I = XyzToI(Dims, Tl->Tile + Block + Voxel);
-    i64 J = K + XyzToI(ZDims, Voxel);
+    i64 I = Row(Dims, Tl->Tile + Block + Voxel);
+    i64 J = K + Row(ZDims, Voxel);
     Data[I] = Tl->Floats[J];
   } mg_EndFor3
 }
 
-template <typename t>
+mg_T(t)
 bool WriteEMax(int EMax, int ToleranceExp, bitstream* Bs) {
   if (0 <= EMax - ToleranceExp + 1) {
     Write(Bs, 1);
     // TODO: for now we don't care if the exponent is 2047 which represents Inf
     // or NaN
-    Write(Bs, EMax + Traits<t>::ExpBias, Traits<t>::ExpBits);
+    Write(Bs, EMax + traits<t>::ExpBias, traits<t>::ExpBits);
     return true;
   } else {
     Write(Bs, 0);
@@ -114,10 +114,10 @@ bool WriteEMax(int EMax, int ToleranceExp, bitstream* Bs) {
   }
 }
 
-template <typename t>
+mg_T(t)
 bool ReadEMax(bitstream* Bs, int ToleranceExp, i16* EMax) {
   if (Read(Bs)) {// significant
-    *EMax = i16(Read(Bs, Traits<t>::ExpBits) - Traits<t>::ExpBias);
+    *EMax = i16(Read(Bs, traits<t>::ExpBits) - traits<t>::ExpBias);
     return true;
   }
   *EMax = i16(ToleranceExp - 2);
@@ -126,7 +126,7 @@ bool ReadEMax(bitstream* Bs, int ToleranceExp, i16* EMax) {
 
 // TODO: error handling
 // TODO: minimize fopen calls
-ff_err WriteChunk(const file_format& Ff, tile_data* Tl, int Ci) {
+ff_err WriteChunk(file_format& Ff, tile_data* Tl, int Ci) {
   mg_Assert(Size(Tl->Bs) > 0);
   // TODO: cache the file names if the formatting turns out to be slow
   char FileNameBuf[256];
@@ -144,7 +144,7 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Tl, int Ci) {
   Flush(&Tl->Bs);
 #if defined(mg_CollectStats)
   tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
-  const u64* U64Ptr = (u64*)(Tl->Bs.Stream.Data);
+  u64* U64Ptr = (u64*)(Tl->Bs.Stream.Data);
   PushBack(&(Ts.CkStats), chunk_stats{(int)Where, *U64Ptr, (int)Size(Tl->Bs), {}});
 #endif
   fwrite(Tl->Bs.Stream.Data, Ff.ChunkBytes, 1, Fp);
@@ -158,20 +158,20 @@ ff_err WriteChunk(const file_format& Ff, tile_data* Tl, int Ci) {
 // TODO: minimize file opening
 // TODO: the tile size should depend on the precision at some level, to reduce
 // internal fragmentation
-template <typename t>
-ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
+mg_T(t)
+ff_err WriteTile(file_format& Ff, tile_data* Tl) {
 #if defined(mg_CollectStats)
   tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
   Ts.LocalId = Tl->LocalId;
-  dynamic_array<int> Sizes;
+  array<int> Sizes;
 #endif
   int Ci = 0; // chunk id
   InitWrite(&Tl->Bs, Tl->Bs.Stream);
   for (int Bp = Ff.Prec - 1; Bp >= 0; --Bp) {
     v3i Block;
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
-      int Bi = XyzToI(Tl->NBlocks3, Block / ZDims);
-      int K = XyzToI(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
+      int Bi = Row(Tl->NBlocks3, Block / ZDims);
+      int K = Row(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
       bool DoEncode = false;
       /* Copy the block data into the tile's buffer */
       if (Bp == Ff.Prec - 1) {
@@ -186,7 +186,7 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
         else
           PushBack(&(Ts.EMaxes), i16(Exponent(Ff.Tolerance) - 2));
 #endif
-        ForwardBlockTransform(&Tl->Ints[K]);
+        ForwardZfp(&Tl->Ints[K]);
         ForwardShuffle(&Tl->Ints[K], &Tl->UInts[K]);
       }
       /* Encode and write chunks */
@@ -198,7 +198,7 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
       do {
         if (DoEncode) {
           FullyEncoded =
-            EncodeBlock(&Tl->UInts[K], Bp, Ff.ChunkBytes * 8, Tl->Ns[Bi],
+            Encode(&Tl->UInts[K], Bp, Ff.ChunkBytes * 8, Tl->Ns[Bi],
                         M, InnerLoop, &Tl->Bs);
 #if defined(mg_CollectStats)
           PushBack(&Sizes, (int)BitSize(Tl->Bs));
@@ -223,10 +223,10 @@ ff_err WriteTile(const file_format& Ff, tile_data* Tl) {
 // TODO: use aligned memory allocation
 // TODO: try reusing the memory buffer
 // TODO: write the tile in Z order
-template <typename t>
-ff_err WriteSubband(const file_format& Ff, int Sb) {
-  v3i SbPos3 = Unpack3Ints64(Ff.Subbands[Sb].PosPacked);
-  v3i SbDims = Unpack3Ints64(Ff.Subbands[Sb].DimsPacked);
+mg_T(t)
+ff_err WriteSubband(file_format& Ff, int Sb) {
+  v3i SbPos3 = Unpack3i64(Ff.Subbands[Sb].FromP);
+  v3i SbDims = Unpack3i64(Ff.Subbands[Sb].DimsP);
   v3i Tile;
 #if defined(mg_CollectStats)
   FStats.SbStats[Sb].NumTiles3 = (SbDims + Ff.TileDims - 1) / Ff.TileDims;
@@ -237,21 +237,21 @@ ff_err WriteSubband(const file_format& Ff, int Sb) {
     tile_data Tl;
     Tl.Tile = Tile;
     Tl.RealDims = Min(SbPos3 + SbDims - Tile, Ff.TileDims);
-    Tl.LocalId = XyzToI(NTilesInSb, (Tile - SbPos3) / Ff.TileDims);
+    Tl.LocalId = Row(NTilesInSb, (Tile - SbPos3) / Ff.TileDims);
     Tl.GlobalId = NTilesInSubbands(Ff, 0, Sb) + Tl.LocalId;
     Tl.NBlocks3 = ((Tl.RealDims + ZDims) - 1) / ZDims;
     Tl.Subband = Sb;
-    AllocBufT(&Tl.Floats, Prod(Ff.TileDims));
-    AllocBufT(&Tl.Ints, Prod(Ff.TileDims));
-    AllocBufT(&Tl.UInts, Prod(Ff.TileDims));
-    AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocks3));
-    AllocBufT0(&Tl.Ns, Prod(Tl.NBlocks3));
+    AllocTypedBuf(&Tl.Floats, Prod(Ff.TileDims));
+    AllocTypedBuf(&Tl.Ints, Prod(Ff.TileDims));
+    AllocTypedBuf(&Tl.UInts, Prod(Ff.TileDims));
+    AllocTypedBuf(&Tl.EMaxes, Prod(Tl.NBlocks3));
+    AllocTypedBuf0(&Tl.Ns, Prod(Tl.NBlocks3));
     AllocBuf0(&Tl.Bs.Stream, Ff.ChunkBytes + BufferSize(Tl.Bs));
-    mg_CleanUp(0, DeallocBufT(&Tl.Floats);
-                  DeallocBufT(&Tl.Ints);
-                  DeallocBufT(&Tl.UInts);
-                  DeallocBufT(&Tl.EMaxes);
-                  DeallocBufT(&Tl.Ns);
+    mg_CleanUp(0, DeallocTypedBuf(&Tl.Floats);
+                  DeallocTypedBuf(&Tl.Ints);
+                  DeallocTypedBuf(&Tl.UInts);
+                  DeallocTypedBuf(&Tl.EMaxes);
+                  DeallocTypedBuf(&Tl.Ns);
                   DeallocBuf(&Tl.Bs.Stream));
     ff_err Err = WriteTile<t>(Ff, &Tl);
     if (ErrorExists(Err))
@@ -267,28 +267,28 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   if (Ff->Volume.Type != data_type::float32 &&
       Ff->Volume.Type != data_type::float64)
     return mg_Error(ff_err_code::TypeNotSupported);
-  v3i Dims = Unpack3Ints64(Ff->Volume.DimsPacked);
+  v3i Dims = Unpack3i64(Ff->Volume.Dims);
   BuildSubbands(Dims, Ff->NLevels, &Ff->Subbands);
-  v3i Sb0Dims = Unpack3Ints64(Ff->Subbands[0].DimsPacked);
+  v3i Sb0Dims = Unpack3i64(Ff->Subbands[0].DimsP);
   if (!(Ff->TileDims >= ZDims || Sb0Dims >= Ff->TileDims))
     return mg_Error(ff_err_code::InvalidTileDims);
   /* Chunk size must be large enough to store all the EMaxes in a tile */
   if (Ff->Volume.Type == data_type::float32) {
-    if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims / ZDims) * Traits<f32>::ExpBits)
+    if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims / ZDims) * traits<f32>::ExpBits)
       return mg_Error(ff_err_code::InvalidChunkSize);
   } else if (Ff->Volume.Type == data_type::float64) {
-    if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims / ZDims) * Traits<f64>::ExpBits)
+    if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims / ZDims) * traits<f64>::ExpBits)
       return mg_Error(ff_err_code::InvalidChunkSize);
   }
   i64 NTiles = NTilesInSubbands(*Ff, 0, Size(Ff->Subbands));
-  AllocBufT0(&Ff->TileHeaders, NTiles + 1);
+  AllocTypedBuf0(&Ff->TileHeaders, NTiles + 1);
   if (Mode == file_format::mode::Read) {
     /* allocate memory for the linked list */
-    AllocBufT(&Ff->Chunks, Size(Ff->Subbands));
+    AllocTypedBuf(&Ff->Chunks, Size(Ff->Subbands));
     for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
-      v3i SbDims3 = Unpack3Ints64(Ff->Subbands[Sb].DimsPacked);
+      v3i SbDims3 = Unpack3i64(Ff->Subbands[Sb].DimsP);
       v3i NTiles3 = (SbDims3 + Ff->TileDims - 1) / Ff->TileDims;
-      AllocBufT(&Ff->Chunks[Sb], Prod<i64>(NTiles3));
+      AllocTypedBuf(&Ff->Chunks[Sb], Prod<i64>(NTiles3));
       for (i64 Ti = 0; Ti < Size(Ff->Chunks[Sb]); ++Ti) {
         list<buffer>* List = &Ff->Chunks[Sb][Ti];
         *List = list<buffer>();
@@ -308,7 +308,7 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
 // TODO: provide more context info for returned errors
 
 /* Write meta data (and the tile headers) to the first file */
-int FormatMeta(file_format* Ff, const metadata& Meta) {
+int FormatMeta(file_format* Ff, metadata& Meta) {
   int N = snprintf(Ff->Meta, sizeof(Ff->Meta), "WZ %d.%d\n",
                    Ff->Major, Ff->Minor); // version
   N += snprintf(Ff->Meta + N, sizeof(Ff->Meta) - N, "000 bytes\n"); // header size
@@ -357,12 +357,12 @@ ff_err ParseMeta(file_format* Ff, metadata* Meta) {
   if (fscanf(Fp, "dimensions = %d %d %d\n",
              &Meta->Dims.X, &Meta->Dims.Y, &Meta->Dims.Z) != 3)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Dims corrupted");
-  Ff->Volume.DimsPacked = Pack3Ints64(Meta->Dims);
+  Ff->Volume.Dims = Pack3i64(Meta->Dims);
   Ff->Volume.Extent = grid(Meta->Dims);
   char Type[16];
   if (fscanf(Fp, "type = %s\n", Type) != 1)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Type corrupted");
-  Ff->Volume.Type = Meta->Type = StringTo<data_type>()(str_ref(Type));
+  Ff->Volume.Type = Meta->Type = StringTo<data_type>()(stref(Type));
   if (fscanf(Fp, "num levels = %d\n", &Ff->NLevels) != 1)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Num Levels corrupted");
   if (fscanf(Fp, "tile dims = %d %d %d\n",
@@ -378,7 +378,7 @@ ff_err ParseMeta(file_format* Ff, metadata* Meta) {
 }
 
 // TODO: write to an existing file
-ff_err Encode(file_format* Ff, const metadata& Meta) {
+ff_err Encode(file_format* Ff, metadata& Meta) {
   ff_err Err = Finalize(Ff, file_format::mode::Write);
   if (ErrorExists(Err))
     return Err;
@@ -386,7 +386,7 @@ ff_err Encode(file_format* Ff, const metadata& Meta) {
     // TODO
   }
   if (Ff->NLevels > 0)
-    Cdf53Forward(&(Ff->Volume), Ff->NLevels);
+    ForwardCdf53(&(Ff->Volume), Ff->NLevels);
 #if defined(mg_CollectStats)
   Resize(&FStats.SbStats, Size(Ff->Subbands));
 #endif
@@ -424,7 +424,7 @@ void SetPrecision(file_format* Ff, int Precision) {
 void SetVolume(file_format* Ff, byte* Data, v3i Dims, data_type Type) {
   Ff->Volume.Buffer.Data = Data;
   Ff->Volume.Buffer.Bytes = SizeOf(Type) * Prod<i64>(Dims);
-  Ff->Volume.DimsPacked = Pack3Ints64(Dims);
+  Ff->Volume.Dims = Pack3i64(Dims);
   Ff->Volume.Type = Type;
 }
 void SetWaveletTransform(file_format* Ff, int NLevels) {
@@ -460,7 +460,7 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
       InitRead(&Tl->Bs, *ChunkIt);
 #if defined(mg_CollectStats)
       tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
-      const u64* U64Ptr = (u64*)((*ChunkIt).Data);
+      u64* U64Ptr = (u64*)((*ChunkIt).Data);
       PushBack(&(Ts.CkStats), chunk_stats{(int)Where, *U64Ptr, 0, {}});
 #endif
     } else { // cannot read the chunk in the file
@@ -473,19 +473,19 @@ ff_err ReadNextChunk(file_format* Ff, tile_data* Tl, buffer* ChunkBuf) {
 }
 
 // TODO: add an "incremental" mode where the returned values are deltas
-template <typename t>
+mg_T(t)
 void DecompressTile(file_format* Ff, tile_data* Tl) {
 #if defined(mg_CollectStats)
   tile_stats& Ts = FStats.SbStats[Tl->Subband].TlStats[Tl->LocalId];
   Ts.LocalId = Tl->LocalId;
 #endif
-  const auto & ChunkList = Ff->Chunks[Tl->Subband][Tl->LocalId];
-  auto ChunkIt = ConstBegin(ChunkList);
+  auto & ChunkList = Ff->Chunks[Tl->Subband][Tl->LocalId];
+  auto ChunkIt = Begin(ChunkList);
   InitRead(&Tl->Bs, *ChunkIt);
   for (int Bp = Ff->Prec - 1; Bp >= 0; --Bp) {
     v3i Block;
     mg_BeginFor3(Block, v3i::Zero(), Tl->RealDims, ZDims) {
-      int Bi = XyzToI(Tl->NBlocks3, Block / ZDims);
+      int Bi = Row(Tl->NBlocks3, Block / ZDims);
       bool DoDecode = false;
       if (Bp == Ff->Prec - 1) {
         DoDecode = ReadEMax<t>(&Tl->Bs, Exponent(Ff->Tolerance), &Tl->EMaxes[Bi]);
@@ -493,20 +493,20 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
         PushBack(&(Ts.EMaxes), Tl->EMaxes[Bi]);
 #endif
       }
-      int K = XyzToI(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
+      int K = Row(Tl->NBlocks3, Block / ZDims) * Prod(ZDims);
       DoDecode = Ff->Prec - Bp <= Tl->EMaxes[Bi] - Exponent(Ff->Tolerance) + 1;
       bool FullyDecoded = false;
-      bool LastChunk = ChunkIt == ConstEnd(ChunkList);
+      bool LastChunk = ChunkIt == End(ChunkList);
       bool ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
       bool InnerLoop = 0;
       i8 M = 0;
       while (DoDecode && !FullyDecoded && !LastChunk) {
         FullyDecoded =
-          DecodeBlock(&Tl->UInts[K], Bp, Ff->ChunkBytes * 8, Tl->Ns[Bi],
+          Decode(&Tl->UInts[K], Bp, Ff->ChunkBytes * 8, Tl->Ns[Bi],
                       M, InnerLoop, &Tl->Bs);
         ExhaustedBits = BitSize(Tl->Bs) >= Ff->ChunkBytes * 8;
 #if defined(mg_CollectStats)
-        int I = ForwardDistance(ConstBegin(ChunkList), ChunkIt);
+        int I = ForwardDistance(Begin(ChunkList), ChunkIt);
         PushBack(&Ts.CkStats[I].Sizes, (int)BitSize(Tl->Bs));
         if (FullyDecoded || ExhaustedBits) {
           Ts.CkStats[I].ActualSize = (int)Size(Tl->Bs);
@@ -514,7 +514,7 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
 #endif
         if (ExhaustedBits) {
           ++ChunkIt;
-          LastChunk = ChunkIt == ConstEnd(ChunkList);
+          LastChunk = ChunkIt == End(ChunkList);
           if (!LastChunk)
             InitRead(&Tl->Bs, *ChunkIt);
         } else {
@@ -524,7 +524,7 @@ void DecompressTile(file_format* Ff, tile_data* Tl) {
 
       if (Bp == 0 || LastChunk) {
         InverseShuffle(&Tl->UInts[K], &Tl->Ints[K]);
-        InverseBlockTransform(&Tl->Ints[K]);
+        InverseZfp(&Tl->Ints[K]);
         Dequantize((byte*)&Tl->Ints[K], Prod(ZDims), Tl->EMaxes[Bi],
                    Ff->Prec - 2, (byte*)&Tl->Floats[K], Ff->Volume.Type);
         CopyBlockInverse<t>(Ff, Tl, Block, K);
@@ -538,10 +538,10 @@ END:
 }
 
 // TODO: add signature to the .h file
-template <typename t>
+mg_T(t)
 ff_err ReadSubband(file_format* Ff, int Sb) {
-  v3i SbPos3 = Unpack3Ints64(Ff->Subbands[Sb].PosPacked);
-  v3i SbDims = Unpack3Ints64(Ff->Subbands[Sb].DimsPacked);
+  v3i SbPos3 = Unpack3i64(Ff->Subbands[Sb].FromP);
+  v3i SbDims = Unpack3i64(Ff->Subbands[Sb].DimsP);
   v3i Tile;
 #if defined(mg_CollectStats)
   FStats.SbStats[Sb].NumTiles3 = (SbDims + Ff->TileDims - 1) / Ff->TileDims;
@@ -552,21 +552,21 @@ ff_err ReadSubband(file_format* Ff, int Sb) {
     tile_data Tl;
     Tl.Tile = Tile;
     Tl.RealDims = Min(SbPos3 + SbDims - Tile, Ff->TileDims);
-    Tl.LocalId = XyzToI(NTilesInSb3, (Tile - SbPos3) / Ff->TileDims);
+    Tl.LocalId = Row(NTilesInSb3, (Tile - SbPos3) / Ff->TileDims);
     Tl.GlobalId = NTilesInSubbands(*Ff, 0, Sb) + Tl.LocalId;
     Tl.NBlocks3 = ((Tl.RealDims + ZDims) - 1) / ZDims;
     Tl.Subband = Sb;
-    AllocBufT(&Tl.Floats, Prod(Ff->TileDims));
-    AllocBufT(&Tl.Ints, Prod(Ff->TileDims));
-    AllocBufT0(&Tl.UInts, Prod(Ff->TileDims));
-    AllocBufT(&Tl.EMaxes, Prod(Tl.NBlocks3));
-    AllocBufT0(&Tl.Ns, Prod(Tl.NBlocks3));
+    AllocTypedBuf(&Tl.Floats, Prod(Ff->TileDims));
+    AllocTypedBuf(&Tl.Ints, Prod(Ff->TileDims));
+    AllocTypedBuf0(&Tl.UInts, Prod(Ff->TileDims));
+    AllocTypedBuf(&Tl.EMaxes, Prod(Tl.NBlocks3));
+    AllocTypedBuf0(&Tl.Ns, Prod(Tl.NBlocks3));
     AllocBuf0(&Tl.Bs.Stream, Ff->ChunkBytes + BufferSize(Tl.Bs));
-    mg_CleanUp(0, DeallocBufT(&Tl.Floats);
-                  DeallocBufT(&Tl.Ints);
-                  DeallocBufT(&Tl.UInts);
-                  DeallocBufT(&Tl.EMaxes);
-                  DeallocBufT(&Tl.Ns);
+    mg_CleanUp(0, DeallocTypedBuf(&Tl.Floats);
+                  DeallocTypedBuf(&Tl.Ints);
+                  DeallocTypedBuf(&Tl.UInts);
+                  DeallocTypedBuf(&Tl.EMaxes);
+                  DeallocTypedBuf(&Tl.Ns);
                   DeallocBuf(&Tl.Bs.Stream));
     ff_err Err(ff_err_code::NoError);
     while (true) {
@@ -605,7 +605,7 @@ ff_err Decode(file_format* Ff, metadata* Meta) {
     }
   }
   if (Ff->NLevels > 0)
-    Cdf53Inverse(&(Ff->Volume), Ff->NLevels);
+    InverseCdf53(&(Ff->Volume), Ff->NLevels);
   return mg_Error(ff_err_code::NoError);
 }
 
@@ -617,15 +617,15 @@ void CleanUp(file_format* Ff) {
     for (int S = 0; S < Size(Ff->Subbands); ++S) {
       for (int T = 0; T < Size(Ff->Chunks[S]); ++T)
         Dealloc(&Ff->Chunks[S][T]);
-      DeallocBufT(&Ff->Chunks[S]);
+      DeallocTypedBuf(&Ff->Chunks[S]);
     }
     if (Size(Ff->Chunks) > 0)
-      DeallocBufT(&Ff->Chunks);
+      DeallocTypedBuf(&Ff->Chunks);
   }
   if (Size(Ff->Subbands) > 0)
     Dealloc(&Ff->Subbands);
   if (Size(Ff->TileHeaders) > 0)
-    DeallocBufT(&Ff->TileHeaders);
+    DeallocTypedBuf(&Ff->TileHeaders);
 }
 
 } // namespace mg

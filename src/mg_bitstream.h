@@ -1,10 +1,13 @@
-// TODO: this code currently works only on little-endian machine. make sure it works for
-// both types of endianess
+// TODO: this code currently works only on little-endian machine. make sure it
+// works for both types of endianess
 // TODO: bound checking?
-/* A bit stream. LSB bits are written first. Bytes are written in little-endian order. */
+
+/*
+A bit stream. LSB bits are written first. Bytes are written in little-endian
+order. */
 #pragma once
 
-#include "mg_types.h"
+#include "mg_common.h"
 
 namespace mg {
 
@@ -15,8 +18,8 @@ struct bitstream {
   u64 BitBuf = 0; // buffer
   int BitPos = 0; // how many of those bits we've consumed/written
 
-  inline static array<u64, 65> Masks = []() {
-    array<u64, 65> Masks;
+  inline static stack_array<u64, 65> Masks = []() {
+    stack_array<u64, 65> Masks;
     for (int I = 0; I < 64; ++I)
       Masks[I] = (u64(1) << I) - 1;
     Masks[64] = ~u64(0);
@@ -25,22 +28,24 @@ struct bitstream {
 };
 
 void Rewind(bitstream* Bs);
-i64 Size(const bitstream& Bs); // TODO: takes a non-pointer as argument
-i64 BitSize(const bitstream& Bs);
-int BufferSize(const bitstream& Bs);
+i64 Size( bitstream& Bs); // TODO: takes a non-pointer as argument
+i64 BitSize( bitstream& Bs);
+int BufferSize( bitstream& Bs);
 /* ---------------- Read functions ---------------- */
 void InitRead(bitstream* Bs, buffer Stream);
 /* Refill our buffer (replace the consumed bytes with new bytes from memory) */
 void Refill(bitstream* Bs);
-/* Peek the next "Count" bits from the buffer without consuming them (Count <= 64 - BitPos).
-This is often called after Refill(). */
+/*
+Peek the next "Count" bits from the buffer without consuming them
+(Count <= 64 - BitPos). This is often called after Refill(). */
 u64 Peek(bitstream* Bs, int Count = 1);
 /* Consume the next "Count" bits from the buffer (Count <= 64 - 7).
 This is often called after Refill() and potentially Peek(). */
 void Consume(bitstream* Bs, int Count = 1);
-/* Extract "Count" bits from the stream (Count <= 64 - 7).
-This performs at most one Refill() call. The restriction on Count is due to the fact that
-Refill() works in units of bytes, so at most 7 already consumed bits can be left over. */
+/*
+Extract "Count" bits from the stream (Count <= 64 - 7). This performs at most
+one Refill() call. The restriction on Count is due to the fact that Refill()
+works in units of bytes, so at most 7 already consumed bits can be left over. */
 u64 Read(bitstream* Bs, int Count = 1);
 /* Similar to Read() but Count is less restrictive (Count <= 64) */
 u64 ReadLong(bitstream* Bs, int Count);

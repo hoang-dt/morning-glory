@@ -10,7 +10,8 @@
 #include "mg_mutex.h"
 namespace mg {
 static mutex StacktraceMutex;
-bool PrintStacktrace(printer* Pr) {
+bool
+PrintStacktrace(printer* Pr) {
   lock Lck(&StacktraceMutex);
   mg_Print(Pr, "Stack trace:\n");
   SymSetOptions(SYMOPT_DEFERRED_LOADS | SYMOPT_INCLUDE_32BIT_MODULES | SYMOPT_UNDNAME);
@@ -69,7 +70,8 @@ bool PrintStacktrace(printer* Pr) {
 #include "mg_macros.h"
 namespace mg {
 // TODO: get the line number (add2line)
-bool PrintStacktrace(printer* Pr) {
+bool
+PrintStacktrace(printer* Pr) {
   mg_Print(Pr, "Stack trace:\n");
   constexpr int MaxFrames = 63;
   void* AddrList[MaxFrames + 1]; // Storage array for stack trace address data
@@ -84,7 +86,8 @@ bool PrintStacktrace(printer* Pr) {
   size_t FuncNameSize = 128;
   char Buffer[128];
   char* FuncName = Buffer;
-  for (int I = 1; I < AddrLen; ++I) { // iterate over the returned symbol lines (skip the first)
+  // iterate over the returned symbol lines (skip the first)
+  for (int I = 1; I < AddrLen; ++I) {
     // fprintf(stderr, "%s\n", SymbolList[I]);
 	  char* BeginName = 0, *BeginOffset = 0, *EndOffset = 0;
     /* Find parentheses and +address offset surrounding the mangled name:
@@ -103,7 +106,8 @@ bool PrintStacktrace(printer* Pr) {
       *BeginName++ = '\0';
 	    *BeginOffset++ = '\0';
 	    *EndOffset = '\0';
-	    /* mangled name is now in [BeginName, BeginOffset) and caller offset in [BeginOffset, EndOffset) */
+	    /* mangled name is now in [BeginName, BeginOffset) and caller offset in
+      [BeginOffset, EndOffset) */
 	    int Status;
 	    char* Ret = abi::__cxa_demangle(BeginName, FuncName, &FuncNameSize, &Status);
 	    if (Status == 0) {
@@ -115,9 +119,10 @@ bool PrintStacktrace(printer* Pr) {
                  SymbolList[I], BeginName, BeginOffset, AddrList[I]);
 	    }
       /* get file names and line numbers using addr2line */
-      const int BufLen = 1024;
+      int BufLen = 1024;
       char Syscom[BufLen];
-      snprintf(Syscom, BufLen,"addr2line %p -e %s", AddrList[I], "main"); //last parameter is the name of this app
+      //last parameter is the name of this app
+      snprintf(Syscom, BufLen,"addr2line %p -e %s", AddrList[I], "main");
       FILE* F = popen(Syscom, "r");
       if (F) {
         char Buffer[BufLen] = { 0 };

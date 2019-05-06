@@ -3,23 +3,20 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "mg_macros.h"
-#include "mg_memory.h"
 #include "mg_error.h"
-#include "mg_io.h"
-#include "mg_types.h"
+#include "mg_memory.h"
 
 namespace mg {
 
-template <typename t>
-error<t>::error() {}
+mg_T(t) error<t>::
+error() {}
 
-template <typename t>
-error<t>::error(t CodeIn, bool StrGened, cstr MsgIn) :
+mg_T(t) error<t>::
+error(t CodeIn, bool StrGened, cstr MsgIn) :
   Msg(MsgIn), Code(CodeIn), StackIdx(0), StrGenerated(StrGened) {}
 
-template <typename t>
-cstr ToString(const error<t>& Err, bool Force) {
+mg_T(t) cstr
+ToString(const error<t>& Err, bool Force) {
   if (Force || !Err.StrGenerated) {
     auto ErrStr = ToString(Err.Code);
     snprintf(ScratchBuf, sizeof(ScratchBuf), "%.*s (file: %s, line %d): %s",
@@ -28,25 +25,17 @@ cstr ToString(const error<t>& Err, bool Force) {
   return ScratchBuf;
 }
 
-template <typename t>
-void PrintStacktrace(printer* Pr, const error<t>& Err) {
+mg_T(t) void
+PrintStacktrace(printer* Pr, const error<t>& Err) {
   mg_Print(Pr, "Stack trace:\n");
   for (i8 I = 0; I < Err.StackIdx; ++I)
     mg_Print(Pr, "File %s, line %d\n", Err.Files[I], Err.Lines[I]);
 }
 
-template <typename t>
-bool ErrorExists(const error<t>& Err) {
-  return Err.Code != t::NoError;
-}
+mg_T(t) bool
+ErrorExists(const error<t>& Err) { return Err.Code != t::NoError; }
 
 } // namespace mg
-
-#define mg_TempSprintHelper(...)\
-  __VA_OPT__(snprintf(ScratchBuf + L, sizeof(ScratchBuf) - size_t(L), __VA_ARGS__));\
-  mg_Unused(L)
-
-#define mg_ExtractFirst(X, ...) X
 
 #undef mg_Error
 #define mg_Error(ErrCode, ...)\
@@ -58,7 +47,7 @@ bool ErrorExists(const error<t>& Err) {
       auto ErrStr = ToString(Err.Code);\
       int L = snprintf(ScratchBuf, sizeof(ScratchBuf), "%.*s (file %s, line %d): ",\
                        ErrStr.Size, ErrStr.Ptr, __FILE__, __LINE__);\
-      mg_TempSprintHelper(__VA_ARGS__);\
+      mg_SPrintHelper(ScratchBuf, L, __VA_ARGS__);\
       return Err;\
     }\
     mg::error Err(ErrCode);\

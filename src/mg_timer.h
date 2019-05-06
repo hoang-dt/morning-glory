@@ -1,6 +1,6 @@
 #pragma once
 
-#include "mg_types.h"
+#include "mg_common.h"
 
 namespace mg {
 struct timer;

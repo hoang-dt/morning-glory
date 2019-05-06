@@ -1,17 +1,14 @@
 #pragma once
 
 #include "mg_assert.h"
-#include "mg_macros.h"
-#include "mg_types.h"
 
 namespace mg {
 
-template <typename t> mg_ForceInline
-list<t>::list(allocator* Alloc) : Alloc(Alloc) {}
+mg_Ti(t) list<t>::
+list(allocator* Alloc) : Alloc(Alloc) {}
 
-template <typename t>
-list_iterator<t> Insert(list<t>* List, list_iterator<t> Where, const t& Payload)
-{
+mg_T(t) list_iterator<t>
+Insert(list<t>* List, const list_iterator<t>& Where, const t& Payload) {
   buffer Buf;
   List->Alloc->Alloc(&Buf, sizeof(list_node<t>));
   list_node<t>* NewNode = (list_node<t>*)Buf.Data;
@@ -25,8 +22,8 @@ list_iterator<t> Insert(list<t>* List, list_iterator<t> Where, const t& Payload)
   return list_iterator<t>{NewNode};
 }
 
-template <typename t>
-list_iterator<t> PushBack(list<t>* List, const t& Payload) {
+mg_T(t) list_iterator<t>
+PushBack(list<t>* List, const t& Payload) {
   auto Node = List->Head;
   list_node<t>* Prev = nullptr;
   while (Node) {
@@ -39,8 +36,8 @@ list_iterator<t> PushBack(list<t>* List, const t& Payload) {
   return NewNode;
 }
 
-template <typename t>
-void Dealloc(list<t>* List) {
+mg_T(t) void
+Dealloc(list<t>* List) {
   auto Node = List->Head;
   while (Node) {
     buffer Buf((byte*)Node, sizeof(list_node<t>), List->Alloc);
@@ -51,57 +48,31 @@ void Dealloc(list<t>* List) {
   List->Size = 0;
 }
 
-template <typename t> mg_ForceInline
-i64 Size(const list<t>& List) {
-  return List.Size;
-}
+mg_Ti(t) i64
+Size(const list<t>& List) { return List.Size; }
 
-template <typename t> mg_ForceInline
-list_iterator<t>& list_iterator<t>::operator++() {
+mg_Ti(t) list_iterator<t>&
+list_iterator<t>::operator++() {
   mg_Assert(Node);
   Node = Node->Next;
   return *this;
 }
 
-template <typename t> mg_ForceInline
-list_node<t>* list_iterator<t>::operator->() const {
-  mg_Assert(Node);
-  return Node;
-}
+mg_Ti(t) list_node<t>*
+list_iterator<t>::operator->() { mg_Assert(Node); return Node; }
 
-template <typename t> mg_ForceInline
-t& list_iterator<t>::operator*() const {
-  mg_Assert(Node);
-  return Node->Payload;
-}
+mg_Ti(t) t& list_iterator<t>::
+operator*() { mg_Assert(Node); return Node->Payload; }
 
-template <typename t> mg_ForceInline
-bool list_iterator<t>::operator!=(list_iterator<t> Other) const {
-  return Node != Other.Node;
-}
-template <typename t> mg_ForceInline
-bool list_iterator<t>::operator==(list_iterator<t> Other) const {
-  return Node == Other.Node;
-}
+mg_Ti(t) bool list_iterator<t>::
+operator!=(const list_iterator<t>& Other) { return Node != Other.Node; }
+mg_Ti(t) bool list_iterator<t>::
+operator==(const list_iterator<t>& Other) { return Node == Other.Node; }
 
-template <typename t> mg_ForceInline
-list_iterator<t> Begin(list<t>& List) {
-  return list_iterator<t>{List.Head};
-}
-template <typename t> mg_ForceInline
-list_iterator<t> End(list<t>& List) {
-  (void)List;
-  return list_iterator<t>();
-}
-template <typename t> mg_ForceInline
-list_iterator<const t> ConstBegin(const list<t>& List) {
-  return list_iterator<const t>{(list_node<const t>*)List.Head};
-}
-template <typename t> mg_ForceInline
-list_iterator<const t> ConstEnd(const list<t>& List) {
-  (void)List;
-  return list_iterator<const t>();
-}
+mg_Ti(t) list_iterator<t>
+Begin(const list<t>& List) { return list_iterator<t>{List.Head}; }
+mg_Ti(t) list_iterator<t>
+End(const list<t>& List) { (void)List; return list_iterator<t>(); }
 
 } // namespace mg
 

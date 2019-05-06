@@ -22,7 +22,7 @@ void SetBufferMode(buffer_mode Mode) {
 
 FILE* GetFileHandle(logger* Logger, cstr FileName) {
   int MaxSlots = Size(Logger->FileHandles);
-  u32 FullHash = Murmur3_32((const u8*)FileName, strlen(FileName), 37);
+  u32 FullHash = Murmur3_32((u8*)FileName, strlen(FileName), 37);
   int Index = FullHash % MaxSlots;
   FILE** Fp = &Logger->FileHandles[Index];
   bool Collision = false;

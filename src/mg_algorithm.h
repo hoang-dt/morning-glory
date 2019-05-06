@@ -1,47 +1,31 @@
 /* Generic algorithms to replace <algorithm> */
 #pragma once
 
+#include "mg_macros.h"
+
 namespace mg {
 
-template <typename t>
-t Min(t a, t b);
-template <typename t>
-t Max(t a, t b);
+mg_T(t) t Min(const t& a, const t& b);
+mg_T(t) t Max(const t& a, const t& b);
 
-template <typename i, typename f>
-i MaxElement(i Begin, i End, const f& CompareFunc);
+mg_T2(i, f) i MaxElem(i Beg, i End, const f& Comp);
+mg_T(i) struct MinMax { i Min, Max; };
+mg_T(i) MinMax<i> MinMaxElem(i Beg, i End);
+mg_T2(i, f) MinMax<i> MinMaxElem(i Beg, i End, const f& Comp);
 
-template <typename i>
-struct MinMax { i Min, Max; };
-template <typename i>
-MinMax<i> MinMaxElement(i Begin, i End);
-template <typename i, typename f>
-MinMax<i> MinMaxElement(i Begin, i End, const f& CompareFunc);
+mg_T2(i, t) i Find(i Beg, i End, const t& Val);
+mg_T2(i, t) i FindLast(i RevBeg, i RevEnd, const t& Val);
+mg_T2(t1, t2) bool Contains(const t1& Big, const t2& Small);
+mg_T2(i, f) i FindIf(i Beg, i End, const f& Pred);
 
-template <typename i, typename t>
-i Find(i Begin, i End, const t& Val);
+mg_T(t) void Swap(t* A, t* B);
 
-template <typename i, typename t>
-i FindLast(i ReverseBegin, i ReverseEnd, const t& Val);
-
-template <typename t1, typename t2>
-bool Contains(const t1& Big, const t2& Small);
-
-template <typename i, typename t>
-i FindIf(i Begin, i End, const t& Func);
-
-template <typename t>
-void Swap(t* A, t* B);
-
-template <typename i, typename t>
-void Fill(i Begin, i End, const t& Val);
+mg_T2(i, t) void Fill(i Beg, i End, const t& Val);
 
 /* Only work with random access iterator */
-template <typename i>
-void Reverse(i Begin, i End);
+mg_T(i) void Reverse(i Beg, i End);
 
-template <typename i>
-int ForwardDistance(i Begin, i End);
+mg_T(i) int FwdDist(i Beg, i End);
 
 } // namespace mg
 

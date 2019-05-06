@@ -1,116 +1,108 @@
 #pragma once
 
-#include "mg_macros.h"
-
 namespace mg {
 
-template <typename t> mg_ForceInline
-t Min(t a, t b) {
-  return b < a ? b : a;
-}
-template <typename t> mg_ForceInline
-t Max(t a, t b) {
-  return a < b ? b : a;
-}
+mg_Ti(t) t Min(const t& a, const t& b) { return b < a ? b : a; }
+mg_Ti(t) t Max(const t& a, const t& b) { return a < b ? b : a; }
 
-template <typename i, typename f>
-i MaxElement(i Begin, i End, const f& CompareFunc) {
-  auto MaxElem = Begin;
-  for (i Pos = Begin; Pos != End; ++Pos) {
-    if (CompareFunc(*MaxElem, *Pos))
+mg_T2(i, f) i
+MaxElem(i Beg, i End, f& Comp) {
+  auto MaxElem = Beg;
+  for (i Pos = Beg; Pos != End; ++Pos) {
+    if (Comp(*MaxElem, *Pos))
       MaxElem = Pos;
   }
   return MaxElem;
 }
 
-template <typename i>
-MinMax<i> MinMaxElement(i Begin, i End) {
-  auto MinElem = Begin;
-  auto MaxElem = Begin;
-  for (i Pos = Begin; Pos != End; ++Pos) {
+mg_T(i) MinMax<i>
+MinMaxElem(i Beg, i End) {
+  auto MinElem = Beg;
+  auto MaxElem = Beg;
+  for (i Pos = Beg; Pos != End; ++Pos) {
     if (*Pos < *MinElem)
       MinElem = Pos;
     else if (*Pos > *MaxElem)
       MaxElem = Pos;
   }
-  return MinMax<i>{ MinElem, MaxElem };
+  return MinMax<i>{MinElem, MaxElem};
 }
 
-template <typename i, typename f>
-MinMax<i> MinMaxElement(i Begin, i End, const f& CompareFunc) {
-  auto MinElem = Begin;
-  auto MaxElem = Begin;
-  for (i Pos = Begin; Pos != End; ++Pos) {
-    if (CompareFunc(*Pos, *MinElem))
+mg_T2(i, f) MinMax<i>
+MinMaxElem(i Beg, i End, const f& Comp) {
+  auto MinElem = Beg;
+  auto MaxElem = Beg;
+  for (i Pos = Beg; Pos != End; ++Pos) {
+    if (Comp(*Pos, *MinElem))
       MinElem = Pos;
-    else if (CompareFunc(*MaxElem, *Pos))
+    else if (Comp(*MaxElem, *Pos))
       MaxElem = Pos;
   }
   return MinMax<i>{ MinElem, MaxElem };
 }
 
-template <typename i, typename t>
-i Find(i Begin, i End, const t& Val) {
-  for (i Pos = Begin; Pos != End; ++Pos) {
+mg_T2(i, t) i
+Find(i Beg, i End, const t& Val) {
+  for (i Pos = Beg; Pos != End; ++Pos) {
     if (*Pos == Val)
       return Pos;
   }
   return End;
 }
 
-template <typename i, typename t>
-i FindLast(i ReverseBegin, i ReverseEnd, const t& Val) {
-  for (i Pos = ReverseBegin; Pos != ReverseEnd; --Pos) {
+mg_T2(i, t) i
+FindLast(i RevBeg, i RevEnd, const t& Val) {
+  for (i Pos = RevBeg; Pos != RevEnd; --Pos) {
     if (*Pos == Val)
       return Pos;
   }
-  return ReverseEnd;
+  return RevEnd;
 }
 
-template <typename t1, typename t2>
-bool Contains(const t1& Big, const t2& Small) {
-  return Find(ConstBegin(Big), ConstEnd(Big), Small) != ConstEnd(Big);
+mg_T2i(t1, t2) bool
+Contains(const t1& Big, const t2& Small) {
+  return Find(Begin(Big), End(Big), Small) != End(Big);
 }
 
-template <typename i, typename t>
-i FindIf(i Begin, i End, const t& Func) {
-  for (i Pos = Begin; Pos != End; ++Pos) {
-    if (Func(*Pos))
+mg_T2(i, f) i
+FindIf(i Beg, i End, const f& Pred) {
+  for (i Pos = Beg; Pos != End; ++Pos) {
+    if (Pred(*Pos))
       return Pos;
   }
   return End;
 }
 
-template <typename t>
-void Swap(t* A, t* mg_Restrict B) {
+mg_Ti(t) void
+Swap(t* A, t* mg_Restrict B) {
   t T = *A;
   *A = *B;
   *B = T;
 }
 
-template <typename i, typename t>
-void Fill(i Begin, i End, const t& Val) {
-for (i Iter = Begin; Iter != End; ++Iter)
-  *Iter = Val;
+mg_T2(i, t) void
+Fill(i Beg, i End, const t& Val) {
+  for (i It = Beg; It != End; ++It)
+    *It = Val;
 }
 
-template <typename i>
-void Reverse(i Begin, i End) {
-  auto Iter1 = Begin;
-  auto Iter2 = End - 1;
-  while (Iter1 < Iter2) {
-    Swap(Iter1, Iter2);
-    ++Iter1;
-    --Iter2;
+mg_T(i) void
+Reverse(i Beg, i End) {
+  auto It1 = Beg;
+  auto It2 = End - 1;
+  while (It1 < It2) {
+    Swap(It1, It2);
+    ++It1;
+    --It2;
   }
 }
 
-template <typename i>
-int ForwardDistance(i Begin, i End) {
+mg_T(i) int
+FwdDist(i Beg, i End) {
   int Dist = 0;
-  while (Begin != End) {
+  while (Beg != End) {
     ++Dist;
-    ++Begin;
+    ++Beg;
   }
   return Dist;
 }

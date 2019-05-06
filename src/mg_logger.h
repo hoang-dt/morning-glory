@@ -16,7 +16,8 @@ void SetBufferMode(buffer_mode Mode); // set buffer mode for the global logger
 
 } // namespace mg
 
-/* Use the following macro for logging as follows
+/*
+Use the following macro for logging as follows
 mg_Log("log.txt", "Message %d", A)
 mg_Log(stderr, "Message %f", B) */
 #define mg_Log(FileName, Format, ...)

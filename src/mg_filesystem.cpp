@@ -3,7 +3,6 @@
 #include "mg_algorithm.h"
 #include "mg_filesystem.h"
 #include "mg_io.h"
-#include "mg_memory.h"
 
 #if defined(_WIN32)
   #include <direct.h>
@@ -22,50 +21,55 @@
 
 namespace mg {
 
-path::path() = default;
+path::
+path() = default;
 
-path::path(str_ref Str) {
-  Init(this, Str);
+path::
+path(stref Str) { Init(this, Str); }
+
+void
+Init(path* Path, stref Str) {
+  Path->Parts[0] = Str;
+  Path->NParts = 1;
 }
 
-void Init(path* Path, str_ref Str) {
-  Path->Components[0] = Str;
-  Path->NumComponents = 1;
+void Append(path* Path, stref Component) {
+  mg_Assert(Path->NParts < Path->NPartsMax, "too many path parts");
+  Path->Parts[Path->NParts++] = Component;
 }
 
-void Append(path* Path, str_ref Component) {
-  mg_Assert(Path->NumComponents < Path->NumComponentsMax, "too many path components");
-  Path->Components[Path->NumComponents++] = Component;
-}
-
-str_ref GetFileName(str_ref Path) {
+stref
+GetFileName(stref Path) {
   mg_Assert(!Contains(Path, '\\'));
-  cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
-  if (LastSlash != ConstReverseEnd(Path))
-    return SubString(Path, int(LastSlash - ConstBegin(Path) + 1),
-                     Path.Size - int(LastSlash - ConstBegin(Path)));
+  cstr LastSlash = FindLast(RevBegin(Path), RevEnd(Path), '/');
+  if (LastSlash != RevEnd(Path))
+    return SubString(Path, int(LastSlash - Begin(Path) + 1),
+                     Path.Size - int(LastSlash - Begin(Path)));
   return Path;
 }
 
-str_ref GetDirName(str_ref Path) {
+stref
+GetDirName(stref Path) {
   mg_Assert(!Contains(Path, '\\'));
-  cstr LastSlash = FindLast(ConstReverseBegin(Path), ConstReverseEnd(Path), '/');
-  if (LastSlash != ConstReverseEnd(Path))
-    return SubString(Path, 0, int(LastSlash - ConstBegin(Path)));
+  cstr LastSlash = FindLast(RevBegin(Path), RevEnd(Path), '/');
+  if (LastSlash != RevEnd(Path))
+    return SubString(Path, 0, int(LastSlash - Begin(Path)));
   return Path;
 }
 
-str ToString(const path& Path) {
+str
+ToString(const path& Path) {
   printer Pr(ScratchBuf, sizeof(ScratchBuf));
-  for (int I = 0; I < Path.NumComponents; ++I) {
-    mg_Print(&Pr, "%.*s", Path.Components[I].Size, Path.Components[I].Ptr);
-    if (I + 1 < Path.NumComponents)
+  for (int I = 0; I < Path.NParts; ++I) {
+    mg_Print(&Pr, "%.*s", Path.Parts[I].Size, Path.Parts[I].Ptr);
+    if (I + 1 < Path.NParts)
       mg_Print(&Pr, "/");
   }
   return ScratchBuf;
 }
 
-bool IsRelative(str_ref Path) {
+bool
+IsRelative(stref Path) {
   if (Path.Size > 0 && Path[0] == '/')  // e.g. /usr/local
     return false;
   if (Path.Size > 2 && Path[1] == ':' && Path[2] == '/')  // e.g. C:/Users
@@ -73,7 +77,8 @@ bool IsRelative(str_ref Path) {
   return true;
 }
 
-bool CreateFullDir(str_ref Path) {
+bool
+CreateFullDir(stref Path) {
   str PathCopy = ToString(Path);
   int Error = 0;
   str P = PathCopy;
@@ -86,7 +91,8 @@ bool CreateFullDir(str_ref Path) {
   return (Error == 0);
 }
 
-bool DirExists(str_ref Path) {
+bool
+DirExists(stref Path) {
   str PathCopy = ToString(Path);
   return Access(PathCopy) == 0;
 }

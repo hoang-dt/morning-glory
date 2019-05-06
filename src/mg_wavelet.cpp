@@ -2,49 +2,49 @@
 #include "mg_array.h"
 #include "mg_assert.h"
 #include "mg_bitops.h"
-#include "mg_common_types.h"
+#include "mg_data_types.h"
 #include "mg_math.h"
-#include "mg_types.h"
+#include "mg_common.h"
 #include "mg_volume.h"
 #include "mg_wavelet.h"
 
 namespace mg {
 
 // TODO: this won't work for a general (sub)volume
-void Cdf53Forward(volume* Vol, int NLevels) {
+void ForwardCdf53(volume* Vol, int NLevels) {
 #define Body(type)\
-  v3i Dims = Unpack3Ints64(Vol->DimsPacked);\
+  v3i Dims = Unpack3i64(Vol->Dims);\
   type* FPtr = (type*)(Vol->Buffer.Data);\
   for (int I = 0; I < NLevels; ++I) {\
-    ForwardLiftCdf53X(FPtr, Dims, v3i(I, I, I));\
-    ForwardLiftCdf53Y(FPtr, Dims, v3i(I, I, I));\
-    ForwardLiftCdf53Z(FPtr, Dims, v3i(I, I, I));\
+    FLiftCdf53X(FPtr, Dims, v3i(I, I, I));\
+    FLiftCdf53Y(FPtr, Dims, v3i(I, I, I));\
+    FLiftCdf53Z(FPtr, Dims, v3i(I, I, I));\
   }\
 
-  TypeChooser(Vol->Type)
+  mg_DispatchOnType(Vol->Type)
 #undef Body
 }
 
 // TODO: this won't work for a general (sub)volume
-void Cdf53Inverse(volume* Vol, int NLevels) {
+void InverseCdf53(volume* Vol, int NLevels) {
 #define Body(type)\
-  v3i Dims = Unpack3Ints64(Vol->DimsPacked);\
+  v3i Dims = Unpack3i64(Vol->Dims);\
   type* FPtr = (type*)(Vol->Buffer.Data);\
   for (int I = NLevels - 1; I >= 0; --I) {\
-    InverseLiftCdf53Z(FPtr, Dims, v3i(I, I, I));\
-    InverseLiftCdf53Y(FPtr, Dims, v3i(I, I, I));\
-    InverseLiftCdf53X(FPtr, Dims, v3i(I, I, I));\
+    ILiftCdf53Z(FPtr, Dims, v3i(I, I, I));\
+    ILiftCdf53Y(FPtr, Dims, v3i(I, I, I));\
+    ILiftCdf53X(FPtr, Dims, v3i(I, I, I));\
   }\
 
-  TypeChooser(Vol->Type)
+  mg_DispatchOnType(Vol->Type)
 #undef Body
 }
 
 // TODO: this won't work for a general (sub)volume
-void Cdf53ForwardExtrapolate(volume* Vol) {
+void ForwardCdf53Ext(volume* Vol) {
 #define Body(type)\
-  v3i SmallDims = Unpack3Ints64(Vol->Extent.DimsPacked);\
-  v3i BigDims = Unpack3Ints64(Vol->DimsPacked);\
+  v3i SmallDims = Unpack3i64(Vol->Extent.Dims);\
+  v3i BigDims = Unpack3i64(Vol->Dims);\
   if (BigDims.Y > 1)\
     mg_Assert(BigDims.X == BigDims.Y);\
   if (BigDims.Z > 1)\
@@ -53,20 +53,20 @@ void Cdf53ForwardExtrapolate(volume* Vol) {
   type* FPtr = (type*)(Vol->Buffer.Data);\
   int NLevels = Log2Floor(BigDims.X - 1) + 1;\
   for (int I = 0; I < NLevels; ++I) {\
-    ForwardLiftExtrapolateCdf53X(FPtr, SmallDims, BigDims, v3i(I, I, I));\
-    ForwardLiftExtrapolateCdf53Y(FPtr, SmallDims, BigDims, v3i(I, I, I));\
-    ForwardLiftExtrapolateCdf53Z(FPtr, SmallDims, BigDims, v3i(I, I, I));\
+    FLiftExtCdf53X(FPtr, SmallDims, BigDims, v3i(I, I, I));\
+    FLiftExtCdf53Y(FPtr, SmallDims, BigDims, v3i(I, I, I));\
+    FLiftExtCdf53Z(FPtr, SmallDims, BigDims, v3i(I, I, I));\
   }\
 
-  TypeChooser(Vol->Type)
+  mg_DispatchOnType(Vol->Type)
 #undef Body
 }
 
 // TODO: this won't work for a general (sub)volume
-void Cdf53InverseExtrapolate(volume* Vol) {
+void InverseCdf53Ext(volume* Vol) {
 #define Body(type)\
-  v3i SmallDims = Unpack3Ints64(Vol->Extent.DimsPacked);\
-  v3i BigDims = Unpack3Ints64(Vol->DimsPacked);\
+  v3i SmallDims = Unpack3i64(Vol->Extent.Dims);\
+  v3i BigDims = Unpack3i64(Vol->Dims);\
   if (BigDims.Y > 1)\
     mg_Assert(BigDims.X == BigDims.Y);\
   if (BigDims.Z > 1)\
@@ -75,16 +75,16 @@ void Cdf53InverseExtrapolate(volume* Vol) {
   type* FPtr = (type*)(Vol->Buffer.Data);\
   int NLevels = Log2Floor(BigDims.X - 1) + 1;\
   for (int I = NLevels - 1; I >= 0; --I) {\
-    InverseLiftExtrapolateCdf53Z(FPtr, SmallDims, BigDims, v3i(I, I, I));\
-    InverseLiftExtrapolateCdf53Y(FPtr, SmallDims, BigDims, v3i(I, I, I));\
-    InverseLiftExtrapolateCdf53X(FPtr, SmallDims, BigDims, v3i(I, I, I));\
+    ILiftExtCdf53Z(FPtr, SmallDims, BigDims, v3i(I, I, I));\
+    ILiftExtCdf53Y(FPtr, SmallDims, BigDims, v3i(I, I, I));\
+    ILiftExtCdf53X(FPtr, SmallDims, BigDims, v3i(I, I, I));\
   }\
 
-  TypeChooser(Vol->Type)
+  mg_DispatchOnType(Vol->Type)
 #undef Body
 }
 
-array<u8, 8> SubbandOrders[4] = {
+stack_array<u8, 8> SubbandOrders[4] = {
   { 127, 127, 127, 127, 127, 127, 127, 127 }, // not used
   { 0, 1, 127, 127, 127, 127, 127, 127 }, // for 1D
   { 0, 1, 2, 3, 127, 127, 127, 127 }, // for 2D
@@ -92,17 +92,17 @@ array<u8, 8> SubbandOrders[4] = {
 };
 
 /* Here we assume the wavelet transform is done in X, then Y, then Z */
-void BuildSubbands(v3i N, int NLevels, dynamic_array<grid>* Subbands) {
-  int NDims = NumDims(N);
-  const array<u8, 8>& Order = SubbandOrders[NDims];
+void BuildSubbands(v3i N, int NLevels, array<grid>* Subbands) {
+  int NDims = NDims(N);
+  stack_array<u8, 8>& Order = SubbandOrders[NDims];
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
   v3i M = N;
   for (int I = 0; I < NLevels; ++I) {
     v3i P((M.X + 1) >> 1, (M.Y + 1) >> 1, (M.Z + 1) >> 1);
     for (int J = (1 << NDims) - 1; J > 0; --J) {
-      u8 Z = CheckBit(Order[J], Max(NDims - 3, 0)),
-         Y = CheckBit(Order[J], Max(NDims - 2, 0)),
-         X = CheckBit(Order[J], Max(NDims - 1, 0));
+      u8 Z = BitSet(Order[J], Max(NDims - 3, 0)),
+         Y = BitSet(Order[J], Max(NDims - 2, 0)),
+         X = BitSet(Order[J], Max(NDims - 1, 0));
       v3i Sm((X == 0) ? P.X : M.X - P.X,
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
@@ -120,9 +120,9 @@ void BuildSubbands(v3i N, int NLevels, dynamic_array<grid>* Subbands) {
 }
 
 /* This version assumes the coefficients were not moved */
-void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<grid>* Subbands) {
-  int NDims = NumDims(N);
-  const array<u8, 8>& Order = SubbandOrders[NDims];
+void BuildSubbandsInPlace(v3i N, int NLevels, array<grid>* Subbands) {
+  int NDims = NDims(N);
+  stack_array<u8, 8>& Order = SubbandOrders[NDims];
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
   v3i M = N; // dimensions of all the subbands at the current level
   v3i S(1, 1, 1); // strides
@@ -130,9 +130,9 @@ void BuildSubbandsInPlace(v3i N, int NLevels, dynamic_array<grid>* Subbands) {
     S = S * 2;
     v3i P((M.X + 1) >> 1, (M.Y + 1) >> 1, (M.Z + 1) >> 1); // next dimensions
     for (int J = (1 << NDims) - 1; J > 0; --J) { // for each subband
-      u8 Z = CheckBit(Order[J], Max(NDims - 3, 0)),
-         Y = CheckBit(Order[J], Max(NDims - 2, 0)),
-         X = CheckBit(Order[J], Max(NDims - 1, 0));
+      u8 Z = BitSet(Order[J], Max(NDims - 3, 0)),
+         Y = BitSet(Order[J], Max(NDims - 2, 0)),
+         X = BitSet(Order[J], Max(NDims - 1, 0));
       v3i Sm((X == 0) ? P.X : M.X - P.X, // dimensions of the current subband
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
@@ -165,8 +165,8 @@ void FormSubbands(volume* Dst, volume Src, int NLevels) {
   mg_Assert(Dst->Extent.DimsPacked == Src.Extent.DimsPacked);
   mg_Assert(Dst->Type == Src.Type);
   v3i Dims = SmallDims(Src);
-  dynamic_array<grid> Subbands;
-  dynamic_array<grid> SubbandsInPlace;
+  array<grid> Subbands;
+  array<grid> SubbandsInPlace;
   BuildSubbands(Dims, NLevels, &Subbands);
   BuildSubbandsInPlace(Dims, NLevels, &SubbandsInPlace);
   for (int I = 0; I < Size(Subbands); ++I) {

@@ -4,11 +4,8 @@
 #include <stdlib.h>
 #include "mg_debugbreak.h"
 #include "mg_io.h"
-#include "mg_stacktrace.h"
 #include "mg_macros.h"
-
-#define mg_TempFprintHelper(...)\
-  __VA_OPT__(fprintf(stderr, __VA_ARGS__))
+#include "mg_stacktrace.h"
 
 #define mg_AssertHelper(Debug, Cond, ...)\
   do {\
@@ -16,7 +13,7 @@
       fprintf(stderr, "Condition \"%s\" failed, ", #Cond);\
       fprintf(stderr, "in file %s, line %d\n", __FILE__, __LINE__);\
       if (mg_NumArgs(__VA_ARGS__) > 0) {\
-        mg_TempFprintHelper(__VA_ARGS__);\
+        mg_FPrintHelper(__VA_ARGS__);\
         fprintf(stderr, "\n");\
       }\
       mg::printer Pr(stderr);\
@@ -36,6 +33,7 @@
 #endif
 
 #undef mg_AbortIf
-#define mg_AbortIf(Cond, ...) mg_AssertHelper(false, !(Cond) && "Fatal error!", __VA_ARGS__)
+#define mg_AbortIf(Cond, ...)\
+  mg_AssertHelper(false, !(Cond) && "Fatal error!", __VA_ARGS__)
 #undef mg_Abort
 #define mg_Abort(...) mg_AbortIf(true, __VA_ARGS__)

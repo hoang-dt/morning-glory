@@ -3,8 +3,8 @@
 namespace mg {
 
 /* Size is only used when Mode is Write or ReadWrite */
-error<mmap_err_code> open_file(const char* Name, map_mode Mode, mmap_file* MMap)
-{
+error<mmap_err_code>
+open_file(char* Name, map_mode Mode, mmap_file* MMap) {
 #if defined(_WIN32)
   MMap->File =
     CreateFileA(Name,
@@ -27,7 +27,8 @@ error<mmap_err_code> open_file(const char* Name, map_mode Mode, mmap_file* MMap)
   return mg_Error(mmap_err_code::NoError);
 }
 
-error<mmap_err_code> map_file(mmap_file* MMap, i64 Bytes) {
+error<mmap_err_code>
+map_file(mmap_file* MMap, i64 Bytes) {
 #if defined(_WIN32)
   LARGE_INTEGER FileSize{{0, 0}};
   if (!GetFileSizeEx(MMap->File, &FileSize) || Bytes != 0)
@@ -82,7 +83,8 @@ error<mmap_err_code> map_file(mmap_file* MMap, i64 Bytes) {
 }
 
 /* (Non-blocking) flush dirty pages */
-error<mmap_err_code> flush_file(mmap_file* MMap, byte* Start, i64 Bytes) {
+error<mmap_err_code>
+flush_file(mmap_file* MMap, byte* Start, i64 Bytes) {
 #if defined(_WIN32)
   bool Result = Start ? FlushViewOfFile(Start, (size_t)Bytes)
                       : FlushViewOfFile(MMap->Buf.Data, (size_t)Bytes);
@@ -108,7 +110,8 @@ error<mmap_err_code> flush_file(mmap_file* MMap, byte* Start, i64 Bytes) {
 
 /* (Blocking) flush file metadata and ensure file is physically written.
  * Meant to be called at the very end */
-error<mmap_err_code> sync_file(mmap_file* MMap) {
+error<mmap_err_code>
+sync_file(mmap_file* MMap) {
 #if defined(_WIN32)
   if (!FlushFileBuffers(MMap->File))
     return mg_Error(mmap_err_code::SyncFailed);
@@ -120,7 +123,8 @@ error<mmap_err_code> sync_file(mmap_file* MMap) {
 }
 
 /* Unmap the file and close all handles */
-error<mmap_err_code> unmap_file(mmap_file* MMap) {
+error<mmap_err_code>
+unmap_file(mmap_file* MMap) {
 #if defined(_WIN32)
   if (!UnmapViewOfFile(MMap->Buf.Data)) {
     CloseHandle(MMap->FileMapping);
@@ -136,7 +140,8 @@ error<mmap_err_code> unmap_file(mmap_file* MMap) {
 }
 
 /* Close the file */
-error<mmap_err_code> close_file(mmap_file* MMap) {
+error<mmap_err_code>
+close_file(mmap_file* MMap) {
 #if defined(_WIN32)
   if (!CloseHandle(MMap->File))
     return mg_Error(mmap_err_code::FileCloseFailed);

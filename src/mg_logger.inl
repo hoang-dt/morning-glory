@@ -1,30 +1,32 @@
 #pragma once
 
-#include "mg_types.h"
+#include "mg_common.h"
 
 #define MaxSlots 16
 
 namespace mg {
 
 struct logger {
-  array<FILE*, MaxSlots> FileHandles = {};
-  array<cstr, MaxSlots> FileNames = {};
-  array<u32, MaxSlots> FileNameHashes = {};
+  stack_array<FILE*, MaxSlots> FileHandles = {};
+  stack_array<cstr, MaxSlots> FileNames = {};
+  stack_array<u32, MaxSlots> FileNameHashes = {};
   buffer_mode Mode = buffer_mode::Full;
 };
 
-constexpr bool IsStdErr(cstr Input) {
+constexpr inline bool
+IsStdErr(cstr Input) {
   return Input[0] == 's' && Input[1] == 't' && Input[2] == 'd' &&
          Input[3] == 'e' && Input[4] == 'r' && Input[5] == 'r';
 }
-constexpr bool IsStdOut(cstr Input) {
+constexpr inline bool
+IsStdOut(cstr Input) {
   return Input[0] == 's' && Input[1] == 't' && Input[2] == 'd' &&
          Input[3] == 'o' && Input[4] == 'u' && Input[5] == 't';
 }
 
-template <typename t>
-constexpr cstr CastCStr(t Input) {
-  if constexpr (IsSameType<t, cstr>::Result)
+mg_T(t) constexpr cstr
+CastCStr(t Input) {
+  if constexpr (is_same_type<t, cstr>::Value)
     return Input;
   return nullptr;
 }
