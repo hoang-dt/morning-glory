@@ -18,7 +18,7 @@
 #include "mg_string.cpp"
 #include "mg_timer.cpp"
 #include "mg_utils.cpp"
-//#include "mg_wavelet.cpp"
+#include "mg_wavelet.cpp"
 #include "mg_volume.cpp"
 #include "mg_zfp.cpp"
 //#include "main.cpp"

@@ -45,15 +45,22 @@ struct traits {
   // static constexpr int ExpBias
 };
 
-mg_T2(t1, t2)
-struct is_same_type { enum { Value = false }; };
-mg_T(t)
-struct is_same_type<t, t> { enum { Value = true }; };
-mg_T(t)
-struct is_pointer { static constexpr bool Value = false; };
-mg_T(t)
-struct is_pointer<t*> { static constexpr bool Value = true; };
-mg_T(t) auto& Value(t& T);
+struct true_type { static constexpr bool Value = true; };
+struct false_type { static constexpr bool Value = false; };
+mg_T(t) struct remove_const { typedef t type; };
+mg_T(t) struct remove_const<const t> { typedef t type; };
+mg_T(t) struct remove_volatile { typedef t type; };
+mg_T(t) struct remove_volatile<volatile t> { typedef t type; };
+mg_T(t) struct remove_cv { typedef typename remove_volatile<typename remove_const<t>::type>::type type; };
+mg_T(t) struct remove_reference { typedef t type; };
+mg_T(t) struct remove_reference<t&> { typedef t type; };
+mg_T(t) struct remove_reference<t&&> { typedef t type; };
+mg_T2(t1, t2) struct is_same_type : false_type {};
+mg_T(t) struct is_same_type<t, t> : true_type {};
+mg_T(t) struct is_pointer_helper : false_type {};
+mg_T(t) struct is_pointer_helper<t*> : true_type {};
+mg_T(t) struct is_pointer : is_pointer_helper<typename remove_cv<t>::type> {};
+mg_T(t) auto& Value(t&& T);
 
 /* Something to replace std::array */
 template <typename t, int N>
@@ -63,16 +70,15 @@ struct stack_array {
   t& operator[](int Idx);
 };
 
-template <typename t, int N> t*
-Begin(stack_array<t, N>& A);
-template <typename t, int N> t*
-End(stack_array<t, N>& A);
-template <typename t, int N> t*
-RevBegin(stack_array<t, N>& A);
-template <typename t, int N> t*
-RevEnd(stack_array<t, N>& A);
-template <typename t, int N> int
-Size(const stack_array<t, N>& A);
+#define mg_TA template <typename t, int N>
+
+mg_TA t* Begin(stack_array<t, N>& A);
+mg_TA t* End(stack_array<t, N>& A);
+mg_TA t* RevBegin(stack_array<t, N>& A);
+mg_TA t* RevEnd(stack_array<t, N>& A);
+mg_TA int Size(const stack_array<t, N>& A);
+
+#undef mg_TA
 
 /* Vector in 2D, supports .X, .UV, and [] */
 #pragma GCC diagnostic push
@@ -84,8 +90,8 @@ struct v2 {
     struct { t U, V; };
     t E[2];
   };
-  static v2 Zero();
-  static v2 One();
+  inline static const v2 Zero = v2(0);
+  inline static const v2 One = v2(1);
   v2();
   explicit v2(t V);
   v2(t X, t Y);
@@ -113,8 +119,8 @@ struct v3 {
     struct { t Ignored3_; v2<t> V__; };
     t E[3];
   };
-  static v3 Zero();
-  static v3 One();
+  inline static const v3 Zero = v3(0);
+  inline static const v3 One = v3(1);
   v3();
   explicit v3(t V);
   v3(t X, t Y, t Z);
@@ -135,9 +141,7 @@ using v3d  = v3<f64>;
 #define mg_EndFor3
 #define mg_BeginFor3Lockstep(C1, B1, E1, S1, C2, B2, E2, S2)
 
-mg_T(t)
-struct typed_buffer;
-
+mg_T(t) struct typed_buffer;
 struct allocator;
 struct buffer {
   byte* Data = nullptr;
@@ -151,6 +155,8 @@ struct buffer {
   byte& operator[](i64 Idx);
   explicit operator bool() const;
 };
+
+bool operator==(const buffer& Buf1, const buffer& Buf2);
 
 mg_T(t)
 struct typed_buffer {
@@ -166,11 +172,8 @@ struct typed_buffer {
   explicit operator bool() const;
 };
 
-mg_T(t) i64
-Size(const typed_buffer<t>& Buf);
-mg_T(t) i64
-Bytes(const typed_buffer<t>& Buf);
-
+mg_T(t) i64 Size(const typed_buffer<t>& Buf);
+mg_T(t) i64 Bytes(const typed_buffer<t>& Buf);
 
 } // namespace mg
 

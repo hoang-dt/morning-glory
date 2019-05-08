@@ -5,6 +5,14 @@
 
 namespace mg {
 
+mg_Ti(t) auto&
+Value(t&& T) {
+  if constexpr (is_pointer<typename remove_reference<t>::type>::Value) 
+    return *T;
+  else 
+    return T;
+}
+
 template <>
 struct traits<i8> {
   using signed_t   = i8;
@@ -98,20 +106,19 @@ struct traits<f64> {
 };
 
 /* Something to replace std::array */
-#define TemplateArray template <typename t, int N> mg_Inline
+#define mg_TAi template <typename t, int N> mg_Inline
 
-TemplateArray t& stack_array<t, N>::
+mg_TAi t& stack_array<t, N>::
 operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
-
-TemplateArray t*
+mg_TAi t*
 Begin(stack_array<t, N>& A) { return &A.Arr[0]; }
-TemplateArray t*
+mg_TAi t*
 End(stack_array<t, N>& A) { return &A.Arr[0] + N; }
-TemplateArray t*
+mg_TAi t*
 RevBegin(stack_array<t, N>& A) { return &A.Arr[0] + (N - 1); }
-TemplateArray t*
+mg_TAi t*
 RevEnd(stack_array<t, N>& A) { return &A.Arr[0] - 1; }
-TemplateArray int
+mg_TAi int
 Size(const stack_array<t, N>&) { return N; }
 
 
@@ -122,7 +129,7 @@ mg_Inline buffer::
 buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn)
   : Data(DataIn), Bytes(BytesIn), Alloc(AllocIn) {}
 
-TemplateArray buffer::
+mg_TAi buffer::
 buffer(t (&Arr)[N]) : Data((byte*)&Arr[0]), Bytes(sizeof(Arr)) {}
 
 mg_Ti(t) buffer::
@@ -134,6 +141,11 @@ operator[](i64 Idx) { assert(Idx < Bytes); return Data[Idx]; }
 
 mg_Inline buffer::
 operator bool() const { return this->Data && this->Bytes; }
+
+mg_Inline bool
+operator==(const buffer& Buf1, const buffer& Buf2) {
+  return Buf1.Data == Buf2.Data && Buf1.Bytes == Buf2.Bytes;
+}
 
 /* typed_buffer stuffs */
 mg_Ti(t) typed_buffer<t>::
@@ -162,49 +174,36 @@ Bytes(const typed_buffer<t>& Buf) { return Buf.Size * sizeof(t); }
 mg_Ti(t) typed_buffer<t>::
 operator bool() const { return Data && Size; }
 
-#undef TemplateArray
+#undef mg_TAi
 
 /* v2 stuffs */
-mg_Ti(t) v2<t> v2<t>::
-Zero() { static v2<t> Z(0); return Z; }
-mg_Ti(t) v2<t> v2<t>::
-One() { static v2<t> O(1); return O; }
-
 mg_Ti(t) v2<t>::
-v2() {}
+v2() = default;
 mg_Ti(t) v2<t>::
 v2(t V): X(V), Y(V) {}
 mg_Ti(t) v2<t>::
 v2(t X, t Y): X(X), Y(Y) {}
 mg_T(t) template <typename u> mg_Inline v2<t>::
 v2(const v2<u>& Other) : X(Other.X), Y(Other.Y) {}
-
 mg_Ti(t) t& v2<t>::
 operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
-
 mg_T(t) template <typename u> mg_Inline v2<t>& v2<t>::
 operator=(const v2<u>& other) { X = other.X; Y = other.Y; return *this; }
 
 /* v3 stuffs */
-mg_Ti(t) v3<t> v3<t>::
-Zero() { static v3<t> Z(0); return Z; }
-mg_Ti(t) v3<t> v3<t>::
-One() { static v3<t> O(1); return O; }
-
 mg_Ti(t) v3<t>::
-v3() {}
+v3() = default;
 mg_Ti(t) v3<t>::
 v3(t V): X(V), Y(V), Z(V) {}
 mg_Ti(t) v3<t>::
 v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
 mg_T(t) template <typename u> mg_Inline v3<t>::
 v3(const v3<u>& Other) : X(Other.X), Y(Other.Y), Z(Other.Z) {}
-
 mg_Ti(t) t& v3<t>::
 operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
-
 mg_T(t) template <typename u> mg_Inline v3<t>& v3<t>::
 operator=(const v3<u>& Rhs) { X = Rhs.X; Y = Rhs.Y; Z = Rhs.Z; return *this; }
+
 
 // TODO: move the following to mg_macros.h?
 
@@ -222,14 +221,6 @@ operator=(const v3<u>& Rhs) { X = Rhs.X; Y = Rhs.Y; Z = Rhs.Z; return *this; }
   for (C1.Z = (B1).Z, C2.Z = (B2).Z; C1.Z < (E1).Z; C1.Z += (S1).Z, C2.Z += (S2).Z) {\
   for (C1.Y = (B1).Y, C2.Y = (B2).Y; C1.Y < (E1).Y; C1.Y += (S1).Y, C2.Y += (S2).Y) {\
   for (C1.X = (B1).X, C2.X = (B2).X; C1.X < (E1).X; C1.X += (S1).X, C2.X += (S2).X)
-
-mg_Ti(t) auto&
-Value(t& T) {
-  if constexpr (is_pointer<t>::Value)
-    return *T;
-  else
-    return T;
-}
 
 } // namespace mg
 

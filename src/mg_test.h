@@ -19,8 +19,9 @@ inline bool __Test##Name__ = []() {\
 #define mg_TestMain \
 int main() {\
   for (const auto& Test : mg::TestFuncMap) {\
-    printf("Testing %s:\n", Test.first);\
+    printf("-------- Testing %s:\n", Test.first);\
     Test.second();\
+    printf("PASSED\n");\
   }\
   return 0;\
 }

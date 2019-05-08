@@ -27,7 +27,7 @@ Copy(grid<volume>* Dst, const grid<volume>& Src) {
   v3i Dims3Src = Dims(Src.Base), Dims3Dst = Dims(*Dst);\
   v3i Strd3Src = Strd(Src), Strd3Dst = Strd(*Dst);\
   v3i Pos;\
-  mg_BeginFor3(Pos, v3i::Zero(), Dims3, v3i::One()) {\
+  mg_BeginFor3(Pos, v3i::Zero, Dims3, v3i::One) {\
     i64 I = Row(Dims3Src, From3Src + Pos * Strd3Src);\
     i64 J = Row(Dims3Dst, From3Dst + Pos * Strd3Dst);\
     DstBuf[J] = SrcBuf[I];\
@@ -38,7 +38,7 @@ Copy(grid<volume>* Dst, const grid<volume>& Src) {
 }
 
 grid<volume>
-GridVolume(const grid<volume>& Grid1, const grid<volume>& Grid2) {
+GridCollapse(const grid<volume>& Grid1, const grid<volume>& Grid2) {
   grid<volume> Result;
   v3i From1 = From(Grid1), Dims1 = Dims(Grid1), Strd1 = Strd(Grid1);
   v3i From2 = From(Grid2), Dims2 = Dims(Grid2), Strd2 = Strd(Grid2);
@@ -47,7 +47,7 @@ GridVolume(const grid<volume>& Grid1, const grid<volume>& Grid2) {
   SetStrd(&Result, Strd1 * Strd2);
   SetDims(&Result, Dims1);
   Result.Base = Grid2.Base;
-  mg_Assert((Dims(Result.Base) == v3i::Zero()) ||
+  mg_Assert((Dims(Result.Base) == v3i::Zero) ||
             (From(Result) + Strd(Result) * (Dims(Result) - 1) < Dims(Result.Base)));
   return Result;
 }

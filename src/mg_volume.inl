@@ -11,7 +11,7 @@ extent() = default;
 
 mg_Ti(t) extent<t>::
 extent(const v3i& Dims3)
-  : From(Pack3i64(v3i::Zero()))
+  : From(Pack3i64(v3i::Zero))
   , Dims(Pack3i64(Dims3)) {}
 
 mg_Ti(t) extent<t>::
@@ -19,13 +19,28 @@ extent(const v3i& From3, const v3i& Dims3)
   : From(Pack3i64(From3))
   , Dims(Pack3i64(Dims3)) {}
 
+mg_T(t) mg_Ti(u) extent<t>::
+extent(const extent<u>& Other)
+  : From(Other.From)
+  , Dims(Other.Dims) 
+{ if constexpr (is_same_type<t, u>::Value) Base = Other.Base; }
+
 mg_Ti(t) bool extent<t>::
 HasBase() const {
-  if constexpr (is_same_type<t, void*>::Value)
+  if constexpr (is_same_type<t, int*>::Value)
     return false;
   if constexpr (is_pointer<t>::Value)
-    return (void*)Base == nullptr;
+    return (void*)Base != nullptr;
   return true;
+}
+
+mg_T(t) mg_Ti(u) extent<t>& extent<t>::
+operator=(const extent<u>& Other) {
+  From = Other.From;
+  Dims = Other.Dims;
+  if constexpr (is_same_type<t, u>::Value) 
+    Base = Other.Base;
+  return *this;
 }
 
 mg_Ti(t) grid<t>::
@@ -33,15 +48,15 @@ grid() = default;
 
 mg_Ti(t) grid<t>::
 grid(const v3i& Dims3)
-  : From(Pack3i64(v3i::Zero()))
+  : From(Pack3i64(v3i::Zero))
   , Dims(Pack3i64(Dims3))
-  , Strd(Pack3i64(v3i::One())) {}
+  , Strd(Pack3i64(v3i::One)) {}
 
 mg_Ti(t) grid<t>::
 grid(const v3i& From3, const v3i& Dims3)
   : From(Pack3i64(From3))
   , Dims(Pack3i64(Dims3))
-  , Strd(Pack3i64(v3i::One())) {}
+  , Strd(Pack3i64(v3i::One)) {}
 
 mg_Ti(t) grid<t>::
 grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3)
@@ -53,15 +68,25 @@ mg_T(t) grid<t>::
 grid(const extent<t>& Ext)
   : From(Ext.From)
   , Dims(Ext.Dims)
-  , Strd(Pack3i64(v3i::One())) {}
+  , Strd(Pack3i64(v3i::One)) {}
 
 mg_Ti(t) bool grid<t>::
 HasBase() const {
-  if constexpr (is_same_type<t, void*>::Value)
+  if constexpr (is_same_type<t, int*>::Value)
     return false;
   if constexpr (is_pointer<t>::Value)
-    return (void*)Base == nullptr;
+    return (void*)Base != nullptr;
   return true;
+}
+
+mg_T(t) mg_Ti(u) grid<t>& grid<t>::
+operator=(const grid<u>& Other) {
+  From = Other.From;
+  Dims = Other.Dims;
+  Strd = Other.Strd;
+  if constexpr (is_same_type<t, u>::Value) 
+    Base = Other.Base;
+  return *this;
 }
 
 mg_Inline volume::
@@ -73,9 +98,14 @@ volume(const buffer& Buf, const v3i& Dims3, data_type TypeIn)
   , Dims(Pack3i64(Dims3))
   , Type(TypeIn) {}
 
+mg_Inline bool
+operator==(const volume& V1, const volume& V2) {
+  return V1.Buffer == V2.Buffer && V1.Dims == V2.Dims && V1.Type == V2.Type;
+}
+
 mg_Ti(t) v3i From(const extent<t>& Ext) { return Unpack3i64(Ext.From); }
 mg_Ti(t) v3i Dims(const extent<t>& Ext) { return Unpack3i64(Ext.Dims); }
-mg_Ti(t) v3i Strd(const extent<t>& Ext) { return v3i::One(); }
+mg_Ti(t) v3i Strd(const extent<t>& Ext) { return v3i::One; }
 mg_Ti(t) void SetFrom(extent<t>* Ext, const v3i& From3) { Ext->From = Pack3i64(From3); };
 mg_Ti(t) void SetDims(extent<t>* Ext, const v3i& Dims3) { Ext->Dims = Pack3i64(Dims3); };
 
@@ -97,10 +127,10 @@ GridVolume(const t& Invalid) { return grid<volume>(); }
 mg_T(t) grid<volume>
 GridVolume(const extent<t>& Ext) {
   grid<volume> MyGrid;
-  MyGrid.From = Ext.From; MyGrid.Dims = Ext.Dims; MyGrid.Strd = Pack3i64(v3i::One());
+  MyGrid.From = Ext.From; MyGrid.Dims = Ext.Dims; MyGrid.Strd = Pack3i64(v3i::One);
   if (Ext.HasBase()) {
     grid<volume> BaseGrid = GridVolume(Value(Ext.Base));
-    return GridVolume(MyGrid, BaseGrid);
+    return GridCollapse(MyGrid, BaseGrid);
   }
   return MyGrid;
 }
@@ -111,13 +141,17 @@ GridVolume(const grid<t>& Grid) {
   MyGrid.From = Grid.From; MyGrid.Dims = Grid.Dims; MyGrid.Strd = Grid.Strd;
   if (Grid.HasBase()) {
     grid<volume> BaseGrid = GridVolume(Value(Grid.Base));
-    return GridVolume(MyGrid, BaseGrid);
+    return GridCollapse(MyGrid, BaseGrid);
   }
   return MyGrid;
 }
 
-mg_Ti(t) grid<volume>
-GridVolume(const volume& Volume) { return grid<volume>(Dims(Volume)); }
+grid<volume>
+GridVolume(const volume& Volume) {
+  grid<volume> Result(Dims(Volume));
+  Result.Base = Volume;
+  return Result;
+}
 
 mg_Inline i64
 Row(const v3i& N, const v3i& P) { return i64(P.Z) * N.X * N.Y + i64(P.Y) * N.X + P.X; }
@@ -130,6 +164,6 @@ InvRow(i64 I, const v3i& N) {
 }
 
 mg_Inline int
-NDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
+NumDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
 
 } // namespace mg
