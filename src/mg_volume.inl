@@ -2,6 +2,7 @@
 
 #include "mg_assert.h"
 #include "mg_bitops.h"
+#include "mg_math.h"
 
 namespace mg {
 
@@ -17,6 +18,15 @@ mg_Ti(t) extent<t>::
 extent(const v3i& From3, const v3i& Dims3)
   : From(Pack3i64(From3))
   , Dims(Pack3i64(Dims3)) {}
+
+mg_Ti(t) bool extent<t>::
+HasBase() const {
+  if constexpr (is_same_type<t, void*>::Value)
+    return false;
+  if constexpr (is_pointer<t>::Value)
+    return (void*)Base == nullptr;
+  return true;
+}
 
 mg_Ti(t) grid<t>::
 grid() = default;
@@ -39,11 +49,20 @@ grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3)
   , Dims(Pack3i64(Dims3))
   , Strd(Pack3i64(Strd3)) {}
 
-mg_T(t) mg_Ti(u) grid<t>::
-grid(const extent<u>& Ext)
+mg_T(t) grid<t>::
+grid(const extent<t>& Ext)
   : From(Ext.From)
   , Dims(Ext.Dims)
   , Strd(Pack3i64(v3i::One())) {}
+
+mg_Ti(t) bool grid<t>::
+HasBase() const {
+  if constexpr (is_same_type<t, void*>::Value)
+    return false;
+  if constexpr (is_pointer<t>::Value)
+    return (void*)Base == nullptr;
+  return true;
+}
 
 mg_Inline volume::
 volume() = default;
@@ -72,35 +91,32 @@ mg_Inline i64 Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
 mg_Inline void SetDims(volume* Vol, const v3i& Dims3) { Vol->Dims = Pack3i64(Dims3); }
 mg_Inline void SetType(volume* Vol, data_type Type) { Vol->Type = Type; }
 
-/* assumption: Grid1 is on top of Grid2 */
-grid<volume>
-GridVolume(grid<volume>& Grid1, grid<volume>& Grid2) {
-  grid<volume> Result;
-  v3i From1 = From(Grid1), Dims1 = Dims(Grid1), Strd1 = Strd(Grid1);
-  v3i From2 = From(Grid2), Dims2 = Dims(Grid2), Strd2 = Strd(Grid2);
-  mg_Assert(Dims1 <= Dims2);
-  SetFrom(&Result, From2 + Strd2 * From1);
-  SetStrd(&Result, Strd1 * Strd2);
-  SetDims(&Result, Dims1);
-  Result.Base = Grid2.Base;
-  mg_Assert(From(Result) + Strd(Result) * (Dims(Result) - 1) <= Dims(Result.Base) - 1);
-  return Result;
-}
+mg_Ti(t) grid<volume>
+GridVolume(const t& Invalid) { return grid<volume>(); }
 
 mg_T(t) grid<volume>
 GridVolume(const extent<t>& Ext) {
-  grid<volume> MyGrid(Ext);
-  grid<volume> BaseGrid = Ext.HasBase() ? GridVolume(Value(Ext.Base)) : MyGrid;
-  return GridVolume(MyGrid, BaseGrid);
+  grid<volume> MyGrid;
+  MyGrid.From = Ext.From; MyGrid.Dims = Ext.Dims; MyGrid.Strd = Pack3i64(v3i::One());
+  if (Ext.HasBase()) {
+    grid<volume> BaseGrid = GridVolume(Value(Ext.Base));
+    return GridVolume(MyGrid, BaseGrid);
+  }
+  return MyGrid;
 }
 
 mg_T(t) grid<volume>
 GridVolume(const grid<t>& Grid) {
-  grid<volume> BaseGrid = Grid.HasBase() ? GridVolume(Value(Grid.Base)) : Grid;
-  return GridVolume(Grid, BaseGrid);
+  grid<volume> MyGrid;
+  MyGrid.From = Grid.From; MyGrid.Dims = Grid.Dims; MyGrid.Strd = Grid.Strd;
+  if (Grid.HasBase()) {
+    grid<volume> BaseGrid = GridVolume(Value(Grid.Base));
+    return GridVolume(MyGrid, BaseGrid);
+  }
+  return MyGrid;
 }
 
-mg_T(t) grid<volume>
+mg_Ti(t) grid<volume>
 GridVolume(const volume& Volume) { return grid<volume>(Dims(Volume)); }
 
 mg_Inline i64

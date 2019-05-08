@@ -17,8 +17,8 @@
 #define mg_Cat(A, ...) mg_CatHelper(A, __VA_ARGS__)
 #define mg_CatHelper(A, ...) A ## __VA_ARGS__
 
-#define mg_FPrintHelper(...)\
-  __VA_OPT__(fprintf(stderr, __VA_ARGS__))
+#define mg_FPrintHelper(Stream, ...)\
+  __VA_OPT__(fprintf(Stream, __VA_ARGS__))
 
 #define mg_SPrintHelper(Buf, L, ...)\
   __VA_OPT__(snprintf(Buf + L, sizeof(Buf) - size_t(L), __VA_ARGS__));\

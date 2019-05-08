@@ -37,6 +37,21 @@ Copy(grid<volume>* Dst, const grid<volume>& Src) {
 #undef Body
 }
 
+grid<volume>
+GridVolume(const grid<volume>& Grid1, const grid<volume>& Grid2) {
+  grid<volume> Result;
+  v3i From1 = From(Grid1), Dims1 = Dims(Grid1), Strd1 = Strd(Grid1);
+  v3i From2 = From(Grid2), Dims2 = Dims(Grid2), Strd2 = Strd(Grid2);
+  mg_Assert(From1 + (Dims1 - 1) * Strd1 < Dims2);
+  SetFrom(&Result, From2 + Strd2 * From1);
+  SetStrd(&Result, Strd1 * Strd2);
+  SetDims(&Result, Dims1);
+  Result.Base = Grid2.Base;
+  mg_Assert((Dims(Result.Base) == v3i::Zero()) ||
+            (From(Result) + Strd(Result) * (Dims(Result) - 1) < Dims(Result.Base)));
+  return Result;
+}
+
 void
 Clone(volume* Dst, const volume& Src, allocator* Alloc) {
   Clone(&Dst->Buffer, Src.Buffer, Alloc);

@@ -53,8 +53,7 @@ mg_T(t)
 struct is_pointer { static constexpr bool Value = false; };
 mg_T(t)
 struct is_pointer<t*> { static constexpr bool Value = true; };
-mg_T(t) auto&
-Value(t T);
+mg_T(t) auto& Value(t& T);
 
 /* Something to replace std::array */
 template <typename t, int N>

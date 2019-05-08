@@ -9,11 +9,12 @@
 
 namespace mg {
 
+// TODO: move some of these to mg_string.inl as inline functions
 stref::stref() = default;
 stref::stref(cstr PtrIn, int SizeIn) : ConstPtr(PtrIn), Size(SizeIn) {}
 stref::stref(cstr PtrIn) : ConstPtr(PtrIn), Size(int(strlen(PtrIn))) {}
 char& stref::operator[](int Idx) { mg_Assert(Idx < Size); return Ptr[Idx]; }
-stref::operator bool() { return Ptr != nullptr; }
+stref::operator bool() const { return Ptr != nullptr; }
 
 str ToString(stref Str) {
   mg_Assert(Str.Size < (int)sizeof(ScratchBuf));

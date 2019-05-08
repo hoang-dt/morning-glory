@@ -11,26 +11,25 @@ namespace mg {
 /* parent's type can be extent*, grid*, volume*, extent, grid, volume */
 template <typename t = void*>
 struct extent {
-  u64 From, Dims;
+  u64 From = 0, Dims = 0;
   t Base = {};
   extent();
   extent(const v3i& Dims3);
   extent(const v3i& From3, const v3i& Dims3);
-  bool HasBase() const { return (void*)Base == nullptr; }
+  bool HasBase() const;
 };
 
 /* parent's type can be extent*, grid*, volume*, extent, grid, volume */
 template <typename t = void*>
 struct grid {
-  u64 From, Dims, Strd; // packed from, dims, strides
+  u64 From = 0, Dims = 0, Strd = 0; // packed from, dims, strides
   t Base = {};
   grid();
   grid(const v3i& Dims3);
   grid(const v3i& From3, const v3i& Dims3);
   grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3);
-  template <typename u>
-  grid(const extent<u>& Ext);
-  bool HasBase() const { return (void*)Base == nullptr; }
+  grid(const extent<t>& Ext);
+  bool HasBase() const;
 };
 
 struct grid_indexer {
@@ -38,17 +37,13 @@ struct grid_indexer {
 };
 
 struct volume {
-  buffer Buffer;
-  u64 Dims;
-  data_type Type;
+  buffer Buffer = {};
+  u64 Dims = 0;
+  data_type Type = data_type::__Invalid__;
   volume();
   volume(const buffer& Buf, const v3i& Dims3, data_type TypeIn);
   bool HasBase() const { return false; }
 };
-
-mg_T(t) grid<volume> GridVol(const extent<t>& Extent);
-mg_T(t) grid<volume> GridVol(const grid<t>& Grid);
-mg_T(t) grid<volume> GridVol(const volume& Volume);
 
 mg_T(t) v3i From(const extent<t>& Ext);
 mg_T(t) v3i Dims(const extent<t>& Ext);
@@ -68,6 +63,13 @@ i64  Size(const volume& Vol);
 
 i64 Row(const v3i& N, const v3i& P);
 v3i InvRow(i64 I, const v3i& N);
+
+mg_T(t) grid<volume> GridVolume(const t& Invalid);
+mg_T(t) grid<volume> GridVolume(const extent<t>& Ext);
+mg_T(t) grid<volume> GridVolume(const grid<t>& Grid);
+        grid<volume> GridVolume(const volume& Volume);
+/* assumption: Grid1 is on top of Grid2 */
+grid<volume> GridVolume(const grid<volume>& Grid1, const grid<volume>& Grid2);
 
 /* Read a volume from a file */
 error<> ReadVolume(cstr FileName, const v3i& Dims3, data_type Type, volume* Vol);
