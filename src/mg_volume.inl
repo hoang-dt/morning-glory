@@ -19,6 +19,17 @@ extent(const v3i& From3, const v3i& Dims3)
   : From(Pack3i64(From3))
   , Dims(Pack3i64(Dims3)) {}
 
+mg_Ti(t) extent<t>::
+extent(const v3i& From3, const v3i& Dims3, const t& BaseIn)
+  : From(Pack3i64(From3))
+  , Dims(Pack3i64(Dims3))
+  , Base(BaseIn)
+{
+  static_assert(!is_same_type<t, int*>::Value, "for int*, use the 2-argument version");
+  mg_Assert(mg::Dims(Value(Base)) == v3i::Zero /* dummy base*/ ||
+            (From3 + (Dims3 - 1) < mg::Dims(Value(Base))));
+}
+
 mg_T(t) mg_Ti(u) extent<t>::
 extent(const extent<u>& Other)
   : From(Other.From)
@@ -53,6 +64,18 @@ grid(const v3i& Dims3)
   , Strd(Pack3i64(v3i::One)) {}
 
 mg_Ti(t) grid<t>::
+grid(const t& BaseIn)
+  : From(Pack3i64(mg::From(Value(BaseIn))))
+  , Dims(Pack3i64(mg::Dims(Value(BaseIn))))
+  , Strd(Pack3i64(mg::Strd(Value(BaseIn))))
+  , Base(BaseIn)
+{
+  static_assert(!is_same_type<t, int*>::Value, "template type cannot be int*");
+  mg_Assert(mg::Dims(Value(Base)) == v3i::Zero /* dummy base*/ ||
+            (From + Strd * (Dims - 1) < mg::Dims(Value(Base))));
+}
+
+mg_Ti(t) grid<t>::
 grid(const v3i& From3, const v3i& Dims3)
   : From(Pack3i64(From3))
   , Dims(Pack3i64(Dims3))
@@ -64,11 +87,24 @@ grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3)
   , Dims(Pack3i64(Dims3))
   , Strd(Pack3i64(Strd3)) {}
 
+mg_Ti(t) grid<t>::
+grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3, const t& BaseIn)
+  : From(Pack3i64(From3))
+  , Dims(Pack3i64(Dims3))
+  , Strd(Pack3i64(Strd3))
+  , Base(BaseIn)
+{
+  static_assert(!is_same_type<t, int*>::Value, "for int*, use the 3-argument version");
+  mg_Assert(mg::Dims(Value(Base)) == v3i::Zero /* dummy base*/ ||
+            (From3 + Strd3 * (Dims3 - 1) < mg::Dims(Value(Base))));
+}
+
 mg_T(t) grid<t>::
 grid(const extent<t>& Ext)
   : From(Ext.From)
   , Dims(Ext.Dims)
-  , Strd(Pack3i64(v3i::One)) {}
+  , Strd(Pack3i64(v3i::One))
+  , Base(Ext.Base) {}
 
 mg_Ti(t) bool grid<t>::
 HasBase() const {
@@ -106,54 +142,34 @@ operator==(const volume& V1, const volume& V2) {
 mg_Ti(t) v3i From(const extent<t>& Ext) { return Unpack3i64(Ext.From); }
 mg_Ti(t) v3i Dims(const extent<t>& Ext) { return Unpack3i64(Ext.Dims); }
 mg_Ti(t) v3i Strd(const extent<t>& Ext) { return v3i::One; }
-mg_Ti(t) void SetFrom(extent<t>* Ext, const v3i& From3) { Ext->From = Pack3i64(From3); };
-mg_Ti(t) void SetDims(extent<t>* Ext, const v3i& Dims3) { Ext->Dims = Pack3i64(Dims3); };
 
 mg_Ti(t) v3i From(const grid<t>& Grid) { return Unpack3i64(Grid.From); }
 mg_Ti(t) v3i Dims(const grid<t>& Grid) { return Unpack3i64(Grid.Dims); }
 mg_Ti(t) v3i Strd(const grid<t>& Grid) { return Unpack3i64(Grid.Strd); }
-mg_Ti(t) void SetFrom(grid<t>* Grid, const v3i& From3) { Grid->From = Pack3i64(From3); };
-mg_Ti(t) void SetDims(grid<t>* Grid, const v3i& Dims3) { Grid->Dims = Pack3i64(Dims3); };
-mg_Ti(t) void SetStrd(grid<t>* Grid, const v3i& Strd3) { Grid->Strd = Pack3i64(Strd3); };
 
+mg_Inline v3i From(const volume& Vol) { return v3i::Zero; }
 mg_Inline v3i Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
 mg_Inline i64 Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
-mg_Inline void SetDims(volume* Vol, const v3i& Dims3) { Vol->Dims = Pack3i64(Dims3); }
-mg_Inline void SetType(volume* Vol, data_type Type) { Vol->Type = Type; }
 
-mg_Ti(t) grid<volume>
-GridVolume(const t& Invalid) { return grid<volume>(); }
-
-mg_T(t) grid<volume>
-GridVolume(const extent<t>& Ext) {
-  grid<volume> MyGrid;
-  MyGrid.From = Ext.From; MyGrid.Dims = Ext.Dims; MyGrid.Strd = Pack3i64(v3i::One);
-  if (Ext.HasBase()) {
-    grid<volume> BaseGrid = GridVolume(Value(Ext.Base));
-    return GridCollapse(MyGrid, BaseGrid);
-  }
-  return MyGrid;
-}
-
-mg_T(t) grid<volume>
-GridVolume(const grid<t>& Grid) {
-  grid<volume> MyGrid;
-  MyGrid.From = Grid.From; MyGrid.Dims = Grid.Dims; MyGrid.Strd = Grid.Strd;
-  if (Grid.HasBase()) {
-    grid<volume> BaseGrid = GridVolume(Value(Grid.Base));
-    return GridCollapse(MyGrid, BaseGrid);
-  }
-  return MyGrid;
-}
-
-grid<volume>
+mg_Inline grid<volume>
 GridVolume(const volume& Volume) {
   grid<volume> Result(Dims(Volume));
   Result.Base = Volume;
   return Result;
 }
 
-mg_Ti(t) mg_Gi 
+mg_T2(t, u) grid<u>
+GridCollapse(const grid<t>& Grid1, const grid<u>& Grid2) {
+  v3i From1 = From(Grid1), Dims1 = Dims(Grid1), Strd1 = Strd(Grid1);
+  v3i From2 = From(Grid2), Dims2 = Dims(Grid2), Strd2 = Strd(Grid2);
+  mg_Assert(From1 + (Dims1 - 1) * Strd1 < Dims2);
+  if constexpr (is_same_type<u, int*>::Value)
+    return grid<u>(From2 + Strd2 * From1, Dims1, Strd1 * Strd2);
+  else
+    return grid<u>(From2 + Strd2 * From1, Dims1, Strd1 * Strd2, Grid2.Base);
+}
+
+mg_Ti(t) mg_Gi
 Begin(grid<volume>& Grid) {
   grid_iterator<t> Iter;
   Iter.D = Dims(Grid); Iter.S = Strd(Grid); Iter.P = From(Grid);
@@ -209,16 +225,31 @@ NumDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
 
 #undef mg_BeginGridLoop2
 #define mg_BeginGridLoop2(G1, G2)\
-  {\
-    v3i Pos;\
-    v3i FromDst = From(G1), FromSrc = From(G2);\
-    v3i Dims3 = Dims(G1), DimsSrc = Dims((G1).Base), DimsDst = Dims((G2).Base);\
-    v3i StrdSrc = Strd(G1), StrdDst = Strd(G2);\
-    mg_BeginFor3(Pos, v3i::Zero, Dims3, v3i::One) {\
-      i64 I = Row(DimsSrc, FromSrc + Pos * StrdSrc);\
-      i64 J = Row(DimsDst, FromDst + Pos * StrdDst);\
+  v3i Pos;\
+  v3i FromDst = From(G1), FromSrc = From(G2);\
+  v3i Dims3 = Dims(G1), DimsSrc = Dims((G1).Base), DimsDst = Dims((G2).Base);\
+  v3i StrdSrc = Strd(G1), StrdDst = Strd(G2);\
+  mg_BeginFor3(Pos, v3i::Zero, Dims3, v3i::One) {\
+    i64 I = Row(DimsSrc, FromSrc + Pos * StrdSrc);\
+    i64 J = Row(DimsDst, FromDst + Pos * StrdDst);\
 
 #undef mg_EndGridLoop2
-#define mg_EndGridLoop2 }}}}
+#define mg_EndGridLoop2 }}}
+
+mg_T(t) void
+Copy(grid<t>* Dst, const grid<t>& Src) {
+  static_assert(is_same_type<t, volume>::Value || is_same_type<t, volume*>::Value);
+#define Body(type)\
+  mg_Assert(Dims(Src) == Dims(*Dst));\
+  mg_Assert(Value(Dst->Base).Buffer && Value(Src.Base).Buffer);\
+  mg_Assert(Value(Dst->Base).Type == Value(Src.Base).Type);\
+  typed_buffer<type> DstBuf(Value(Dst->Base).Buffer), SrcBuf(Value(Src.Base).Buffer);\
+  mg_BeginGridLoop2(Src, *Dst)\
+    DstBuf[J] = SrcBuf[I];\
+  }}}
+
+  mg_DispatchOnType(Value(Src.Base).Type);
+#undef Body
+}
 
 } // namespace mg

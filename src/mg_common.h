@@ -55,6 +55,7 @@ mg_T(t) struct remove_cv { typedef typename remove_volatile<typename remove_cons
 mg_T(t) struct remove_reference { typedef t type; };
 mg_T(t) struct remove_reference<t&> { typedef t type; };
 mg_T(t) struct remove_reference<t&&> { typedef t type; };
+mg_T(t) struct remove_cv_ref { typedef typename remove_cv<typename remove_reference<t>::type>::type type; };
 mg_T2(t1, t2) struct is_same_type : false_type {};
 mg_T(t) struct is_same_type<t, t> : true_type {};
 mg_T(t) struct is_pointer_helper : false_type {};
