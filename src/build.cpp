@@ -16,7 +16,6 @@
 //#include "mg_signal_processing.cpp"
 #include "mg_stacktrace.cpp"
 #include "mg_string.cpp"
-#include "mg_timer.cpp"
 #include "mg_utils.cpp"
 #include "mg_wavelet.cpp"
 #include "mg_volume.cpp"

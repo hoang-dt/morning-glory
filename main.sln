@@ -81,8 +81,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		src\mg_stacktrace.h = src\mg_stacktrace.h
 		src\mg_string.cpp = src\mg_string.cpp
 		src\mg_string.h = src\mg_string.h
+		src\mg_string.inl = src\mg_string.inl
 		src\mg_test.h = src\mg_test.h
-		src\mg_timer.cpp = src\mg_timer.cpp
 		src\mg_timer.h = src\mg_timer.h
 		src\mg_timer.inl = src\mg_timer.inl
 		src\mg_utils.cpp = src\mg_utils.cpp
@@ -118,7 +118,7 @@ Global
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{05531BF2-0140-4B69-8BBC-50D8506418E5}.Release|x64.ActiveCfg = Release|x64
-		{F22AE3ED-2813-4665-90C3-FE47987A2838}.Release|x64.ActiveCfg = Release
+		{F22AE3ED-2813-4665-90C3-FE47987A2838}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

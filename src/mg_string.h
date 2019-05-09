@@ -71,3 +71,5 @@ stref Next(tokenizer* Tk);
 void Reset(tokenizer* Tk);
 
 } // namespace mg
+
+#include "mg_string.inl"

@@ -8,7 +8,9 @@
 #include <DbgHelp.h>
 #include "mg_io.h"
 #include "mg_mutex.h"
+
 namespace mg {
+
 static mutex StacktraceMutex;
 bool
 PrintStacktrace(printer* Pr) {
@@ -57,6 +59,7 @@ PrintStacktrace(printer* Pr) {
   }
   return SymCleanup(Process);
 }
+
 } // namespace mg
 #elif defined(__linux__) || defined(__APPLE__)
 // Adapted from
@@ -68,7 +71,9 @@ PrintStacktrace(printer* Pr) {
 #include <cxxabi.h>
 #include "mg_io.h"
 #include "mg_macros.h"
+
 namespace mg {
+
 // TODO: get the line number (add2line)
 bool
 PrintStacktrace(printer* Pr) {
@@ -138,5 +143,6 @@ PrintStacktrace(printer* Pr) {
   free(SymbolList);
   return true;
 }
+
 } // namespace mg
 #endif

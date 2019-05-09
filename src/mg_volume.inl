@@ -22,7 +22,7 @@ extent(const v3i& From3, const v3i& Dims3)
 mg_T(t) mg_Ti(u) extent<t>::
 extent(const extent<u>& Other)
   : From(Other.From)
-  , Dims(Other.Dims) 
+  , Dims(Other.Dims)
 { if constexpr (is_same_type<t, u>::Value) Base = Other.Base; }
 
 mg_Ti(t) bool extent<t>::
@@ -38,7 +38,7 @@ mg_T(t) mg_Ti(u) extent<t>& extent<t>::
 operator=(const extent<u>& Other) {
   From = Other.From;
   Dims = Other.Dims;
-  if constexpr (is_same_type<t, u>::Value) 
+  if constexpr (is_same_type<t, u>::Value)
     Base = Other.Base;
   return *this;
 }
@@ -84,7 +84,7 @@ operator=(const grid<u>& Other) {
   From = Other.From;
   Dims = Other.Dims;
   Strd = Other.Strd;
-  if constexpr (is_same_type<t, u>::Value) 
+  if constexpr (is_same_type<t, u>::Value)
     Base = Other.Base;
   return *this;
 }
@@ -153,6 +153,47 @@ GridVolume(const volume& Volume) {
   return Result;
 }
 
+mg_Ti(t) mg_Gi 
+Begin(grid<volume>& Grid) {
+  grid_iterator<t> Iter;
+  Iter.D = Dims(Grid); Iter.S = Strd(Grid); Iter.P = From(Grid);
+  Iter.N = Dims(Grid.Base);
+  Iter.Ptr = (t*)Grid.Base.Buffer.Data + Row(Iter.N, Iter.P);
+  return Iter;
+}
+
+mg_Ti(t) mg_Gi
+End(grid<volume>& Grid) {
+  grid_iterator<t> Iter;
+  v3i To3(0, 0, From(Grid).Z + Dims(Grid).Z * Strd(Grid).Z);
+  Iter.Ptr = (t*)Grid.Base.Buffer.Data + Row(Dims(Grid.Base), To3);
+  return Iter;
+}
+
+mg_Ti(t) mg_Gi& mg_Gi::
+operator++() {
+  P.X += S.X;
+  Ptr += S.X;
+  if (P.X >= D.X) {
+    P.X = 0;
+    P.Y += S.Y;
+    Ptr = Ptr - D.X * i64(S.X) + (N.X * S.Y);
+    if (P.Y >= D.Y) {
+      P.Y = 0;
+      P.Z += S.Z;
+      Ptr = Ptr - D.Y * i64(N.X) * S.Y + S.Z * i64(N.X) * N.Y;
+    }
+  }
+  return *this;
+}
+
+mg_Ti(t) t& mg_Gi::
+operator*() { return *Ptr; }
+mg_Ti(t) bool mg_Gi::
+operator!=(const grid_iterator<t>& Other) const { return Ptr != Other.Ptr; }
+mg_Ti(t) bool mg_Gi::
+operator==(const grid_iterator<t>& Other) const { return Ptr == Other.Ptr; }
+
 mg_Inline i64
 Row(const v3i& N, const v3i& P) { return i64(P.Z) * N.X * N.Y + i64(P.Y) * N.X + P.X; }
 
@@ -165,5 +206,19 @@ InvRow(i64 I, const v3i& N) {
 
 mg_Inline int
 NumDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
+
+#undef mg_BeginGridLoop2
+#define mg_BeginGridLoop2(G1, G2)\
+  {\
+    v3i Pos;\
+    v3i FromDst = From(G1), FromSrc = From(G2);\
+    v3i Dims3 = Dims(G1), DimsSrc = Dims((G1).Base), DimsDst = Dims((G2).Base);\
+    v3i StrdSrc = Strd(G1), StrdDst = Strd(G2);\
+    mg_BeginFor3(Pos, v3i::Zero, Dims3, v3i::One) {\
+      i64 I = Row(DimsSrc, FromSrc + Pos * StrdSrc);\
+      i64 J = Row(DimsDst, FromDst + Pos * StrdDst);\
+
+#undef mg_EndGridLoop2
+#define mg_EndGridLoop2 }}}}
 
 } // namespace mg

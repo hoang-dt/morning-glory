@@ -20,6 +20,8 @@ struct list {
   list(allocator* Alloc = &Mallocator());
 };
 
+#define mg_Li list_iterator<t>
+
 mg_T(t)
 struct list_iterator {
   list_node<t>* Node = nullptr;
@@ -30,23 +32,12 @@ struct list_iterator {
   bool operator==(const list_iterator& Other);
 };
 
-mg_T(t) list_iterator<t>
-Begin(list<t>& List);
-mg_T(t) list_iterator<t>
-End(list<t>& List);
-
-mg_T(t) list_iterator<t>
-Insert(list<t>* List, const list_iterator<t>& Where, const t& Payload);
-
-mg_T(t) list_iterator<t>
-PushBack(list<t>* List, const t& Payload);
-
-mg_T(t) void
-Dealloc(list<t>* List);
-
-mg_T(t) i64
-Size(const list<t>& List);
-
+mg_T(t) mg_Li Begin(list<t>& List);
+mg_T(t) mg_Li End(list<t>& List);
+mg_T(t) mg_Li Insert(list<t>* List, const mg_Li& Where, const t& Payload);
+mg_T(t) mg_Li PushBack(list<t>* List, const t& Payload);
+mg_T(t) void Dealloc(list<t>* List);
+mg_T(t) i64 Size(const list<t>& List);
 
 } // namespace mg
 

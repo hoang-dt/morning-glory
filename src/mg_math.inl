@@ -79,6 +79,10 @@ operator==(const v3<t>& Lhs, const v3<t>& Rhs) {
   return Lhs.X == Rhs.X && Lhs.Y == Rhs.Y && Lhs.Z == Rhs.Z;
 }
 mg_Ti(t) bool
+operator!=(const v3<t>& Lhs, const v3<t>& Rhs) {
+  return Lhs.X != Rhs.X || Lhs.Y != Rhs.Y || Lhs.Z != Rhs.Z;
+}
+mg_Ti(t) bool
 operator<=(const v3<t>& Lhs, const v3<t>& Rhs) {
   return Lhs.X <= Rhs.X && Lhs.Y <= Rhs.Y && Lhs.Z <= Rhs.Z;
 }

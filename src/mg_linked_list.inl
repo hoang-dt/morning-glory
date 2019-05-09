@@ -7,7 +7,7 @@ namespace mg {
 mg_Ti(t) list<t>::
 list(allocator* Alloc) : Alloc(Alloc) {}
 
-mg_T(t) list_iterator<t>
+mg_T(t) mg_Li
 Insert(list<t>* List, const list_iterator<t>& Where, const t& Payload) {
   buffer Buf;
   List->Alloc->Alloc(&Buf, sizeof(list_node<t>));
@@ -22,7 +22,7 @@ Insert(list<t>* List, const list_iterator<t>& Where, const t& Payload) {
   return list_iterator<t>{NewNode};
 }
 
-mg_T(t) list_iterator<t>
+mg_T(t) mg_Li
 PushBack(list<t>* List, const t& Payload) {
   auto Node = List->Head;
   list_node<t>* Prev = nullptr;
@@ -61,18 +61,22 @@ list_iterator<t>::operator++() {
 mg_Ti(t) list_node<t>*
 list_iterator<t>::operator->() { mg_Assert(Node); return Node; }
 
-mg_Ti(t) t& list_iterator<t>::
+mg_Ti(t) t& mg_Li::
 operator*() { mg_Assert(Node); return Node->Payload; }
 
-mg_Ti(t) bool list_iterator<t>::
+mg_Ti(t) bool mg_Li::
 operator!=(const list_iterator<t>& Other) { return Node != Other.Node; }
-mg_Ti(t) bool list_iterator<t>::
+
+mg_Ti(t) bool mg_Li::
 operator==(const list_iterator<t>& Other) { return Node == Other.Node; }
 
-mg_Ti(t) list_iterator<t>
+mg_Ti(t) mg_Li
 Begin(const list<t>& List) { return list_iterator<t>{List.Head}; }
-mg_Ti(t) list_iterator<t>
+
+mg_Ti(t) mg_Li
 End(const list<t>& List) { (void)List; return list_iterator<t>(); }
+
+#undef mg_Li
 
 } // namespace mg
 

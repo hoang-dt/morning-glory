@@ -17,7 +17,7 @@ template <>
 struct traits<i8> {
   using signed_t   = i8;
   using unsigned_t = u8;
-  static constexpr u8 NegabinaryMask = 0xaa;
+  static constexpr u8 NBinaryMask = 0xaa;
   static constexpr i8 Min = -(1 << 7);
   static constexpr i8 Max = (1 << 7) - 1;
 };
@@ -26,7 +26,7 @@ template <>
 struct traits<u8> {
   using signed_t   = i8;
   using unsigned_t = u8;
-  static constexpr u8 NegabinaryMask = 0xaa;
+  static constexpr u8 NBinaryMask = 0xaa;
   static constexpr u8 Min = 0;
   static constexpr u8 Max = (1 << 8) - 1;
 };
@@ -35,7 +35,7 @@ template <>
 struct traits<i16> {
   using signed_t   = i16;
   using unsigned_t = u16;
-  static constexpr u16 NegabinaryMask = 0xaaaa;
+  static constexpr u16 NBinaryMask = 0xaaaa;
   static constexpr i16 Min = -(1 << 15);
   static constexpr i16 Max = (1 << 15) - 1;
 };
@@ -44,7 +44,7 @@ template <>
 struct traits<u16> {
   using signed_t   = i16;
   using unsigned_t = u16;
-  static constexpr u16 NegabinaryMask = 0xaaaa;
+  static constexpr u16 NBinaryMask = 0xaaaa;
   static constexpr u16 Min = 0;
   static constexpr u16 Max = (1 << 16) - 1;
 };
@@ -54,7 +54,7 @@ struct traits<i32> {
   using signed_t   = i32;
   using unsigned_t = u32;
   using floating_t = f32;
-  static constexpr u32 NegabinaryMask = 0xaaaaaaaa;
+  static constexpr u32 NBinaryMask = 0xaaaaaaaa;
   static constexpr i32 Min = i32(0x80000000);
   static constexpr i32 Max = 0x7fffffff;
 };
@@ -63,7 +63,7 @@ template <>
 struct traits<u32> {
   using signed_t   = i32;
   using unsigned_t = u32;
-  static constexpr u32 NegabinaryMask = 0xaaaaaaaa;
+  static constexpr u32 NBinaryMask = 0xaaaaaaaa;
   static constexpr u32 Min = 0;
   static constexpr u32 Max = 0xffffffff;
 };
@@ -73,7 +73,7 @@ struct traits<i64> {
   using signed_t   = i64;
   using unsigned_t = u64;
   using floating_t = f64;
-  static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaULL;
+  static constexpr u64 NBinaryMask = 0xaaaaaaaaaaaaaaaaULL;
   static constexpr i64 Min = 0x8000000000000000ll;
   static constexpr i64 Max = 0x7fffffffffffffffull;
 };
@@ -82,7 +82,7 @@ template <>
 struct traits<u64> {
   using signed_t   = i64;
   using unsigned_t = u64;
-  static constexpr u64 NegabinaryMask = 0xaaaaaaaaaaaaaaaaULL;
+  static constexpr u64 NBinaryMask = 0xaaaaaaaaaaaaaaaaULL;
   static constexpr u64 Min = 0;
   static constexpr u64 Max = 0xffffffffffffffffull;
 };
@@ -178,7 +178,7 @@ operator bool() const { return Data && Size; }
 
 /* v2 stuffs */
 mg_Ti(t) v2<t>::
-v2() = default;
+v2() {}
 mg_Ti(t) v2<t>::
 v2(t V): X(V), Y(V) {}
 mg_Ti(t) v2<t>::
@@ -192,7 +192,7 @@ operator=(const v2<u>& other) { X = other.X; Y = other.Y; return *this; }
 
 /* v3 stuffs */
 mg_Ti(t) v3<t>::
-v3() = default;
+v3() {}
 mg_Ti(t) v3<t>::
 v3(t V): X(V), Y(V), Z(V) {}
 mg_Ti(t) v3<t>::

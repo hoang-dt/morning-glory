@@ -40,7 +40,7 @@ struct traits {
   // using signed_t =
   // using unsigned_t =
   // using integral_t =
-  // static constexpr uint NegabinaryMask =
+  // static constexpr uint NBinaryMask =
   // static constexpr int ExpBits
   // static constexpr int ExpBias
 };

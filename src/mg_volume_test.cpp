@@ -3,8 +3,9 @@
 #include "mg_common.h"
 #include "mg_volume.h"
 
-void TestVolume() {
-  using namespace mg;
+using namespace mg;
+
+void TestGridCollapse() {
   {
     extent Ext(v3i(1, 2, 3), v3i(2, 3, 4));
     grid Grid(v3i(1, 2, 3), v3i(4, 6, 8), v3i(2, 3, 4));
@@ -41,5 +42,23 @@ void TestVolume() {
   }
 }
 
-mg_RegisterTest("Volume", TestVolume)
+void TestGridIterator() {
+  {
+    extent<volume> Ext(v3i(0, 0, 0), v3i(3, 3, 3));
+    f64 A[] = {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
+                10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                20, 21, 22, 23, 24, 25, 26, 27 };
+    buffer Buf((byte*)A, sizeof(A));
+    volume Vol(Buf, v3i(3, 3, 3), data_type::float64);
+    Ext.Base = Vol;
+    grid<volume> GridVol = GridVolume(Ext);
+    int I = 0;
+    for (auto It = Begin<f64>(GridVol); It != End<f64>(GridVol); ++It) {
+      mg_Assert(*It == I++);
+    }
+  }
+}
+
+mg_RegisterTest(Volume_GridIterator, TestGridIterator)
+mg_RegisterTest(Volume_GridCollapse, TestGridCollapse)
 

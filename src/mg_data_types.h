@@ -19,6 +19,7 @@ namespace mg {
 int SizeOf(data_type Type);
 int BitSizeOf(data_type Type);
 data_type IntType(data_type InputType);
+data_type UnsignedType(data_type InputType);
 mg_T(t) bool MatchTypes(data_type Type);
 
 } // namespace mg

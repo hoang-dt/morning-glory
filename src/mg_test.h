@@ -11,10 +11,11 @@ using TestFunc = std::function<void(void)>;
 inline std::map<cstr, TestFunc> TestFuncMap;
 
 #define mg_RegisterTest(Name, Func)\
-inline bool __Test##Name__ = []() {\
-  mg::TestFuncMap[Name] = Func;\
+bool Test##Name() {\
+  mg::TestFuncMap[#Name] = Func;\
   return true;\
-}();
+}\
+inline bool VarTest##Name = Test##Name();
 
 #define mg_TestMain \
 int main() {\
@@ -27,3 +28,4 @@ int main() {\
 }
 
 } // namespace mg
+

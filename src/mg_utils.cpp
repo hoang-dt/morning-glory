@@ -1,9 +1,9 @@
 #include "mg_utils.h"
-#include "mg_common.h"
 
 namespace mg {
 
-u32 Murmur3_32(u8* Key, int Len, u32 Seed) {
+u32 
+Murmur3_32(u8* Key, int Len, u32 Seed) {
   u32 H = Seed;
   if (Len > 3) {
     u32* Key_x4 = (u32*)Key;
@@ -41,4 +41,5 @@ u32 Murmur3_32(u8* Key, int Len, u32 Seed) {
   return H;
 }
 
-}
+} // namespace mg
+

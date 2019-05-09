@@ -36,10 +36,6 @@ struct grid {
   bool HasBase() const;
 };
 
-struct grid_indexer {
-  //gird_indexer(v3i );
-};
-
 struct volume {
   buffer Buffer = {};
   u64 Dims = 0;
@@ -74,6 +70,22 @@ mg_T(t) grid<volume> GridVolume(const t& Invalid);
 mg_T(t) grid<volume> GridVolume(const extent<t>& Ext);
 mg_T(t) grid<volume> GridVolume(const grid<t>& Grid);
         grid<volume> GridVolume(const volume& Volume);
+
+#define mg_Gi grid_iterator<t>
+
+mg_T(t)
+struct grid_iterator {
+  t* Ptr = nullptr;
+  v3i P = {}, D = {}, S = {}, N = {};
+  grid_iterator& operator++();
+  t& operator*();
+  bool operator!=(const grid_iterator& Other) const;
+  bool operator==(const grid_iterator& Other) const;
+};
+
+mg_T(t) mg_Gi Begin(grid<volume>& Grid);
+mg_T(t) mg_Gi End(grid<volume>& Grid);
+
 /* assumption: Grid1 is on top of Grid2 */
 grid<volume> GridCollapse(const grid<volume>& Grid1, const grid<volume>& Grid2);
 
@@ -87,6 +99,9 @@ void Clone(volume* Dst, volume& Src, allocator* Alloc = &Mallocator());
 
 /* Return the number of dimensions, given a volume size */
 int NumDims(const v3i& N);
+
+#define mg_BeginGridLoop2(I, J) // loop through two grids in lockstep
+#define mg_EndGridLoop2
 
 } // namespace mg
 
