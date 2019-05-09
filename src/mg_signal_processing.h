@@ -13,6 +13,6 @@ f64  PSNR(const grid<volume>& F, const grid<volume>& G);
 void ToNegaBinary(grid<volume>* Dst, const grid<volume>& Src);
 void FromNegaBinary(grid<volume>* Dst, const grid<volume>& Src);
 int  Quantize(grid<volume>* Dst, const grid<volume>& Src, int Bits);
-void Dequantize(byte* FIn, i64 Size, int EMax, int Bits, byte* FOut, data_type Type = data_type::float64);
+void Dequantize(byte* FIn, i64 Size, int EMax, int Bits, byte* FOut, dtype Type = dtype::float64);
 
 } // namespace mg

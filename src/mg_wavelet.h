@@ -25,14 +25,14 @@ mg_T(t) void ILiftExtCdf53Z(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 
 void ForwardCdf53(volume* Vol, int NLevels);
 void InverseCdf53(volume* Vol, int NLevels);
-void ForwardCdf53Ext(grid<volume>* Grid);
-void InverseCdf53Ext(grid<volume>* Grid);
+void ForwardCdf53Ext(grid_volume* Grid);
+void InverseCdf53Ext(grid_volume* Grid);
 
 mg_T(t) struct array;
-void BuildSubbands(const v3i& N, int NLevels, array<grid<>>* Subbands);
-void BuildSubbandsInPlace(const v3i& N, int NLevels, array<grid<>>* Subbands);
+void BuildSubbands(const v3i& N, int NLevels, array<grid>* Subbands);
+void BuildSubbandsInPlace(const v3i& N, int NLevels, array<grid>* Subbands);
 /* Copy samples from Src so that in Dst, samples are organized into subbands */
-void FormSubbands(grid<volume> Dst, grid<volume> Src, int NLevels);
+void FormSubbands(grid_volume Dst, grid_volume Src, int NLevels);
 /* Assume the wavelet transform is done in X, then Y, then Z */
 int LevelToSubband(const v3i& Level);
 v3i ExpandDomain(const v3i& N, int NLevels);

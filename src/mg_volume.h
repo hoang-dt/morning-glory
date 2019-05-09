@@ -8,89 +8,60 @@
 
 namespace mg {
 
-mg_T(t = int*) struct extent;
-mg_T(t = int*) struct grid;
-struct volume;
-
-mg_T(t) struct is_extent                 : false_type {};
-mg_T(t) struct is_extent<extent<t>>      : true_type  {};
-mg_T(t) struct is_extent_ptr             : false_type {};
-mg_T(t) struct is_extent_ptr<extent<t>*> : true_type  {};
-mg_T(t) struct is_grid                   : false_type {};
-mg_T(t) struct is_grid<grid<t>>          : true_type  {};
-mg_T(t) struct is_grid_ptr               : false_type {};
-mg_T(t) struct is_grid_ptr<grid<t>*>     : true_type  {};
-
-/* parent's type can be extent*, grid*, volume*, extent, grid, volume */
-template <typename t>
 struct extent {
-  using tt = typename remove_cv_ref<t>::type;
-  static_assert(
-    is_same_type<tt, int*  >::Value ||
-    is_same_type<tt, volume>::Value || is_same_type <tt, volume*>::Value ||
-    is_extent   <tt        >::Value || is_extent_ptr<tt         >::Value ||
-    is_grid     <tt        >::Value || is_grid_ptr  <tt         >::Value,
-    "Template base type must be one of int*, extent, grid, volume");
-
   u64 From = 0, Dims = 0;
-  t Base = {};
   extent();
   explicit extent(const v3i& Dims3);
   extent(const v3i& From3, const v3i& Dims3);
-  extent(const v3i& From3, const v3i& Dims, const t& BaseIn);
-  template <typename u> extent(const extent<u>& Other);
-  template <typename u> extent& operator=(const extent<u>& Other);
-  bool HasBase() const;
 };
 
-/* parent's type can be extent*, grid*, volume*, extent, grid, volume */
-template <typename t>
 struct grid {
-  using tt = typename remove_cv_ref<t>::type;
-  static_assert(
-    is_same_type<tt, int*  >::Value ||
-    is_same_type<tt, volume>::Value || is_same_type <tt, volume*>::Value ||
-    is_extent   <tt        >::Value || is_extent_ptr<tt         >::Value ||
-    is_grid     <tt        >::Value || is_grid_ptr  <tt         >::Value,
-    "Template base type must be one of int*, extent, grid, volume");
-
   u64 From = 0, Dims = 0, Strd = 0; // packed from, dims, strides
-  t Base = {};
   grid();
   explicit grid(const v3i& Dims3);
-  explicit grid(const t& BaseIn);
   grid(const v3i& From3, const v3i& Dims3);
   grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3);
-  grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3, const t& BaseIn);
-  explicit grid(const extent<t>& Ext);
-  template <typename u> grid(const grid<u>& Other);
-  template <typename u> grid& operator=(const grid<u>& Other);
-  bool HasBase() const;
+  explicit grid(const extent& Ext);
 };
 
 struct volume {
   buffer Buffer = {};
   u64 Dims = 0;
-  data_type Type = data_type::__Invalid__;
+  dtype Type = dtype::__Invalid__;
   volume();
-  volume(const buffer& Buf, const v3i& Dims3, data_type TypeIn);
-  bool HasBase() const { return false; }
+  volume(const buffer& Buf, const v3i& Dims3, dtype TypeIn);
+};
+
+struct grid_volume {
+  grid Grid = {};
+  volume Base = {};
+  grid_volume();
+  explicit grid_volume(const volume& Vol);
+  grid_volume(const extent& Ext, const volume& Vol);
+  grid_volume(const grid& GridIn, const volume& Vol);
+  grid_volume(const v3i& From3, const v3i& Dims3, const v3i& Strd3, const volume& Vol);
 };
 
 bool operator==(const volume& V1, const volume& V2);
 
-mg_T(t) v3i From(const extent<t>& Ext);
-mg_T(t) v3i Dims(const extent<t>& Ext);
-mg_T(t) v3i Strd(const extent<t>& Ext);
+v3i From(const extent& Ext);
+v3i Dims(const extent& Ext);
+v3i Strd(const extent& Ext);
+v3i Size(const extent& Ext);
 
-mg_T(t) v3i From(const grid<t>& Grid);
-mg_T(t) v3i Dims(const grid<t>& Grid);
-mg_T(t) v3i Strd(const grid<t>& Grid);
+v3i From(const grid& Grid);
+v3i Dims(const grid& Grid);
+v3i Strd(const grid& Grid);
+v3i Size(const grid& Grid);
 
 v3i From(const volume& Vol);
 v3i Dims(const volume& Vol);
 v3i Strd(const volume& Vol);
 i64 Size(const volume& Vol);
+
+v3i From(const grid_volume& Grid);
+v3i Dims(const grid_volume& Grid);
+v3i Strd(const grid_volume& Grid);
 
 i64 Row(const v3i& N, const v3i& P);
 v3i InvRow(i64 I, const v3i& N);
@@ -107,17 +78,18 @@ struct grid_iterator {
   bool operator==(const grid_iterator& Other) const;
 };
 
-mg_T(t) mg_Gi Begin(grid<volume>& Grid);
-mg_T(t) mg_Gi End(grid<volume>& Grid);
+mg_T(t) mg_Gi Begin(grid_volume& Grid);
+mg_T(t) mg_Gi End(grid_volume& Grid);
 
 /* assumption: Grid1 is on top of Grid2 */
-mg_T2(t, u) grid<u> GridCollapse(const grid<t>& Grid1, const grid<u>& Grid2);
+grid_volume GridCollapse(const grid& Top, const grid_volume& Bot);
+grid GridCollapse(const grid& Top, const grid& Bot);
 
 /* Read a volume from a file */
-error<> ReadVolume(cstr FileName, const v3i& Dims3, data_type Type, volume* Vol);
+error<> ReadVolume(cstr FileName, const v3i& Dims3, dtype Type, volume* Vol);
 
 /* Copy a region of the first volume to a region of the second volume */
-mg_T(t) void Copy(grid<t>* Dst, const grid<t>& Src);
+void Copy(grid_volume* Dst, const grid_volume& Src);
 
 void Clone(volume* Dst, volume& Src, allocator* Alloc = &Mallocator());
 

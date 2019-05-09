@@ -264,8 +264,8 @@ ff_err WriteSubband(file_format& Ff, int Sb) {
 // can manage their own memory
 ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   /* Only support float32 and float64 for now */
-  if (Ff->Volume.Type != data_type::float32 &&
-      Ff->Volume.Type != data_type::float64)
+  if (Ff->Volume.Type != dtype::float32 &&
+      Ff->Volume.Type != dtype::float64)
     return mg_Error(ff_err_code::TypeNotSupported);
   v3i Dims = Unpack3i64(Ff->Volume.Dims);
   BuildSubbands(Dims, Ff->NLevels, &Ff->Subbands);
@@ -273,10 +273,10 @@ ff_err Finalize(file_format* Ff, file_format::mode Mode) {
   if (!(Ff->TileDims >= ZDims || Sb0Dims >= Ff->TileDims))
     return mg_Error(ff_err_code::InvalidTileDims);
   /* Chunk size must be large enough to store all the EMaxes in a tile */
-  if (Ff->Volume.Type == data_type::float32) {
+  if (Ff->Volume.Type == dtype::float32) {
     if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims / ZDims) * traits<f32>::ExpBits)
       return mg_Error(ff_err_code::InvalidChunkSize);
-  } else if (Ff->Volume.Type == data_type::float64) {
+  } else if (Ff->Volume.Type == dtype::float64) {
     if (Ff->ChunkBytes * 8 < Prod(Ff->TileDims / ZDims) * traits<f64>::ExpBits)
       return mg_Error(ff_err_code::InvalidChunkSize);
   }
@@ -362,7 +362,7 @@ ff_err ParseMeta(file_format* Ff, metadata* Meta) {
   char Type[16];
   if (fscanf(Fp, "type = %s\n", Type) != 1)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Type corrupted");
-  Ff->Volume.Type = Meta->Type = StringTo<data_type>()(stref(Type));
+  Ff->Volume.Type = Meta->Type = StringTo<dtype>()(stref(Type));
   if (fscanf(Fp, "num levels = %d\n", &Ff->NLevels) != 1)
     return mg_Error(ff_err_code::ParseFailed, "Meta data: Num Levels corrupted");
   if (fscanf(Fp, "tile dims = %d %d %d\n",
@@ -393,10 +393,10 @@ ff_err Encode(file_format* Ff, metadata& Meta) {
   Ff->MetaBytes = FormatMeta(Ff, Meta);
   mg_Assert(Ff->MetaBytes == 1 + (int)strnlen(Ff->Meta, sizeof(Ff->Meta)));
   for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
-    if (Ff->Volume.Type == data_type::float64) {
+    if (Ff->Volume.Type == dtype::float64) {
       if (ErrorExists(Err = WriteSubband<f64>(*Ff, Sb)))
         return Err;
-    } else if (Ff->Volume.Type == data_type::float32) {
+    } else if (Ff->Volume.Type == dtype::float32) {
       if (ErrorExists(Err = WriteSubband<f32>(*Ff, Sb)))
         return Err;
     } else {
@@ -421,7 +421,7 @@ void SetTolerance(file_format* Ff, f64 Tolerance) {
 void SetPrecision(file_format* Ff, int Precision) {
   Ff->Prec = Precision;
 }
-void SetVolume(file_format* Ff, byte* Data, v3i Dims, data_type Type) {
+void SetVolume(file_format* Ff, byte* Data, v3i Dims, dtype Type) {
   Ff->Volume.Buffer.Data = Data;
   Ff->Volume.Buffer.Bytes = SizeOf(Type) * Prod<i64>(Dims);
   Ff->Volume.Dims = Pack3i64(Dims);
@@ -596,7 +596,7 @@ ff_err Decode(file_format* Ff, metadata* Meta) {
   Resize(&FStats.SbStats, Size(Ff->Subbands));
 #endif
   for (int Sb = 0; Sb < Size(Ff->Subbands); ++Sb) {
-    if (Ff->Volume.Type == data_type::float64) {
+    if (Ff->Volume.Type == dtype::float64) {
       if (ErrorExists(Err = ReadSubband<f64>(Ff, Sb)))
         return Err;
     } else {

@@ -107,7 +107,7 @@ Quantize(grid<volume>* Dst, const grid<volume>& Src, int Bits) {
 }
 
 void
-Dequantize(byte* FIn, i64 Size, int EMax, int Bits, byte* FOut, data_type Type) {
+Dequantize(byte* FIn, i64 Size, int EMax, int Bits, byte* FOut, dtype Type) {
 #define Body(type)\
   using itype = typename traits<type>::integral_t;\
   itype* FInPtr = (itype*)FIn;\

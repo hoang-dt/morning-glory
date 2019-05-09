@@ -4,7 +4,7 @@
 #include "mg_macros.h"
 #include "mg_common.h"
 
-mg_Enum(data_type, int,
+mg_Enum(dtype, int,
   int8, uint8, int16, uint16, int32, uint32, int64, uint64, float32, float64)
 
 /*
@@ -16,11 +16,11 @@ contains the code to run. Presumably the code makes use of Type. */
 
 namespace mg {
 
-int SizeOf(data_type Type);
-int BitSizeOf(data_type Type);
-data_type IntType(data_type InputType);
-data_type UnsignedType(data_type InputType);
-mg_T(t) bool MatchTypes(data_type Type);
+int SizeOf(dtype Type);
+int BitSizeOf(dtype Type);
+dtype IntType(dtype InputType);
+dtype UnsignedType(dtype InputType);
+mg_T(t) bool MatchTypes(dtype Type);
 
 } // namespace mg
 

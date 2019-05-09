@@ -65,8 +65,8 @@ params ParseParams(int Argc, char** Argv) {
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
   mg_AbortIf(Prod<i64>(P.Meta.Dims) > traits<i32>::Max,
     "Data dimensions too big");
-  mg_AbortIf(P.Meta.Type != data_type::float32 &&
-             P.Meta.Type != data_type::float64, "Data type not supported");
+  mg_AbortIf(P.Meta.Type != dtype::float32 &&
+             P.Meta.Type != dtype::float64, "Data type not supported");
   if (P.Action == action::Encode) {
     mg_AbortIf(!OptionValue(Argc, Argv, "--num_levels", &P.NLevels),
       "Provide --num_levels");

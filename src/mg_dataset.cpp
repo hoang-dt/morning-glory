@@ -32,7 +32,7 @@ ParseMeta(stref FilePath, metadata* Meta) {
                   Meta->Field, &Meta->Dims.X, &Meta->Dims.Y, &Meta->Dims.Z, Type))
   {
     Type[0] = (char)tolower(Type[0]);
-    Meta->Type = StringTo<data_type>()(stref(Type));
+    Meta->Type = StringTo<dtype>()(stref(Type));
     Copy(mg_StringRef(Meta->File), FilePath);
     return mg_Error(err_code::NoError);
   }
@@ -80,7 +80,7 @@ ReadMeta(cstr FileName, metadata* Meta) {
       if (D <= 2) Meta->Dims[2] = 1;
       if (D <= 1) Meta->Dims[1] = 1;
     } else if (Attr == "type") {
-      if ((Meta->Type = StringTo<data_type>()(Value)) == data_type::__Invalid__)
+      if ((Meta->Type = StringTo<dtype>()(Value)) == dtype::__Invalid__)
         return mg_Error(err_code::TypeNotSupported, "File %s", FileName);
     } else {
       return mg_Error(err_code::AttributeNotFound, "File %s", FileName);

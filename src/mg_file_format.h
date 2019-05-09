@@ -64,7 +64,7 @@ struct file_format {
 /* API to use the file format */
 /* Must call */
 void SetFileName(file_format* Ff, cstr FileName);
-void SetVolume(file_format* Ff, byte* Data, v3i Dims, data_type Type);
+void SetVolume(file_format* Ff, byte* Data, v3i Dims, dtype Type);
 void SetTileDims(file_format* Ff, v3i TileDims);
 void SetTolerance(file_format* Ff, f64 Tolerance);
 /* Precision = 64 means that the values in a zfp block are quantized to 64-bit
