@@ -18,8 +18,8 @@ inline thread_local char ScratchBuf[1024];
 /*
 Quickly declare a heap-allocated array (typed_buffer) which deallocates itself
 at the end of scope. */
-#define mg_MallocArray(Name, Type, Size)
-#define mg_MallocArray0(Name, Type, Size)
+#define mg_MallocArray (Name, Type, Size)
+#define mg_MallocArray0(Name, Type, Size) // initialize elements to 0
 #define mg_ArrayOfMallocArrays(Name, Type, SizeOuter, SizeInner)
 #define mg_MallocArrayOfArrays(Name, Type, SizeOuter, SizeInner)
 
@@ -32,7 +32,7 @@ struct allocator {
 
 /* Allocators that know if they own an address/buffer */
 struct owning_allocator : allocator {
-  virtual bool Own(buffer Buf) const = 0;
+  virtual bool Own(const buffer& Buf) const = 0;
 };
 
 struct mallocator;
@@ -41,9 +41,10 @@ struct linear_allocator;
 /* A linear allocator that uses stack storage. */
 template <int Capacity>
 struct stack_linear_allocator;
-/* Whenever an allocation of a size in a specific range is made, return the
- * block immediately from the head of a linked list. Otherwise forward the
- * allocation to some Parent allocator. */
+/* 
+Whenever an allocation of a size in a specific range is made, return the block 
+immediately from the head of a linked list. Otherwise forward the allocation to
+some Parent allocator. */
 struct free_list_allocator;
 /* Try to allocate using one allocator first (the Primary), then if that fails,
  * use another allocator (the Secondary). */
@@ -59,11 +60,11 @@ struct linear_allocator : public owning_allocator {
   buffer Block;
   i64 CurrentBytes = 0;
   linear_allocator();
-  linear_allocator(buffer Buf);
+  linear_allocator(const buffer& Buf);
   bool Alloc(buffer* Buf, i64 Bytes) override;
   void Dealloc(buffer* Buf) override;
   void DeallocAll() override;
-  bool Own(buffer Buf) const override;
+  bool Own(const buffer& Buf) const override;
 };
 
 template <int Capacity>
@@ -100,36 +101,22 @@ static inline mallocator& Mallocator() {
   return Instance;
 }
 
-void
-Clone(buffer* Dst, buffer Src, allocator* Alloc = &Mallocator());
+void Clone(const buffer& Src, buffer* Dst, allocator* Alloc = &Mallocator());
 
 /* Abstract away memory allocations/deallocations */
-void
-AllocBuf(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
+void AllocBuf  (buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
+void AllocBuf0 (buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
+void DeallocBuf(buffer* Buf);
 
-void
-AllocBuf0(buffer* Buf, i64 Bytes, allocator* Alloc = &Mallocator());
+mg_T(t) void AllocTypedBuf  (buffer_t<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
+mg_T(t) void AllocTypedBuf0 (buffer_t<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
+mg_T(t) void DeallocTypedBuf(buffer_t<t>* Buf);
 
-void
-DeallocBuf(buffer* Buf);
-
-mg_T(t) void
-AllocTypedBuf(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
-
-mg_T(t) void
-AllocTypedBuf0(typed_buffer<t>* Buf, i64 Size, allocator* Alloc = &Mallocator());
-
-mg_T(t) void
-DeallocTypedBuf(typed_buffer<t>* Buf);
-
-void
-ZeroBuf(buffer* Buf);
-
-mg_T(t) void
-ZeroTypedBuf(typed_buffer<t>* Buf);
-
-void
-MemCopy(buffer* Dst, buffer& Src);
+/* Zero out a buffer */
+void ZeroBuf(buffer* Buf);
+mg_T(t) void ZeroTypedBuf(buffer_t<t>* Buf);
+/* Copy one buffer to another. Here the order of arguments are the reverse of memcpy. */
+void MemCopy(const buffer& Src, buffer* Dst);
 
 
 } // namespace mg

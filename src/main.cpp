@@ -51,15 +51,15 @@ struct params {
 // TODO: add --precision for decoding
 params ParseParams(int Argc, char** Argv) {
   params P;
-  if (OptionExists(Argc, Argv, "--encode"))
+  if (OptExists(Argc, Argv, "--encode"))
     P.Action = action::Encode;
-  else if (OptionExists(Argc, Argv, "--decode"))
+  else if (OptExists(Argc, Argv, "--decode"))
     P.Action = action::Decode;
   else
     mg_Abort("Provide either --encode or --decode");
-  mg_AbortIf(!OptionValue(Argc, Argv, "--compressed_file", &P.CompressedFile),
+  mg_AbortIf(!OptVal(Argc, Argv, "--compressed_file", &P.CompressedFile),
     "Provide --compressed_files");
-  mg_AbortIf(!OptionValue(Argc, Argv, "--raw_file", &P.DataFile),
+  mg_AbortIf(!OptVal(Argc, Argv, "--raw_file", &P.DataFile),
     "Provide --raw_file");
   error Err = ParseMeta(P.DataFile, &P.Meta);
   mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
@@ -68,17 +68,17 @@ params ParseParams(int Argc, char** Argv) {
   mg_AbortIf(P.Meta.Type != dtype::float32 &&
              P.Meta.Type != dtype::float64, "Data type not supported");
   if (P.Action == action::Encode) {
-    mg_AbortIf(!OptionValue(Argc, Argv, "--num_levels", &P.NLevels),
+    mg_AbortIf(!OptVal(Argc, Argv, "--num_levels", &P.NLevels),
       "Provide --num_levels");
-    mg_AbortIf(!OptionValue(Argc, Argv, "--tile_dims", &P.TileDims),
+    mg_AbortIf(!OptVal(Argc, Argv, "--tile_dims", &P.TileDims),
       "Provide --tile_dims");
-    mg_AbortIf(!OptionValue(Argc, Argv, "--chunk_bytes", &P.ChunkBytes),
+    mg_AbortIf(!OptVal(Argc, Argv, "--chunk_bytes", &P.ChunkBytes),
       "Provide --chunk_bytes");
-    mg_AbortIf(!OptionValue(Argc, Argv, "--precision", &P.NBitPlanes),
+    mg_AbortIf(!OptVal(Argc, Argv, "--precision", &P.NBitPlanes),
       "Provide --precision");
     mg_AbortIf(P.NBitPlanes > BitSizeOf(P.Meta.Type),
       "precision too high");
-    mg_AbortIf(!OptionValue(Argc, Argv, "--tolerance", &P.Tolerance),
+    mg_AbortIf(!OptVal(Argc, Argv, "--tolerance", &P.Tolerance),
       "Provide --tolerance");
   }
   return P;

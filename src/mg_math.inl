@@ -39,7 +39,7 @@ Exponent(t Val) {
   return -traits<t>::ExpBias;
 }
 
-template <typename t = int, typename u> mg_Inline t
+mg_T2i(t = int, u) t
 Prod(const v3<u>& Vec) { return t(Vec.X) * t(Vec.Y) * t(Vec.Z); }
 
 mg_Ti(t) v3<t>

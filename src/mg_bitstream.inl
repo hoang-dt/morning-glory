@@ -13,16 +13,16 @@ Rewind(bitstream* Bs) {
 }
 
 mg_Inline i64
-Size(bitstream& Bs) { return (Bs.BitPtr - Bs.Stream.Data) + (Bs.BitPos + 7) / 8; }
+Size(const bitstream& Bs) { return (Bs.BitPtr - Bs.Stream.Data) + (Bs.BitPos + 7) / 8; }
 
 mg_Inline i64
-BitSize( bitstream& Bs) { return (Bs.BitPtr - Bs.Stream.Data) * 8 + Bs.BitPos; }
+BitSize(const bitstream& Bs) { return (Bs.BitPtr - Bs.Stream.Data) * 8 + Bs.BitPos; }
 
 mg_Inline int
-BufferSize( bitstream& Bs) { return sizeof(Bs.BitBuf); }
+BufferSize(const bitstream& Bs) { return sizeof(Bs.BitBuf); }
 
 mg_Inline void
-InitRead(bitstream* Bs, buffer Stream) {
+InitRead(bitstream* Bs, const buffer& Stream) {
   mg_Assert(!Stream.Data || Stream.Bytes > 0);
   Bs->Stream = Stream;
   Rewind(Bs);
@@ -75,7 +75,7 @@ ReadLong(bitstream* Bs, int Count) {
 }
 
 mg_Inline void
-InitWrite(bitstream* Bs, buffer Buf) {
+InitWrite(bitstream* Bs, const buffer& Buf) {
   mg_Assert((size_t)Buf.Bytes >= sizeof(Bs->BitBuf));
   Bs->Stream = Buf;
   Bs->BitPtr = Buf.Data;

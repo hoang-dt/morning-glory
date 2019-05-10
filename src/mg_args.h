@@ -6,10 +6,10 @@
 
 namespace mg {
 
-bool OptionValue(int NArgs, cstr* Args, cstr Option, cstr* Value);
-bool OptionValue(int NArgs, cstr* Args, cstr Option, int* Value);
-bool OptionValue(int NArgs, cstr* Args, cstr Option, f64* Value);
-bool OptionValue(int NumArgs, cstr* Args, cstr Option, v3i* Value);
-bool OptionExists(int NArgs, cstr* Args, cstr Option);
+bool OptVal   (int NArgs, cstr* Args, cstr Opt, cstr* Val);
+bool OptVal   (int NArgs, cstr* Args, cstr Opt, int * Val);
+bool OptVal   (int NArgs, cstr* Args, cstr Opt, f64 * Val);
+bool OptVal   (int NArgs, cstr* Args, cstr Opt, v3i * Val);
+bool OptExists(int NArgs, cstr* Args, cstr Opt);
 
 } // namespace mg

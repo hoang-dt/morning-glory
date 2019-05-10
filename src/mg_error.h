@@ -7,14 +7,14 @@
 namespace mg {
 
 /* There should be only one error in-flight on each thread */
-template <typename t = err_code>
+mg_T(t = err_code)
 struct error {
   cstr Msg = "";
-  t Code;
+  t Code = {};
   i8 StackIdx = 0;
-  bool StrGenerated = false;
+  bool StrGened = false;
   error();
-  error(t Code, bool StrGened = false, cstr MsgIn = "");
+  error(t CodeIn, bool StrGenedIn = false, cstr MsgIn = "");
   inline thread_local static cstr Files[64]; // Store file names up the stack
   inline thread_local static i16 Lines[64]; // Store line numbers up the stack
 }; // struct err_template

@@ -55,6 +55,18 @@ volume(const buffer& Buf, const v3i& Dims3, dtype TypeIn)
   , Dims(Pack3i64(Dims3))
   , Type(TypeIn) {}
 
+mg_Ti(t) volume::
+volume(t* Ptr, i64 Size)
+  : Buffer((byte*)Ptr, Size * sizeof(t))
+  , Dims(Pack3i64(v3i((i32)Size, 1, 1))) // NOTE the cast // TODO: maybe try to factor Size
+  , Type(dtype_traits<t>::Type) { mg_Assert(Size <= (i64)traits<i32>::Max); }
+
+mg_Ti(t) volume::
+volume(t* Ptr, const v3i& Dims3)
+  : Buffer(Ptr, Prod<i64>(Dims3) * sizeof(t))
+  , Dims(Pack3i64(Dims3))
+  , Type(dtype_traits<t>::Type) { mg_Assert(Size <= (i64)traits<i32>::Max); }
+
 mg_Inline grid_volume::
 grid_volume() = default;
 
@@ -78,6 +90,16 @@ grid_volume(const v3i& From3, const v3i& Dims3, const v3i& Strd3, const volume& 
   : Grid(From3, Dims3, Strd3)
   , Base(Vol) {}
 
+mg_Ti(t) grid_volume::
+grid_volume(t* Ptr, i64 Size)
+  : Grid(v3i(i32(Size), 1, 1))
+  , Base(Ptr, Size) { mg_Assert(Size <= (i64)traits<i32>::Max); }
+
+mg_Ti(t) grid_volume::
+grid_volume(t* Ptr, const v3i& Dims3)
+  : Grid(Dims3)
+  , Base(Ptr, Dims3) { mg_Assert(Size <= (i64)traits<i32>::Max); }
+
 mg_Inline bool
 operator==(const volume& V1, const volume& V2) {
   return V1.Buffer == V2.Buffer && V1.Dims == V2.Dims && V1.Type == V2.Type;
@@ -86,10 +108,12 @@ operator==(const volume& V1, const volume& V2) {
 mg_Inline v3i From(const extent& Ext) { return Unpack3i64(Ext.From); }
 mg_Inline v3i Dims(const extent& Ext) { return Unpack3i64(Ext.Dims); }
 mg_Inline v3i Strd(const extent& Ext) { (void)Ext; return v3i::One; }
+mg_Inline i64 Size(const extent& Ext) { return Prod<i64>(Dims(Ext)); }
 
 mg_Inline v3i From(const grid& Grid) { return Unpack3i64(Grid.From); }
 mg_Inline v3i Dims(const grid& Grid) { return Unpack3i64(Grid.Dims); }
 mg_Inline v3i Strd(const grid& Grid) { return Unpack3i64(Grid.Strd); }
+mg_Inline i64 Size(const grid& Grid) { return Prod<i64>(Dims(Grid)); };
 
 mg_Inline v3i From(const volume& Vol) { (void)Vol; return v3i::Zero; }
 mg_Inline v3i Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
@@ -98,6 +122,7 @@ mg_Inline i64 Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
 mg_Inline v3i From(const grid_volume& Grid) { return From(Grid.Grid); }
 mg_Inline v3i Dims(const grid_volume& Grid) { return Dims(Grid.Grid); }
 mg_Inline v3i Strd(const grid_volume& Grid) { return Strd(Grid.Grid); }
+mg_Inline i64 Size(const grid_volume& Grid) { return Size(Grid.Grid); }
 
 mg_Ti(t) mg_Gi
 Begin(grid_volume& Grid) {
@@ -156,17 +181,29 @@ mg_Inline int
 NumDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
 
 #undef mg_BeginGridLoop2
-#define mg_BeginGridLoop2(G1, G2)\
+#define mg_BeginGridLoop2(GI, GJ)\
   {\
     v3i Pos;\
-    v3i FromDst = From(G1), FromSrc = From(G2);\
-    v3i Dims3 = Dims(G1), DimsSrc = Dims((G1).Base), DimsDst = Dims((G2).Base);\
-    v3i StrdSrc = Strd(G1), StrdDst = Strd(G2);\
+    v3i FromI = From(GI), FromJ = From(GJ);\
+    v3i Dims3 = Dims(GI), DimsI = Dims((GI).Base), DimsJ = Dims((GJ).Base);\
+    v3i StrdI = Strd(GI), StrdJ = Strd(GJ);\
     mg_BeginFor3(Pos, v3i::Zero, Dims3, v3i::One) {\
-      i64 I = Row(DimsSrc, FromSrc + Pos * StrdSrc);\
-      i64 J = Row(DimsDst, FromDst + Pos * StrdDst);\
+      i64 I = Row(DimsI, FromI + Pos * StrdI);\
+      i64 J = Row(DimsJ, FromJ + Pos * StrdJ);\
 
 #undef mg_EndGridLoop2
 #define mg_EndGridLoop2 }}}}
+
+#undef mg_BeginGridLoop
+#define mg_BeginGridLoop(G)\
+  {\
+    v3i Pos;\
+    v3i From3 = From(G), Dims3 = Dims(G), Strd3 = Strd(G);\
+    v3i DimsB = Dims((G).Base);\
+    mg_BeginFor3(Pos, From3, Dims3, Strd3) {\
+      i64 I = Row(DimsB, Pos);\
+
+#undef mg_EndGridLoop
+#define mg_EndGridLoop }}}}
 
 } // namespace mg

@@ -2,22 +2,26 @@
 #include "mg_assert.h"
 #include "mg_memory.h"
 
+// TODO: some of these functions can be made inline
+
 namespace mg {
 
-void MemCopy(buffer* Dst, buffer& Src) {
+void 
+MemCopy(const buffer& Src, buffer* Dst) {
   mg_Assert(Dst->Data, "Copy to null");
   mg_Assert(Src.Data || Src.Bytes == 0, "Copy from null");
   mg_Assert(Dst->Bytes >= Src.Bytes, "Copy to a smaller buffer");
   memcpy(Dst->Data, Src.Data, size_t(Src.Bytes));
 }
 
-void ZeroBuf(buffer* Buf) {
+void 
+ZeroBuf(buffer* Buf) {
   mg_Assert(Buf->Data);
   memset(Buf->Data, 0, size_t(Buf->Bytes));
 }
 
 mg_T(t) void
-ZeroTypedBuf(typed_buffer<t>* Buf) {
+ZeroTypedBuf(buffer_t<t>* Buf) {
   mg_Assert(Buf->Data);
   memset(Buf->Data, 0, Buf->Size * sizeof(t));
 }
@@ -66,15 +70,13 @@ mallocator::Dealloc(buffer* Buf) {
 }
 
 void
-mallocator::DeallocAll() {
-  // empty
-}
+mallocator::DeallocAll() { /* empty */ }
 
 linear_allocator::
 linear_allocator() = default;
 
 linear_allocator::
-linear_allocator(buffer Buf) : Block(Buf) {}
+linear_allocator(const buffer& Buf) : Block(Buf) {}
 
 bool linear_allocator::
 Alloc(buffer* Buf, i64 Bytes) {
@@ -104,7 +106,7 @@ DeallocAll() {
 }
 
 bool linear_allocator::
-Own(buffer Buf) const {
+Own(const buffer& Buf) const {
   return Block.Data <= Buf.Data && Buf.Data < Block.Data + CurrentBytes;
 }
 
@@ -182,12 +184,13 @@ DeallocAll() {
 }
 
 void
-Clone(buffer* Dst, buffer Src, allocator* Alloc) {
+Clone(const buffer& Src, buffer* Dst, allocator* Alloc) {
   if (Dst->Data && Dst->Bytes != Src.Bytes)
     DeallocBuf(Dst);
   if (!Dst->Data && Dst->Bytes == 0)
     Alloc->Alloc(Dst, Src.Bytes);
-  MemCopy(Dst, Src);
+  MemCopy(Src, Dst);
 }
 
 } // namespace mg
+

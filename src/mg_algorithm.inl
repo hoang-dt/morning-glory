@@ -60,8 +60,8 @@ FindLast(i RevBeg, i RevEnd, const t& Val) {
 }
 
 mg_T2i(t1, t2) bool
-Contains(const t1& Big, const t2& Small) {
-  return Find(Begin(Big), End(Big), Small) != End(Big);
+Contains(const t1& Collection, const t2& Elem) {
+  return Find(Begin(Collection), End(Collection), Elem) != End(Collection);
 }
 
 mg_T2(i, f) i

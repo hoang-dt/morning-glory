@@ -45,7 +45,7 @@ End(array<t>& Array) { return (t*)Array.Buffer.Data + Array.Size; }
 
 mg_T(t) void
 Relocate(array<t>* Array, buffer Buf) {
-  MemCopy(&Buf, Array->Buffer);
+  MemCopy(Array->Buffer, &Buf);
   Array->Alloc->Dealloc(&Array->Buffer);
   Array->Buffer = Buf;
   Array->Capacity = Buf.Bytes / sizeof(t);
@@ -88,11 +88,10 @@ Reserve(array<t>* Array, i64 Capacity) { SetCapacity(Array, Capacity); }
 
 // TODO: test to see if t is POD, if yes, just memcpy
 mg_T(t) void
-Clone(array<t>* Dst, array<t>& Src) {
+Clone(array<t>& Src, array<t>* Dst) {
   Resize(Dst, Size(Src));
-  for (int I = 0; I < Size(Src); ++I) {
-    Clone(&(*Dst)[I], Src[I]);
-  }
+  for (int I = 0; I < Size(Src); ++I)
+    Clone(Src[I], &(*Dst)[I]);
 }
 
 mg_Ti(t) void

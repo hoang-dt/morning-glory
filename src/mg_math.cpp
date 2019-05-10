@@ -1,4 +1,4 @@
-#include "mg_assert.h"
+#include "mg_math.h"
 
 namespace mg {
 

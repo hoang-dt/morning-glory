@@ -11,7 +11,7 @@ mg_T2i(t, u) expected<t, u>::
 expected(const t& ValIn) : Val(ValIn), Ok(true) {}
 
 mg_T2i(t, u) expected<t, u>::
-expected(const error<u>& Err) : Err(ErrIn), Ok(false) {}
+expected(const error<u>& ErrIn) : Err(ErrIn), Ok(false) {}
 
 mg_T2i(t, u) t& expected<t, u>::
 operator*() { return Val; }

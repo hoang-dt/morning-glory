@@ -7,7 +7,7 @@
 namespace mg {
 
 /* Store either a value or an error */
-template <typename t, typename u = err_code>
+mg_T2(t, u = err_code)
 struct expected {
   union {
     t Val;

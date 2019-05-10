@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mg_common.h"
 #include "mg_string.h"
 
 namespace mg {
@@ -10,19 +11,20 @@ struct path {
   stref Parts[NPartsMax] = {}; /* e.g. home, dir, file.txt */
   int NParts = 0;
   path();
-  path(stref Str);
+  path(const stref& Str);
 };
 
-void Init(path* Path, stref Str);
+void Init(path* Path, const stref& Str);
 /* Add a part to the end (e.g. "C:/Users" + "Meow" = "C:/Users/Meow"). */
-void Append(path* Path, stref Component);
+void Append(path* Path, const stref& Part);
 /* Remove the last part, e.g., removing the file name at the end of a path. */
-stref GetFileName(stref Path);
-stref GetDirName(stref Path);
-str ToString(const path& Path);
+stref GetFileName(const stref& Path);
+stref GetDirName(const stref& Path);
+cstr ToString(const path& Path);
 /* Get the directory where the program is launched from. */
-bool IsRelative(stref Path);
-bool CreateFullDir(stref Path);
-bool DirExists(stref Path);
+bool IsRelative(const stref& Path);
+bool CreateFullDir(const stref& Path);
+bool DirExists(const stref& Path);
 
 } // namespace mg
+

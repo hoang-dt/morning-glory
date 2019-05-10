@@ -33,7 +33,7 @@ struct list_iterator {
 };
 
 mg_T(t) mg_Li Begin(list<t>& List);
-mg_T(t) mg_Li End(list<t>& List);
+mg_T(t) mg_Li End  (list<t>& List);
 mg_T(t) mg_Li Insert(list<t>* List, const mg_Li& Where, const t& Payload);
 mg_T(t) mg_Li PushBack(list<t>* List, const t& Payload);
 mg_T(t) void Dealloc(list<t>* List);

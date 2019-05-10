@@ -69,7 +69,7 @@ void TestGridCopy() {
     volume VolB(buffer((byte*)B, sizeof(B)), v3i(3, 1, 2), dtype::float64);
     grid_volume GridA(VolA);
     grid_volume GridB(grid(v3i::Zero, v3i(3, 1, 2), v3i(1, 3, 2)), VolB);
-    Copy(&GridA, GridB);
+    Copy(GridB, &GridA);
     int I = 0;
     for (auto It = Begin<f64>(GridA); It != End<f64>(GridA); ++It) {
       mg_Assert(*It == B[I++]);

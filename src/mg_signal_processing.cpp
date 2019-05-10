@@ -1,18 +1,20 @@
 #include <math.h>
+#include "mg_algorithm.h"
 #include "mg_assert.h"
 #include "mg_data_types.h"
 #include "mg_math.h"
 #include "mg_signal_processing.h"
+#include "mg_volume.h"
 
 namespace mg {
 
 f64
-SqError(const grid<volume>& F, const grid<volume>& G) {
+SqError(const grid_volume& F, const grid_volume& G) {
   mg_Assert(Dims(F) == Dims(G));
   mg_Assert(F.Base.Type == G.Base.Type);
 #define Body(type)\
-  typed_buffer<type> FBuf(F.Base.Buffer);\
-  typed_buffer<type> GBuf(G.Base.Buffer);\
+  buffer_t<type> FBuf(F.Base.Buffer);\
+  buffer_t<type> GBuf(G.Base.Buffer);\
   f64 Err = 0;\
   mg_BeginGridLoop2(F, G) {\
     f64 Diff = f64(FBuf[I]) - f64(GBuf[J]);\
@@ -26,18 +28,20 @@ SqError(const grid<volume>& F, const grid<volume>& G) {
 }
 
 f64
-RMSError(const grid<volume>& F, const grid<volume>& G) {
-  return sqrt(SquaredError(F, G) / Size(F));
+RMSError(const grid_volume& F, const grid_volume& G) {
+  return sqrt(SqError(F, G) / Size(F));
 }
 
 f64
-PSNR(const grid<volume>& F, const grid<volume>& G) {
+PSNR(const grid_volume& F, const grid_volume& G) {
   mg_Assert(Dims(F) == Dims(G));
   mg_Assert(F.Base.Type == G.Base.Type);
 #define Body(type)\
-  typed_buffer<type> FBuf(F.Base.Buffer);\
-  typed_buffer<type> GBuf(G.Base.Buffer);\
+  buffer_t<type> FBuf(F.Base.Buffer);\
+  buffer_t<type> GBuf(G.Base.Buffer);\
   f64 Err = 0;\
+  type MinElem = traits<type>::Max;\
+  type MaxElem = traits<type>::Min;\
   mg_BeginGridLoop2(F, G) {\
     f64 Diff = f64(FBuf[I]) - f64(GBuf[J]);\
     Err += Diff * Diff;\
@@ -54,15 +58,15 @@ PSNR(const grid<volume>& F, const grid<volume>& G) {
 }
 
 void
-ToNegaBinary(grid<volume>* Dst, const grid<volume>& Src) {
+FwdNegaBinary(const grid_volume& Src, grid_volume* Dst) {
   mg_Assert(Dims(Src) <= Dims(*Dst));
   mg_Assert(Dst->Base.Type == UnsignedType(Src.Base.Type));
 #define Body(type)\
   using utype = typename traits<type>::unsigned_t;\
-  typed_buffer<type> SrcBuf(Src.Base.Buffer);\
-  typed_buffer<utype> DstBuf(Dst->Base.Buffer);\
+  buffer_t<type>  SrcBuf(Src.Base.Buffer);\
+  buffer_t<utype> DstBuf(Dst->Base.Buffer);\
+  auto Mask = traits<type>::NBinaryMask;\
   mg_BeginGridLoop2(Src, *Dst) {\
-    auto Mask = traits<type>::NBinaryMask;\
     DstBuf[J] = utype((SrcBuf[I] + Mask) ^ Mask);\
   } mg_EndGridLoop2\
 
@@ -71,15 +75,15 @@ ToNegaBinary(grid<volume>* Dst, const grid<volume>& Src) {
 }
 
 void
-FromNegaBinary(grid<volume>* Dst, const grid<volume>& Src) {
+InvNegaBinary(const grid_volume& Src, grid_volume* Dst) {
   mg_Assert(Dims(Src) <= Dims(*Dst));
   mg_Assert(Src.Base.Type == UnsignedType(Dst->Base.Type));
 #define Body(type)\
   using utype = typename traits<type>::unsigned_t;\
-  typed_buffer<utype> SrcBuf(Src.Base.Buffer);\
-  typed_buffer<type> DstBuf(Dst->Base.Buffer);\
+  buffer_t<utype> SrcBuf(Src.Base.Buffer);\
+  buffer_t<type>  DstBuf(Dst->Base.Buffer);\
+  auto Mask = traits<type>::NBinaryMask;\
   mg_BeginGridLoop2(Src, *Dst) {\
-    auto Mask = traits<type>::NBinaryMask;\
     DstBuf[J] = type((SrcBuf[I] ^ Mask) - Mask);\
   } mg_EndGridLoop2\
 
@@ -88,35 +92,45 @@ FromNegaBinary(grid<volume>* Dst, const grid<volume>& Src) {
 }
 
 int
-Quantize(grid<volume>* Dst, const grid<volume>& Src, int Bits) {
+Quantize(const grid_volume& Src, grid_volume* Dst, int Bits) {
+  mg_Assert(Dims(Src) <= Dims(*Dst));
+  mg_Assert(Dst->Base.Type == IntType(Src.Base.Type));
 #define Body(type)\
   using itype = typename traits<type>::integral_t;\
-  type* FInPtr = (type*)FIn;\
-  itype* FOutPtr = (itype*)FOut;\
-  type Max = *(MaxElem(FInPtr, FInPtr + Size,\
-                       [](auto A, auto B) { return fabs(A) < fabs(B); }));\
-  int EMax = Exponent(fabs(Max));\
+  buffer_t<type> SrcBuf(Src.Base.Buffer);\
+  buffer_t<itype>  DstBuf(Dst->Base.Buffer);\
+  /* find the max absolute value */\
+  type MaxAbs = 0;\
+  mg_BeginGridLoop(Src) {\
+    MaxAbs = Max(MaxAbs, (type)fabs(SrcBuf[I]));\
+  } mg_EndGridLoop\
+  int EMax = Exponent(fabs(MaxAbs));\
+  /* quantize */\
   f64 Scale = ldexp(1, Bits - 1 - EMax);\
-  for (i64 I = 0; I < Size; ++I)\
-    FOutPtr[I] = itype(Scale * FInPtr[I]);\
+  mg_BeginGridLoop2(Src, *Dst) {\
+    DstBuf[J] = itype(Scale * SrcBuf[I]);\
+  } mg_EndGridLoop2\
   return EMax;
 
-  mg_DispatchOnFloat(Type)
+  mg_DispatchOnFloat(Src.Base.Type)
   return 0;
 #undef Body
 }
 
 void
-Dequantize(byte* FIn, i64 Size, int EMax, int Bits, byte* FOut, dtype Type) {
+Dequantize(const grid_volume& Src, int EMax, int Bits, grid_volume* Dst) {
+  mg_Assert(Dims(Src) <= Dims(*Dst));
+  mg_Assert(Src.Base.Type == IntType(Dst->Base.Type));
 #define Body(type)\
   using itype = typename traits<type>::integral_t;\
-  itype* FInPtr = (itype*)FIn;\
-  type* FOutPtr = (type*)FOut;\
+  buffer_t<itype> SrcBuf(Src.Base.Buffer);\
+  buffer_t<type>  DstBuf(Dst->Base.Buffer);\
   f64 Scale = 1.0 / ldexp(1, Bits - 1 - EMax);\
-  for (i64 I = 0; I < Size; ++I)\
-    FOutPtr[I] = type(Scale * FInPtr[I]);
+  mg_BeginGridLoop2(Src, *Dst) {\
+    DstBuf[J] = (Scale * SrcBuf[I]);\
+  } mg_EndGridLoop2
 
-  mg_DispatchOnFloat(Type)
+  mg_DispatchOnFloat(Dst->Base.Type)
 #undef Body
 }
 

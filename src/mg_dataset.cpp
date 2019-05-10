@@ -6,13 +6,13 @@
 #include "mg_filesystem.h"
 #include "mg_io.h"
 #include "mg_scopeguard.h"
-#include "mg_string.h"
 #include "mg_stacktrace.h"
+#include "mg_string.h"
 
 namespace mg {
 
 cstr
-ToString(metadata& Meta) {
+ToString(const metadata& Meta) {
   printer Pr(Meta.String, sizeof(Meta.String));
   mg_Print(&Pr, "file = %s\n", Meta.File);
   mg_Print(&Pr, "name = %s\n", Meta.Name);
@@ -33,7 +33,8 @@ ParseMeta(stref FilePath, metadata* Meta) {
   {
     Type[0] = (char)tolower(Type[0]);
     Meta->Type = StringTo<dtype>()(stref(Type));
-    Copy(mg_StringRef(Meta->File), FilePath);
+    stref FileStr = mg_StRef(Meta->File);
+    Copy(FilePath, &FileStr);
     return mg_Error(err_code::NoError);
   }
   return mg_Error(err_code::ParseFailed);
@@ -64,11 +65,14 @@ ReadMeta(cstr FileName, metadata* Meta) {
     if (Attr == "file") {
       path Path(GetDirName(FileName));
       Append(&Path, Trim(Value));
-      Copy(mg_StringRef(Meta->File), ToString(Path));
+      stref FileStr = mg_StRef(Meta->File);
+      Copy(ToString(Path), &FileStr);
     } else if (Attr == "name") {
-      Copy(mg_StringRef(Meta->Name), Trim(Value));
+      stref NameStr = mg_StRef(Meta->Name);
+      Copy(Trim(Value), &NameStr);
     } else if (Attr == "field") {
-      Copy(mg_StringRef(Meta->Field), Trim(Value));
+      stref FieldStr = mg_StRef(Meta->Field);
+      Copy(Trim(Value), &FieldStr);
     } else if (Attr == "dimensions") {
       tokenizer TkSpace(Value, " ");
       int D = 0;

@@ -26,7 +26,7 @@ FLiftCdf53##x(volume* Vol, grid& Ext) {\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
   mg_Assert(IsEven(P.x));\
   mg_Assert(P.x + S.x * (D.x - 1) < N.x);\
-  typed_buffer<t> F(Vol.Buffer);\
+  buffer_t<t> F(Vol.Buffer);\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
     int yy = T##y(M, S, y), zz = T##z(M, S, z);\
@@ -63,7 +63,7 @@ ILiftCdf53##x(volume& Vol, grid& Ext) {\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
   mg_Assert(IsEven(P.x));\
   mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
-  typed_buffer<t> F(Vol.Buffer);\
+  buffer_t<t> F(Vol.Buffer);\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
   for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
     int yy = T##y(M, S, y), zz = T##z(M, S, z);\
@@ -99,7 +99,7 @@ ILiftUnpackCdf53##x(volume& Vol, grid& Ext, int Pass) {\
   v3i N = BigDims(Vol), M = SmallDims(Vol);\
   mg_Assert(IsEven(P.x));\
   mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
-  typed_buffer<t> F(Vol.Buffer);\
+  buffer_t<t> F(Vol.Buffer);\
   int Start = P.x + ((M.x - 1 - P.x) / (2 * S.x) + 1) * (2 * S.x);\
   int End = P.x + ((D.x - 1) / 2) * (2 * S.x);\
   printf("End%d Start%d\n", End, Start);\
@@ -133,7 +133,7 @@ Unpack##x(volume& Vol, grid& Ext, int Pass) {\
   mg_Assert(IsEven(P.x));\
   mg_Assert(M.x > P.x);\
   mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
-  typed_buffer<t> F(Vol.Buffer);\
+  buffer_t<t> F(Vol.Buffer);\
   int Start = P.x + ((M.x - P.x) / S.x + 1) * S.x;\
   if (P.x + S.x * (D.x - 1) >= M.x) {\
     for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\

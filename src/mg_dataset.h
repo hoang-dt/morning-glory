@@ -17,7 +17,7 @@ struct metadata {
   char File[256] = "";
   char Name[32] = "";
   char Field[32] = "";
-  v3i Dims = v3i(0, 0, 0);
+  v3i Dims = v3i::Zero;
   dtype Type = dtype(dtype::__Invalid__);
   inline thread_local static char String[384];
 }; // struct metadata

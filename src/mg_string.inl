@@ -32,11 +32,11 @@ mg_Inline tokenizer::
 tokenizer() = default;
 
 mg_Inline tokenizer::
-tokenizer(stref InputIn, stref DelimsIn)
+tokenizer(const stref& InputIn, const stref& DelimsIn)
   : Input(InputIn), Delims(DelimsIn), Pos(0) {}
 
 mg_Inline void 
-Init(tokenizer* Tk, stref Input, stref Delims) {
+Init(tokenizer* Tk, const stref& Input, const stref& Delims) {
   Tk->Input = Input;
   Tk->Delims = Delims;
   Tk->Pos = 0;

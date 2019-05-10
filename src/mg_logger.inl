@@ -1,17 +1,6 @@
 #pragma once
 
-#include "mg_common.h"
-
-#define MaxSlots 16
-
 namespace mg {
-
-struct logger {
-  stack_array<FILE*, MaxSlots> FileHandles = {};
-  stack_array<cstr, MaxSlots> FileNames = {};
-  stack_array<u32, MaxSlots> FileNameHashes = {};
-  buffer_mode Mode = buffer_mode::Full;
-};
 
 constexpr inline bool
 IsStdErr(cstr Input) {
@@ -50,4 +39,4 @@ CastCStr(t Input) {
 #define mg_Log(FileName, Format, ...)
 #endif
 
-#undef MaxSlots
+#undef mg_MaxSlots

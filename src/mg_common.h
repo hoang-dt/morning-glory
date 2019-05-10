@@ -45,6 +45,8 @@ struct traits {
   // static constexpr int ExpBias
 };
 
+/* type traits stuffs */
+
 struct true_type { static constexpr bool Value = true; };
 struct false_type { static constexpr bool Value = false; };
 mg_T(t) struct remove_const { typedef t type; };
@@ -64,22 +66,21 @@ mg_T(t) struct is_pointer : is_pointer_helper<typename remove_cv<t>::type> {};
 mg_T(t) auto& Value(t&& T);
 
 /* Something to replace std::array */
-template <typename t, int N>
+#define mg_TA template <typename t, int N>
+
+mg_TA
 struct stack_array {
   static_assert(N > 0);
   t Arr[N];
   t& operator[](int Idx);
 };
 
-#define mg_TA template <typename t, int N>
 
 mg_TA t* Begin(stack_array<t, N>& A);
 mg_TA t* End(stack_array<t, N>& A);
 mg_TA t* RevBegin(stack_array<t, N>& A);
 mg_TA t* RevEnd(stack_array<t, N>& A);
 mg_TA int Size(const stack_array<t, N>& A);
-
-#undef mg_TA
 
 /* Vector in 2D, supports .X, .UV, and [] */
 #pragma GCC diagnostic push
@@ -142,17 +143,17 @@ using v3d  = v3<f64>;
 #define mg_EndFor3
 #define mg_BeginFor3Lockstep(C1, B1, E1, S1, C2, B2, E2, S2)
 
-mg_T(t) struct typed_buffer;
+mg_T(t) struct buffer_t;
 struct allocator;
 struct buffer {
   byte* Data = nullptr;
   i64 Bytes = 0;
   allocator* Alloc = nullptr;
   buffer();
-  template <typename t, int N>
+  mg_TA
   buffer(t (&Arr)[N]);
   buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn = nullptr);
-  mg_T(t) buffer(typed_buffer<t> Buf);
+  mg_T(t) buffer(buffer_t<t> Buf);
   byte& operator[](i64 Idx);
   explicit operator bool() const;
 };
@@ -160,22 +161,23 @@ struct buffer {
 bool operator==(const buffer& Buf1, const buffer& Buf2);
 
 mg_T(t)
-struct typed_buffer {
+struct buffer_t {
   t* Data = nullptr;
   i64 Size = 0;
   allocator* Alloc = nullptr;
-  typed_buffer();
+  buffer_t();
   template <int N>
-  typed_buffer(t (&Arr)[N]);
-  typed_buffer(t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
-  typed_buffer(buffer Buf);
+  buffer_t(t (&Arr)[N]);
+  buffer_t(t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
+  buffer_t(buffer Buf);
   t& operator[](i64 Idx);
   explicit operator bool() const;
 };
 
-mg_T(t) i64 Size(const typed_buffer<t>& Buf);
-mg_T(t) i64 Bytes(const typed_buffer<t>& Buf);
+mg_T(t) i64 Size(const buffer_t<t>& Buf);
+mg_T(t) i64 Bytes(const buffer_t<t>& Buf);
 
 } // namespace mg
 
 #include "mg_common.inl"
+

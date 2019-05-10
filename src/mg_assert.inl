@@ -13,7 +13,7 @@
       fprintf(stderr, "Condition \"%s\" failed, ", #Cond);\
       fprintf(stderr, "in file %s, line %d\n", __FILE__, __LINE__);\
       if (mg_NumArgs(__VA_ARGS__) > 0) {\
-        mg_FPrintHelper(__VA_ARGS__);\
+        mg_FPrintHelper(stderr, __VA_ARGS__);\
         fprintf(stderr, "\n");\
       }\
       mg::printer Pr(stderr);\

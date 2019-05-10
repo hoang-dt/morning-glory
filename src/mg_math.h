@@ -10,13 +10,13 @@ template <int N>
 int (&Power(int Base))[N];
 
 bool IsEven(int X);
-bool IsOdd(int X);
-v3i IsEven(const v3i& P);
-v3i IsOdd(const v3i& P);
+bool IsOdd (int X);
+v3i  IsEven(const v3i& P);
+v3i  IsOdd (const v3i& P);
 
 mg_T(t) int Exponent(t Val);
 
-template <typename t, typename u = t> t Prod(const v3<u>& Vec);
+mg_T2(t, u = t) t Prod(const v3<u>& Vec);
 
 mg_T(t) v3<t> operator+(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) v3<t> operator-(const v3<t>& Lhs, const v3<t>& Rhs);
@@ -29,7 +29,7 @@ mg_T(t) v3<t> operator/(const v3<t>& Lhs, t Val);
 mg_T(t) bool  operator==(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) bool  operator!=(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) bool  operator<=(const v3<t>& Lhs, const v3<t>& Rhs);
-mg_T(t) bool  operator<(const v3<t>& Lhs, const v3<t>& Rhs);
+mg_T(t) bool  operator< (const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) bool  operator>=(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) v3<t> Min(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) v3<t> Max(const v3<t>& Lhs, const v3<t>& Rhs);
@@ -47,6 +47,8 @@ int GeometricSum(int Base, int N);
 #include "mg_math.inl"
 
 namespace mg {
+
 static auto& Pow10 = Power<9>(10);
 static auto& Pow8  = Power<10>(8);
+
 } // namespace mg

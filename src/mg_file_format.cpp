@@ -53,11 +53,11 @@ struct tile_data {
   int Subband;
   i64 LocalId;
   i64 GlobalId;
-  typed_buffer<f64> Floats;
-  typed_buffer<i64> Ints;
-  typed_buffer<u64> UInts;
-  typed_buffer<i16> EMaxes;
-  typed_buffer<i8> Ns;
+  buffer_t<f64> Floats;
+  buffer_t<i64> Ints;
+  buffer_t<u64> UInts;
+  buffer_t<i16> EMaxes;
+  buffer_t<i8> Ns;
 };
 
 i64 NTilesInSubbands(file_format& Ff, int FromSb, int ToSb) {
@@ -209,7 +209,7 @@ ff_err WriteTile(file_format& Ff, tile_data* Tl) {
           WriteChunk(Ff, Tl, Ci++);
 #if defined(mg_CollectStats)
           auto& LastCkStats = Back(Ts.CkStats);
-          Clone(&(LastCkStats.Sizes), Sizes);
+          Clone(Sizes, &(LastCkStats.Sizes));
           Clear(&Sizes);
 #endif
         }

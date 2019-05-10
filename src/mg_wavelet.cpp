@@ -175,7 +175,7 @@ FormSubbands(grid_volume Dst, grid_volume Src, int NLevels) {
   for (int I = 0; I < Size(Subbands); ++I) {
     Dst.Grid = Subbands[I];
     Src.Grid = SubbandsInPlace[I];
-    Copy(&Dst, Src);
+    Copy(Src, &Dst);
   }
 }
 

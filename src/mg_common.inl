@@ -93,7 +93,7 @@ struct traits<f32> {
   static constexpr int ExpBits = 8;
   static constexpr int ExpBias = (1 << (ExpBits - 1)) - 1;
   static constexpr f32 Min = -FLT_MAX;
-  static constexpr f32 Max = FLT_MAX;
+  static constexpr f32 Max =  FLT_MAX;
 };
 
 template <>
@@ -102,22 +102,21 @@ struct traits<f64> {
   static constexpr int ExpBits = 11;
   static constexpr int ExpBias = (1 << (ExpBits - 1)) - 1;
   static constexpr f64 Min = -DBL_MAX;
-  static constexpr f64 Max = DBL_MAX;
+  static constexpr f64 Max =  DBL_MAX;
 };
 
-/* Something to replace std::array */
 #define mg_TAi template <typename t, int N> mg_Inline
 
 mg_TAi t& stack_array<t, N>::
 operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
 mg_TAi t*
-Begin(stack_array<t, N>& A) { return &A.Arr[0]; }
+Begin   (stack_array<t, N>& A) { return &A.Arr[0]; }
 mg_TAi t*
-End(stack_array<t, N>& A) { return &A.Arr[0] + N; }
+End     (stack_array<t, N>& A) { return &A.Arr[0] + N; }
 mg_TAi t*
 RevBegin(stack_array<t, N>& A) { return &A.Arr[0] + (N - 1); }
 mg_TAi t*
-RevEnd(stack_array<t, N>& A) { return &A.Arr[0] - 1; }
+RevEnd  (stack_array<t, N>& A) { return &A.Arr[0] - 1; }
 mg_TAi int
 Size(const stack_array<t, N>&) { return N; }
 
@@ -133,7 +132,7 @@ mg_TAi buffer::
 buffer(t (&Arr)[N]) : Data((byte*)&Arr[0]), Bytes(sizeof(Arr)) {}
 
 mg_Ti(t) buffer::
-buffer(typed_buffer<t> Buf)
+buffer(buffer_t<t> Buf)
   : Data(Buf.Data), Bytes(Buf.Size * sizeof(t)), Alloc(Buf.Alloc) {}
 
 mg_Inline byte& buffer::
@@ -148,32 +147,33 @@ operator==(const buffer& Buf1, const buffer& Buf2) {
 }
 
 /* typed_buffer stuffs */
-mg_Ti(t) typed_buffer<t>::
-typed_buffer() = default;
+mg_Ti(t) buffer_t<t>::
+buffer_t() = default;
 
-mg_T(t) template <int N> mg_Inline typed_buffer<t>::
-typed_buffer(t (&Arr)[N]) : Data(&Arr[0]), Size(N) {}
+mg_T(t) template <int N> mg_Inline buffer_t<t>::
+buffer_t(t (&Arr)[N]) : Data(&Arr[0]), Size(N) {}
 
-mg_Ti(t) typed_buffer<t>::
-typed_buffer(t* DataIn, i64 SizeIn, allocator* AllocIn)
+mg_Ti(t) buffer_t<t>::
+buffer_t(t* DataIn, i64 SizeIn, allocator* AllocIn)
   : Data(DataIn), Size(SizeIn), Alloc(AllocIn) {}
 
-mg_Ti(t) typed_buffer<t>::
-typed_buffer(buffer Buf)
+mg_Ti(t) buffer_t<t>::
+buffer_t(buffer Buf)
   : Data((t*)Buf.Data), Size(Buf.Bytes / sizeof(t)), Alloc(Buf.Alloc) {}
 
-mg_Ti(t) t& typed_buffer<t>::
+mg_Ti(t) t& buffer_t<t>::
 operator[](i64 Idx) { assert(Idx < Size); return Data[Idx]; }
 
 mg_Ti(t) i64
-Size(const typed_buffer<t>& Buf) { return Buf.Size; }
+Size(const buffer_t<t>& Buf) { return Buf.Size; }
 
 mg_Ti(t) i64
-Bytes(const typed_buffer<t>& Buf) { return Buf.Size * sizeof(t); }
+Bytes(const buffer_t<t>& Buf) { return Buf.Size * sizeof(t); }
 
-mg_Ti(t) typed_buffer<t>::
+mg_Ti(t) buffer_t<t>::
 operator bool() const { return Data && Size; }
 
+#undef mg_TA
 #undef mg_TAi
 
 /* v2 stuffs */
@@ -183,11 +183,11 @@ mg_Ti(t) v2<t>::
 v2(t V): X(V), Y(V) {}
 mg_Ti(t) v2<t>::
 v2(t X, t Y): X(X), Y(Y) {}
-mg_T(t) template <typename u> mg_Inline v2<t>::
+mg_T(t) mg_Ti(u) v2<t>::
 v2(const v2<u>& Other) : X(Other.X), Y(Other.Y) {}
 mg_Ti(t) t& v2<t>::
 operator[](int Idx) { assert(Idx < 2); return E[Idx]; }
-mg_T(t) template <typename u> mg_Inline v2<t>& v2<t>::
+mg_T(t) mg_Ti(u) v2<t>& v2<t>::
 operator=(const v2<u>& other) { X = other.X; Y = other.Y; return *this; }
 
 /* v3 stuffs */
@@ -197,11 +197,11 @@ mg_Ti(t) v3<t>::
 v3(t V): X(V), Y(V), Z(V) {}
 mg_Ti(t) v3<t>::
 v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
-mg_T(t) template <typename u> mg_Inline v3<t>::
+mg_T(t) mg_Ti(u) v3<t>::
 v3(const v3<u>& Other) : X(Other.X), Y(Other.Y), Z(Other.Z) {}
 mg_Ti(t) t& v3<t>::
 operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
-mg_T(t) template <typename u> mg_Inline v3<t>& v3<t>::
+mg_T(t) mg_Ti(u) v3<t>& v3<t>::
 operator=(const v3<u>& Rhs) { X = Rhs.X; Y = Rhs.Y; Z = Rhs.Z; return *this; }
 
 

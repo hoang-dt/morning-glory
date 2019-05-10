@@ -13,8 +13,8 @@ namespace mg {
 
 /* Support only either reading or writing, not both at the same time */
 struct bitstream {
-  buffer Stream;
-  byte* BitPtr; // Pointer to current byte
+  buffer Stream = {};
+  byte* BitPtr = nullptr; // Pointer to current byte
   u64 BitBuf = 0; // buffer
   int BitPos = 0; // how many of those bits we've consumed/written
 
@@ -27,12 +27,12 @@ struct bitstream {
   }();
 };
 
-void Rewind(bitstream* Bs);
-i64 Size( bitstream& Bs); // TODO: takes a non-pointer as argument
-i64 BitSize( bitstream& Bs);
-int BufferSize( bitstream& Bs);
+void Rewind    (bitstream* Bs);
+i64  Size      (const bitstream& Bs);
+i64  BitSize   (const bitstream& Bs);
+int  BufferSize(const bitstream& Bs);
 /* ---------------- Read functions ---------------- */
-void InitRead(bitstream* Bs, buffer Stream);
+void InitRead(bitstream* Bs, const buffer& Stream);
 /* Refill our buffer (replace the consumed bytes with new bytes from memory) */
 void Refill(bitstream* Bs);
 /*
@@ -51,7 +51,7 @@ u64 Read(bitstream* Bs, int Count = 1);
 u64 ReadLong(bitstream* Bs, int Count);
 
 /* ---------------- Write functions ---------------- */
-void InitWrite(bitstream* Bs, buffer Buf);
+void InitWrite(bitstream* Bs, const buffer& Buf);
 /* Flush the written BYTES in our buffer to memory */
 void Flush(bitstream* Bs);
 /* Flush and move the pointer to the next byte in memory */
@@ -59,9 +59,9 @@ void FlushAndMoveToNextByte(bitstream* Bs);
 /* Put "Count" bits into the buffer (Count <= 64 - BitPos) */
 void Put(bitstream* Bs, u64 N, int Count = 1);
 /* Write "Count" bits into the stream (Count <= 64 - 7) */
-u64 Write(bitstream* Bs, u64 N, int Count = 1);
+u64  Write(bitstream* Bs, u64 N, int Count = 1);
 /* Similar to Write() but Count is less restrictive (Count <= 64) */
-u64 WriteLong(bitstream* Bs, u64 N, int Count);
+u64  WriteLong(bitstream* Bs, u64 N, int Count);
 /* Write "Count" bits into the stream (Count >= 0) */
 void RepeatedWrite(bitstream* Bs, bool B, int Count);
 

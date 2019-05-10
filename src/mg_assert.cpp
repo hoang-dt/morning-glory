@@ -25,7 +25,7 @@ void AbortHandler(int Signum) {
   exit(Signum);
 }
 
-void SetHandleAbortSignals(const handler& Handler) {
+void SetHandleAbortSignals(handler& Handler) {
   signal(SIGABRT, Handler);
   signal(SIGSEGV, Handler);
 #if !defined(_WIN32)

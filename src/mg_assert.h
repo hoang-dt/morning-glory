@@ -8,9 +8,11 @@
 #define mg_Abort(...)
 
 namespace mg {
+
 using handler = void (int);
 void AbortHandler(int Signum);
 void SetHandleAbortSignals(handler& Handler = AbortHandler);
+
 } // namespace mg
 
 #include "mg_assert.inl"

@@ -5,7 +5,6 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "mg_common.h"
-#include "mg_macros.h"
 
 #undef mg_Enum
 #define mg_Enum(enum_name, type, ...)\

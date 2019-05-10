@@ -1,8 +1,10 @@
 #pragma once
 
+#include "mg_macros.h"
+
 namespace mg {
 
-template <typename func_t>
+mg_T(func_t)
 struct scope_guard {
   func_t Func;
   bool Dismissed = false;

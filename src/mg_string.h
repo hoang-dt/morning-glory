@@ -7,7 +7,7 @@
 namespace mg {
 
 /* Useful to create a string_ref out of a literal string */
-#define mg_StringRef(x) mg::stref((x), sizeof(x) - 1)
+#define mg_StRef(x) mg::stref((x), sizeof(x) - 1)
 
 /*
 A "view" into a (usually bigger) null-terminated string. A string_ref itself is
@@ -29,32 +29,32 @@ struct stref {
   operator bool() const;
 }; // struct string_ref
 
-str  ToString(stref Str);
-str  Begin(stref Str);
-str  End(stref Str);
+cstr ToString(const stref& Str);
+str  Begin   (stref Str);
+str  End     (stref Str);
 str  RevBegin(stref Str);
-str  RevEnd(stref Str);
-bool operator==(stref Lhs, stref Rhs);
+str  RevEnd  (stref Str);
+bool operator==(const stref& Lhs, const stref& Rhs);
 
 /* Remove spaces at the start of a string */
-stref TrimLeft(stref Str);
-stref TrimRight(stref Str);
-stref Trim(stref Str);
+stref TrimLeft (const stref& Str);
+stref TrimRight(const stref& Str);
+stref Trim     (const stref& Str);
 /*
 Return a substring of a given string. The substring starts at Begin and has
 length Size. Return the empty string if no proper substring can be constructed
 (e.g. Begin >= Str.Size). */
-stref SubString(stref Str, int Begin, int Size);
+stref SubString(const stref& Str, int Begin, int Size);
 /*
 Copy the underlying buffer referred to by Src to the one referred to by Dst.
 AddNull should be true whenever dst represents a whole string (as opposed to a
 substring). If Src is larger than Dst, we copy as many characters as we can. We
 always assume that the null character can be optionally added without
 overflowing the memory of Dst. */
-void Copy(stref Dst, stref Src, bool AddNull = true);
+void Copy(const stref& Src, stref* Dst, bool AddNull = true);
 /* Parse a string_ref and return a number */
-bool ToInt(stref Str, int* Result);
-bool ToDouble(stref Str, f64* Result);
+bool ToInt   (const stref& Str, int* Result);
+bool ToDouble(const stref& Str, f64* Result);
 
 /* Tokenize strings without allocating memory */
 struct tokenizer {
@@ -63,12 +63,12 @@ struct tokenizer {
   int Pos = 0;
 
   tokenizer();
-  tokenizer(stref InputIn, stref DelimsIn = " \n\t");
+  tokenizer(const stref& InputIn, const stref& DelimsIn = " \n\t");
 }; // struct tokenizer
 
-void Init(tokenizer* Tk, stref Input, stref Delims = " \n\t");
-stref Next(tokenizer* Tk);
-void Reset(tokenizer* Tk);
+void  Init (tokenizer* Tk, const stref& Input, const stref& Delims = " \n\t");
+stref Next (tokenizer* Tk);
+void  Reset(tokenizer* Tk);
 
 } // namespace mg
 

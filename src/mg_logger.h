@@ -5,12 +5,24 @@
 // TODO: per-file buffering mode
 // TODO: do we need more than one logger?
 
+#include "mg_common.h"
+
+#define mg_MaxSlots 16
+
 namespace mg {
 
 enum class buffer_mode { Full, Line, None };
-struct logger;
 
-logger& GlobalLogger();
+struct logger {
+  stack_array<FILE*, mg_MaxSlots> FHandles    = {};
+  stack_array<cstr , mg_MaxSlots> FNames      = {};
+  stack_array<u32  , mg_MaxSlots> FNameHashes = {};
+  buffer_mode Mode = buffer_mode::Full;
+};
+
+
+inline logger GlobalLogger;
+
 void SetBufferMode(logger* Logger, buffer_mode Mode);
 void SetBufferMode(buffer_mode Mode); // set buffer mode for the global logger
 

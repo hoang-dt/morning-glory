@@ -21,12 +21,12 @@ grid GridCollapse(const grid& Top, const grid& Bot) {
 }
 
 void
-Copy(grid_volume* Dst, const grid_volume& Src) {
+Copy(const grid_volume& Src, grid_volume* Dst) {
 #define Body(type)\
   mg_Assert(Dims(Src) == Dims(*Dst));\
   mg_Assert(Dst->Base.Buffer && Src.Base.Buffer);\
   mg_Assert(Dst->Base.Type == Src.Base.Type);\
-  typed_buffer<type> DstBuf(Dst->Base.Buffer), SrcBuf(Src.Base.Buffer);\
+  buffer_t<type> DstBuf(Dst->Base.Buffer), SrcBuf(Src.Base.Buffer);\
   mg_BeginGridLoop2(Src, *Dst) {\
     DstBuf[J] = SrcBuf[I];\
   } mg_EndGridLoop2
@@ -45,8 +45,8 @@ ReadVolume(cstr FileName, const v3i& Dims3, dtype Type, volume* Volume) {
 }
 
 void
-Clone(volume* Dst, const volume& Src, allocator* Alloc) {
-  Clone(&Dst->Buffer, Src.Buffer, Alloc);
+Clone(const volume& Src, volume* Dst, allocator* Alloc) {
+  Clone(Src.Buffer, &Dst->Buffer, Alloc);
   Dst->Dims = Src.Dims;
   Dst->Type = Src.Type;
 }

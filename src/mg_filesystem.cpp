@@ -25,21 +25,21 @@ path::
 path() = default;
 
 path::
-path(stref Str) { Init(this, Str); }
+path(const stref& Str) { Init(this, Str); }
 
 void
-Init(path* Path, stref Str) {
+Init(path* Path, const stref& Str) {
   Path->Parts[0] = Str;
   Path->NParts = 1;
 }
 
-void Append(path* Path, stref Component) {
+void Append(path* Path, const stref& Part) {
   mg_Assert(Path->NParts < Path->NPartsMax, "too many path parts");
-  Path->Parts[Path->NParts++] = Component;
+  Path->Parts[Path->NParts++] = Part;
 }
 
 stref
-GetFileName(stref Path) {
+GetFileName(const stref& Path) {
   mg_Assert(!Contains(Path, '\\'));
   cstr LastSlash = FindLast(RevBegin(Path), RevEnd(Path), '/');
   if (LastSlash != RevEnd(Path))
@@ -49,7 +49,7 @@ GetFileName(stref Path) {
 }
 
 stref
-GetDirName(stref Path) {
+GetDirName(const stref& Path) {
   mg_Assert(!Contains(Path, '\\'));
   cstr LastSlash = FindLast(RevBegin(Path), RevEnd(Path), '/');
   if (LastSlash != RevEnd(Path))
@@ -57,7 +57,7 @@ GetDirName(stref Path) {
   return Path;
 }
 
-str
+cstr
 ToString(const path& Path) {
   printer Pr(ScratchBuf, sizeof(ScratchBuf));
   for (int I = 0; I < Path.NParts; ++I) {
@@ -69,20 +69,21 @@ ToString(const path& Path) {
 }
 
 bool
-IsRelative(stref Path) {
-  if (Path.Size > 0 && Path[0] == '/')  // e.g. /usr/local
+IsRelative(const stref& Path) {
+  stref& PathR = const_cast<stref&>(Path);
+  if (PathR.Size > 0 && PathR[0] == '/')  // e.g. /usr/local
     return false;
-  if (Path.Size > 2 && Path[1] == ':' && Path[2] == '/')  // e.g. C:/Users
+  if (PathR.Size > 2 && PathR[1] == ':' && PathR[2] == '/')  // e.g. C:/Users
     return false;
   return true;
 }
 
 bool
-CreateFullDir(stref Path) {
-  str PathCopy = ToString(Path);
+CreateFullDir(const stref& Path) {
+  cstr PathCopy = ToString(Path);
   int Error = 0;
-  str P = PathCopy;
-  for (P = strchr(PathCopy, '/'); P; P = strchr(P + 1, '/')) {
+  str P = (str)PathCopy;
+  for (P = (str)strchr(PathCopy, '/'); P; P = (str)strchr(P + 1, '/')) {
     *P = '\0';
     Error = MkDir(PathCopy);
     *P = '/';
@@ -92,8 +93,8 @@ CreateFullDir(stref Path) {
 }
 
 bool
-DirExists(stref Path) {
-  str PathCopy = ToString(Path);
+DirExists(const stref& Path) {
+  cstr PathCopy = ToString(Path);
   return Access(PathCopy) == 0;
 }
 

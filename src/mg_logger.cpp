@@ -7,42 +7,33 @@
 
 namespace mg {
 
-logger& GlobalLogger() {
-  static logger Logger;
-  return Logger;
-}
+void
+SetBufferMode(logger* Logger, buffer_mode Mode) { Logger->Mode = Mode; }
 
-void SetBufferMode(logger* Logger, buffer_mode Mode) {
-  Logger->Mode = Mode;
-}
+void 
+SetBufferMode(buffer_mode Mode) { SetBufferMode(&GlobalLogger, Mode); }
 
-void SetBufferMode(buffer_mode Mode) {
-  SetBufferMode(&GlobalLogger(), Mode);
-}
-
-FILE* GetFileHandle(logger* Logger, cstr FileName) {
-  int MaxSlots = Size(Logger->FileHandles);
+FILE* 
+GetFileHandle(logger* Logger, cstr FileName) {
+  int MaxSlots = Size(Logger->FHandles);
   u32 FullHash = Murmur3_32((u8*)FileName, strlen(FileName), 37);
-  int Index = FullHash % MaxSlots;
-  FILE** Fp = &Logger->FileHandles[Index];
-  bool Collision = false;
-  if (*Fp && (Logger->FileNameHashes[Index] != FullHash ||
-              strncmp(FileName, Logger->FileNames[Index], 64) != 0))
-    Collision = true;
-
+  int Idx = FullHash % MaxSlots;
+  FILE** Fp = &Logger->FHandles[Idx];
+  bool Collision = *Fp && (Logger->FNameHashes[Idx] != FullHash ||
+                           strncmp(FileName, Logger->FNames[Idx], 64) != 0);
   if (Collision) { // collision, find the next empty slot
     for (int I = 0; I < MaxSlots; ++I) {
-      int J = (Index + I) % MaxSlots;
-      Fp = &Logger->FileHandles[J];
-      if (!Logger->FileNames[J] || strncmp(FileName, Logger->FileNames[J], 64) == 0) {
-        Index = J;
+      int J = (Idx + I) % MaxSlots;
+      Fp = &Logger->FHandles[J];
+      if (!Logger->FNames[J] || strncmp(FileName, Logger->FNames[J], 64) == 0) {
+        Idx = J;
         break;
       }
     }
   }
   if (!*Fp) { // empty slot, open a new file for logging
-    mg_Assert(!Logger->FileNames[Index]);
-    mg_Assert(!Logger->FileHandles[Index]);
+    mg_Assert(!Logger->FNames[Idx]);
+    mg_Assert(!Logger->FHandles[Idx]);
     *Fp = fopen(FileName, "w");
     mg_AbortIf(!*Fp, "File %s cannot be created", FileName);
     if (Logger->Mode == buffer_mode::Full) // full buffering
@@ -51,8 +42,8 @@ FILE* GetFileHandle(logger* Logger, cstr FileName) {
       setvbuf(*Fp, nullptr, _IOLBF, BUFSIZ);
     else // no buffering
       setvbuf(*Fp, nullptr, _IONBF, 0);
-    Logger->FileNames[Index] = FileName;
-    Logger->FileNameHashes[Index] = FullHash;
+    Logger->FNames[Idx] = FileName;
+    Logger->FNameHashes[Idx] = FullHash;
   } else if (Collision) { // no more open slots
     mg_Abort("No more logger slots");
   }
@@ -60,3 +51,4 @@ FILE* GetFileHandle(logger* Logger, cstr FileName) {
 }
 
 } // namespace mg
+

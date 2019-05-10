@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
-#include "mg_error.h"
 #include "mg_memory.h"
 
 namespace mg {
@@ -12,8 +11,8 @@ mg_T(t) error<t>::
 error() {}
 
 mg_T(t) error<t>::
-error(t CodeIn, bool StrGened, cstr MsgIn) :
-  Msg(MsgIn), Code(CodeIn), StackIdx(0), StrGenerated(StrGened) {}
+error(t CodeIn, bool StrGenedIn, cstr MsgIn) :
+  Msg(MsgIn), Code(CodeIn), StackIdx(0), StrGened(StrGenedIn) {}
 
 mg_T(t) cstr
 ToString(const error<t>& Err, bool Force) {
