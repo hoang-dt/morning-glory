@@ -62,18 +62,16 @@ void TestGridIterator() {
 }
 
 void TestGridCopy() {
-  {
-    f64 A[27] = {};
-    f64 B[] = { 0, 1, 2, 18, 19, 20 };
-    volume VolA(buffer((byte*)A, sizeof(A)), v3i(3, 3, 3), dtype::float64);
-    volume VolB(buffer((byte*)B, sizeof(B)), v3i(3, 1, 2), dtype::float64);
-    grid_volume GridA(VolA);
-    grid_volume GridB(grid(v3i::Zero, v3i(3, 1, 2), v3i(1, 3, 2)), VolB);
-    Copy(GridB, &GridA);
-    int I = 0;
-    for (auto It = Begin<f64>(GridA); It != End<f64>(GridA); ++It) {
-      mg_Assert(*It == B[I++]);
-    }
+  f64 A[27] = {};
+  f64 B[] = { 0, 1, 2, 18, 19, 20 };
+  volume VolA(buffer((byte*)A, sizeof(A)), v3i(3, 3, 3), dtype::float64);
+  volume VolB(buffer((byte*)B, sizeof(B)), v3i(3, 1, 2), dtype::float64);
+  grid_volume GridA(VolA);
+  grid_volume GridB(grid(v3i::Zero, v3i(3, 1, 2), v3i(1, 3, 2)), VolB);
+  Copy(GridB, &GridA);
+  int I = 0;
+  for (auto It = Begin<f64>(GridA); It != End<f64>(GridA); ++It) {
+    mg_Assert(*It == B[I++]);
   }
 }
 

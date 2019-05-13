@@ -7,6 +7,8 @@
 
 namespace mg {
 
+// TODO: just  use regular function pointers
+// TODO: use array instead of map
 using TestFunc = std::function<void(void)>;
 inline std::map<cstr, TestFunc> TestFuncMap;
 

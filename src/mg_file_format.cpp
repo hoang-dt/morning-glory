@@ -386,7 +386,7 @@ ff_err Encode(file_format* Ff, metadata& Meta) {
     // TODO
   }
   if (Ff->NLevels > 0)
-    ForwardCdf53(&(Ff->Volume), Ff->NLevels);
+    ForwardCdf53Old(&(Ff->Volume), Ff->NLevels);
 #if defined(mg_CollectStats)
   Resize(&FStats.SbStats, Size(Ff->Subbands));
 #endif
@@ -605,7 +605,7 @@ ff_err Decode(file_format* Ff, metadata* Meta) {
     }
   }
   if (Ff->NLevels > 0)
-    InverseCdf53(&(Ff->Volume), Ff->NLevels);
+    InverseCdf53Old(&(Ff->Volume), Ff->NLevels);
   return mg_Error(ff_err_code::NoError);
 }
 

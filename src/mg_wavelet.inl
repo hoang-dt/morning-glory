@@ -12,78 +12,188 @@
 #define mg_RowZ(z, x, y, N) i64(z) * N.X * N.Y + i64(y) * N.X + (x)
 
 /* Translate a wavelet coordinate to a storage coordinate */
-// TODO: precompute the Log2Floor
-#define mg_TX(N, S, x) ((x) <= N.X ? (x) : (N.X + Log2Floor(S.X)))
-#define mg_TY(N, S, y) ((y) <= N.Y ? (y) : (N.Y + Log2Floor(S.Y)))
-#define mg_TZ(N, S, z) ((z) <= N.Z ? (z) : (N.Z + Log2Floor(S.Z)))
+#define mg_P(N, S, X) ((X) < (N) ? (X) : (X) - (S))
 
-/* Async forward lifting */
+/*
+Forward lifting
+Flag == 00 if y and z have both not been transformed
+Flag == 01 if y has been transformed but not z
+Flag == 10 if z has been transformed but not y
+Flag == 11 if y and z have both been transformed
+*/
 #define mg_FLiftCdf53(z, y, x)\
 namespace mg {\
 mg_T(t) void \
-FLiftCdf53##x(volume* Vol, grid& Ext) {\
-  v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
-  v3i N = BigDims(Vol), M = SmallDims(Vol);\
+FLiftCdf53##x(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap) {\
+  mg_Assert(Flag < 4);\
+  v3i P = From(*Grid), D = Dims(*Grid), S = Strd(*Grid), N = Dims(Grid->Base);\
+  if (D.x == 1) return;\
+  mg_Assert(M.x <= N.x);\
+  mg_Assert(IsPow2(S.X) && IsPow2(S.Y) && IsPow2(S.Z));\
+  mg_Assert(D.x >= 3); /* TODO: what if D.x == 2? */\
   mg_Assert(IsEven(P.x));\
-  mg_Assert(P.x + S.x * (D.x - 1) < N.x);\
-  buffer_t<t> F(Vol.Buffer);\
+  mg_Assert(P.x + S.x * (D.x - 2) < M.x);\
+  bool IsLastBlock = P.x + D.x * S.x >= M.x;\
+  mg_Assert(IsLastBlock || IsOdd(D.x));\
+  buffer_t<t> F(Grid->Base.Buffer);\
+  int Sx = S.x / 2, Sz = S.z / (1 << (Flag & 1u)), Sy = S.y / (1 << (Flag >> 1));\
+  int x1 = mg_P(M.x, Sx, P.x + S.x * (D.x - 1)); /* last position */\
+  int x2 = P.x + S.x * (D.x - 2); /* second last position */\
+  int x3 = P.x + S.x * (D.x - 3); /* third last position */\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
-  for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-    int yy = T##y(M, S, y), zz = T##z(M, S, z);\
-    /* extrapolate */\
-    if (IsEven(D.x)) {\
-      t A = F[mg_Row##x(T##x(M, S, P.x + S.x * (D.x - 2)), yy, zz, N)];\
-      t B = F[mg_Row##x(T##x(M, S, P.x + S.x * (D.x - 1)), yy, zz, N)];\
-      F[mg_Row##x(T##x(M, S, P.x + S.x * D.x), yy, zz, N)] = 2 * B - A;\
+    int zz = mg_P(M.z, Sz, z);\
+    for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
+      int yy = mg_P(M.y, Sy, y);\
+      if (IsLastBlock) {\
+        /* extrapolate */\
+        bool Ext = IsEven(D.x);\
+        if (Ext) {\
+          t A = F[mg_Row##x(x2, yy, zz, N)]; /* 2nd last (even) */\
+          t B = F[mg_Row##x(x1, yy, zz, N)]; /* last (odd) */\
+          /* store the extrapolated value at the last odd position */\
+          F[mg_Row##x(x1, yy, zz, N)] = 2 * B - A;\
+        }\
+        /* predict (excluding last odd position) */\
+        for (int x = P.x + S.x; x < P.x + S.x * (D.x - 2); x += 2 * S.x) {\
+          t & Val = F[mg_Row##x(x, yy, zz, N)];\
+          Val -= F[mg_Row##x(x - S.x, yy, zz, N)] / 2;\
+          Val -= F[mg_Row##x(x + S.x, yy, zz, N)] / 2;\
+        }\
+        if (!Ext) { /* no extrapolation, predict at the last odd position */\
+          t & Val = F[mg_Row##x(x2, yy, zz, N)];\
+          Val -= F[mg_Row##x(x1, yy, zz, N)] / 2;\
+          Val -= F[mg_Row##x(x3, yy, zz, N)] / 2;\
+        }\
+        /* update (excluding last odd position) */\
+        for (int x = P.x + S.x; x < P.x + S.x * (D.x - 2); x += 2 * S.x) {\
+          t Val = F[mg_Row##x(x, yy, zz, N)];\
+          F[mg_Row##x(x - S.x, yy, zz, N)] += Val / 4;\
+          F[mg_Row##x(x + S.x, yy, zz, N)] += Val / 4;\
+        }\
+        if (!Ext) { /* no extrapolation, update at the last odd position */\
+          t Val = F[mg_Row##x(x2, yy, zz, N)];\
+          F[mg_Row##x(x1, yy, zz, N)] += Val / 4;\
+          F[mg_Row##x(x3, yy, zz, N)] += Val / 4;\
+        }\
+      } else { /* not last block */\
+        /* predict (excluding the last odd position) */\
+        for (int x = P.x + S.x; x < P.x + S.x * (D.x - 2); x += 2 * S.x) {\
+          t & Val = F[mg_Row##x(x, yy, zz, N)];\
+          Val -= F[mg_Row##x(x - S.x, yy, zz, N)] / 2;\
+          Val -= F[mg_Row##x(x + S.x, yy, zz, N)] / 2;\
+        }\
+        /* predict at the last odd position */\
+        t OVal = F[mg_Row##x(x2, yy, zz, N)];\
+        OVal  -= F[mg_Row##x(x1, yy, zz, N)] / 2;\
+        OVal  -= F[mg_Row##x(x3, yy, zz, N)] / 2;\
+        /* update (excluding the last odd position */\
+        for (int x = P.x + S.x; x < P.x + S.x * (D.x - 2); x += 2 * S.x) {\
+          t Val = F[mg_Row##x(x, yy, zz, N)];\
+          F[mg_Row##x(x - S.x, yy, zz, N)] += Val / 4;\
+          F[mg_Row##x(x + S.x, yy, zz, N)] += Val / 4;\
+        }\
+        /* update at the last odd position */\
+        F[mg_Row##x(x3, yy, zz, N)] += OVal / 4; /* update the 2nd last even */\
+        if (!Overlap) {\
+          F[mg_Row##x(x1, yy, zz, N)] += OVal / 4; /* update the last even */\
+          F[mg_Row##x(x2, yy, zz, N)] = OVal; /* write the last odd */\
+        }\
+      }\
     }\
-    for (int x = P.x + S.x; x < P.x + S.x * D.x; x += 2 * S.x) {\
-      t & Val = F[mg_Row##x(T##x(M, S, x), yy, zz, N)];\
-      Val -= F[mg_Row##x(T##x(M, S, x - S.x), yy, zz, N)] / 2;\
-      Val -= F[mg_Row##x(T##x(M, S, x + S.x), yy, zz, N)] / 2;\
-    }\
-    for (int x = P.x + S.x; x < P.x + S.x * D.x; x += 2 * S.x) {\
-      t Val = F[mg_Row##x(T##x(M, S, x), yy, zz, N)];\
-      F[mg_Row##x(T##x(M, S, x - S.x), yy, zz, N)] += Val / 4;\
-      F[mg_Row##x(T##x(M, S, x + S.x), yy, zz, N)] += Val / 4;\
-    }\
-  }}\
+  }\
 }\
 } // namespace mg
 
-//mg_FLiftCdf53(Z, Y, X) // X forward lifting
-//mg_FLiftCdf53(Z, X, Y) // Y forward lifting
-//mg_FLiftCdf53(Y, X, Z) // Z forward lifting
+mg_FLiftCdf53(Z, Y, X) // X forward lifting
+mg_FLiftCdf53(Z, X, Y) // Y forward lifting
+mg_FLiftCdf53(Y, X, Z) // Z forward lifting
 #undef mg_FLiftCdf53
 
 #define mg_ILiftCdf53(z, y, x)\
 namespace mg {\
-mg_T(t) void\
-ILiftCdf53##x(volume& Vol, grid& Ext) {\
-  v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
-  v3i N = BigDims(Vol), M = SmallDims(Vol);\
+mg_T(t) void \
+ILiftCdf53##x(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap) {\
+  v3i P = From(*Grid), D = Dims(*Grid), S = Strd(*Grid), N = Dims(Grid->Base);\
+  if (D.x == 1) return;\
+  mg_Assert(M.x <= N.x);\
+  mg_Assert(IsPow2(S.X) && IsPow2(S.Y) && IsPow2(S.Z));\
+  mg_Assert(D.x >= 3);\
   mg_Assert(IsEven(P.x));\
-  mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
-  buffer_t<t> F(Vol.Buffer);\
+  mg_Assert(P.x + S.x * (D.x - 2) < M.x);\
+  bool IsLastBlock = P.x + D.x * S.x >= M.x;\
+  mg_Assert(IsLastBlock || IsOdd(D.x));\
+  buffer_t<t> F(Grid->Base.Buffer);\
+  int Sx = S.x / 2, Sy = S.y / (1 << (Flag >> 1)), Sz = S.z / (1 << (Flag & 1u));\
+  int x1 = mg_P(M.x, Sx, P.x + S.x * (D.x - 1)); /* last position */\
+  int x2 = P.x + S.x * (D.x - 2); /* second last position */\
+  int x3 = P.x + S.x * (D.x - 3); /* third last position */\
   for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
-  for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-    int yy = T##y(M, S, y), zz = T##z(M, S, z);\
-    for (int x = P.x + S.x; x < P.x + S.x * D.x; x += S.x * 2) {\
-      t Val = F[mg_Row##x(T##x(M, S, x), yy, zz, N)];\
-      F[mg_Row##x(T##x(M, S, x - S.x), yy, zz, N)] -= Val / 4;\
-      F[mg_Row##x(T##x(M, S, x + S.x), yy, zz, N)] -= Val / 4;\
+    int zz = mg_P(M.z, Sz, z);\
+    for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
+      int yy = mg_P(M.y, Sy, y);\
+      if (IsLastBlock) {\
+        printf("last block\n");\
+        /* inverse update (excluding last odd position) */\
+        for (int x = P.x + S.x; x < P.x + S.x * (D.x - 2); x += 2 * S.x) {\
+          t Val = F[mg_Row##x(x, yy, zz, N)];\
+          F[mg_Row##x(x - S.x, yy, zz, N)] -= Val / 4;\
+          F[mg_Row##x(x + S.x, yy, zz, N)] -= Val / 4;\
+        }\
+        bool Ext = IsEven(D.x);\
+        if (!Ext) { /* no extrapolation, inverse update at the last odd position */\
+          t Val = F[mg_Row##x(x2, yy, zz, N)];\
+          F[mg_Row##x(x1, yy, zz, N)] -= Val / 4;\
+          F[mg_Row##x(x3, yy, zz, N)] -= Val / 4;\
+        } else { /* extrapolation, need to "fix" the last position (odd) */\
+          t& A = F[mg_Row##x(x1, yy, zz, N)];\
+          t  B = F[mg_Row##x(x2, yy, zz, N)];\
+          A = A /2 + B / 2;\
+        }\
+        for (int I = 0; I < 10; ++I)\
+          printf("%.2f ",F[I]);\
+        printf("\n");\
+        /* inverse predict (excluding last odd position) */\
+        for (int x = P.x + S.x; x < P.x + S.x * (D.x - 2); x += 2 * S.x) {\
+          t & Val = F[mg_Row##x(x, yy, zz, N)];\
+          Val += F[mg_Row##x(x - S.x, yy, zz, N)] / 2;\
+          Val += F[mg_Row##x(x + S.x, yy, zz, N)] / 2;\
+        }\
+        if (!Ext) { /* no extrapolation, inverse predict at the last odd position */\
+          t & Val = F[mg_Row##x(x2, yy, zz, N)];\
+          Val += F[mg_Row##x(x1, yy, zz, N)] / 2;\
+          Val += F[mg_Row##x(x3, yy, zz, N)] / 2;\
+        }\
+      } else { /* not the last block */\
+        /* inverse update (excluding the last odd position */\
+        for (int x = P.x + S.x; x < P.x + S.x * (D.x - 2); x += 2 * S.x) {\
+          t Val = F[mg_Row##x(x, yy, zz, N)];\
+          F[mg_Row##x(x - S.x, yy, zz, N)] -= Val / 4;\
+          F[mg_Row##x(x + S.x, yy, zz, N)] -= Val / 4;\
+        }\
+        /* inverse update at the last odd position */\
+        t& OVal = F[mg_Row##x(x2, yy, zz, N)];\
+        F[mg_Row##x(x3, yy, zz, N)] -= OVal / 4; /* inverse update the 2nd last even */\
+        if (!Overlap) {\
+          F[mg_Row##x(x1, yy, zz, N)] -= OVal / 4; /* inverse update the last even */\
+          /* inverse predict the last odd position */\
+          OVal += F[mg_Row##x(x1, yy, zz, N)] / 2;\
+          OVal += F[mg_Row##x(x3, yy, zz, N)] / 2;\
+        }\
+        /* inverse predict (excluding the last odd position) */\
+        for (int x = P.x + S.x; x < P.x + S.x * (D.x - 2); x += 2 * S.x) {\
+          t & Val = F[mg_Row##x(x, yy, zz, N)];\
+          Val += F[mg_Row##x(x - S.x, yy, zz, N)] / 2;\
+          Val += F[mg_Row##x(x + S.x, yy, zz, N)] / 2;\
+        }\
+      }\
     }\
-    for (int x = P.x + S.x; x < P.x + S.x * D.x; x += S.x * 2) {\
-      t & Val = F[mg_Row##x(T##x(M, S, x), yy, zz, N)];\
-      Val += F[mg_Row##x(T##x(M, S, x - S.x), yy, zz, N)] / 2;\
-      Val += F[mg_Row##x(T##x(M, S, x + S.x), yy, zz, N)] / 2;\
-    }\
-  }}\
+  }\
 }\
 } // namespace mg
 
-//mg_ILiftCdf53(Z, Y, X) // X inverse lifting
-//mg_ILiftCdf53(Z, X, Y) // Y inverse lifting
-//mg_ILiftCdf53(Y, X, Z) // Z inverse lifting
+mg_ILiftCdf53(Z, Y, X) // X inverse lifting
+mg_ILiftCdf53(Z, X, Y) // Y inverse lifting
+mg_ILiftCdf53(Y, X, Z) // Z inverse lifting
 #undef mg_ILiftCdf53
 
 // TODO: rethink the volume, extent abstraction, since for the wavelet function
@@ -91,75 +201,14 @@ ILiftCdf53##x(volume& Vol, grid& Ext) {\
 
 // TODO: rework the code that computes the size of the padded region
 
-#define mg_ILiftUnpackCdf53(z, y, x)\
-namespace mg {\
-mg_T(t) void \
-ILiftUnpackCdf53##x(volume& Vol, grid& Ext, int Pass) {\
-  v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
-  v3i N = BigDims(Vol), M = SmallDims(Vol);\
-  mg_Assert(IsEven(P.x));\
-  mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
-  buffer_t<t> F(Vol.Buffer);\
-  int Start = P.x + ((M.x - 1 - P.x) / (2 * S.x) + 1) * (2 * S.x);\
-  int End = P.x + ((D.x - 1) / 2) * (2 * S.x);\
-  printf("End%d Start%d\n", End, Start);\
-  for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
-  for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-    /* NOTE: the code below is correct for transform order (X, Y, Z), but */\
-    /* for transform order (Z, Y, X), the following must be used */\
-    /* int yyy = Pass == 0 ? yy : y, zzz = Pass == 2 ? z : zz; */\
-    int yy = Pass == 2 ? y : T##y(M, S, y), zz = Pass == 0 ? T##z(M, S, z) : z;\
-    for (int x = End; x >= Start; x -= 2 * S.x) {\
-      int I = mg_Row##x(x, yy, zz, N);\
-      int J = T##x(M, S, x);\
-      printf("zz %d yy %d x %d I %d J %d N %d %d %d\n", z, y, x, I, J, N.X, N.Y, N.Z);\
-      F[mg_Row##x(x, yy, zz, N)] = F[mg_Row##x(T##x(M, S, x), yy, zz, N)];\
-    }\
-  }}\
-}\
-} // namespace mg
-
-//mg_ILiftUnpackCdf53(Z, Y, X) // X inverse lifting
-//mg_ILiftUnpackCdf53(Z, X, Y) // Y inverse lifting
-//mg_ILiftUnpackCdf53(Y, X, Z) // Z inverse lifting
-#undef mg_ILiftCdf53
-
-#define mg_Unpack(z, y, x)\
-namespace mg {\
-mg_T(t) void \
-Unpack##x(volume& Vol, grid& Ext, int Pass) {\
-  v3i P = Pos(Ext), D = Dims(Ext), S = Strides(Ext);\
-  v3i N = BigDims(Vol), M = SmallDims(Vol);\
-  mg_Assert(IsEven(P.x));\
-  mg_Assert(M.x > P.x);\
-  mg_Assert(P.x + S.x * (D.x - 1) < NextPow2(N.x) + 1);\
-  buffer_t<t> F(Vol.Buffer);\
-  int Start = P.x + ((M.x - P.x) / S.x + 1) * S.x;\
-  if (P.x + S.x * (D.x - 1) >= M.x) {\
-    for (int z = P.z; z < P.z + S.z * D.z; z += S.z) {\
-    for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
-      int yy = T##y(M, S, y), zz = T##z(M, S, z);\
-      /* NOTE: the code below is correct for transform order (X, Y, Z), but */\
-      /* for transform order (Z, Y, X), the following must be used */\
-      /* int yyy = Pass == 0 ? yy : y, zzz = Pass == 2 ? z : zz; */\
-      int yyy = Pass == 2 ? y : yy, zzz = Pass == 0 ? zz : z;\
-      for (int x = P.x + S.x * (D.x - 1); x >= Start; x -= S.x)\
-        F[mg_Row##x(x, yyy, zzz, N)] = F[mg_Row##x(T##x(M, S, x), yyy, zzz, N)];\
-    }}\
-  }\
-}\
-} // namespace mg
-//mg_Unpack(Z, Y, X) // X unpacking
-//mg_Unpack(Z, X, Y) // Y unpacking
-//mg_Unpack(Y, X, Z) // Z unpacking
-#undef mg_Unpack
+#undef mg_P
 
 /* Forward x lifting */
 // TODO: merge the first two loops
-#define mg_FLiftCdf53(z, y, x)\
+#define mg_FLiftCdf53Old(z, y, x)\
 namespace mg {\
 mg_T(t) void \
-FLiftCdf53##x(t* F, const v3i& N, const v3i& L) {\
+FLiftCdf53Old##x(t* F, const v3i& N, const v3i& L) {\
   v3i P(1 << L.X, 1 << L.Y, 1 << L.Z);\
   v3i M = (N + P - 1) / P;\
   if (M.x <= 1)\
@@ -200,16 +249,16 @@ FLiftCdf53##x(t* F, const v3i& N, const v3i& L) {\
 }\
 } // namespace mg
 
-mg_FLiftCdf53(Z, Y, X) // X forward lifting
-mg_FLiftCdf53(Z, X, Y) // Y forward lifting
-mg_FLiftCdf53(Y, X, Z) // Z forward lifting
+mg_FLiftCdf53Old(Z, Y, X) // X forward lifting
+mg_FLiftCdf53Old(Z, X, Y) // Y forward lifting
+mg_FLiftCdf53Old(Y, X, Z) // Z forward lifting
 #undef mg_LiftCdf53
 
 // TODO: merge two loops
-#define mg_ILiftCdf53(z, y, x)\
+#define mg_ILiftCdf53Old(z, y, x)\
 namespace mg {\
 mg_T(t) void \
-ILiftCdf53##x(t* F, const v3i& N, const v3i& L) {\
+ILiftCdf53Old##x(t* F, const v3i& N, const v3i& L) {\
   v3i P(1 << L.X, 1 << L.Y, 1 << L.Z);\
   v3i M = (N + P - 1) / P;\
   if (M.x <= 1)\
@@ -250,13 +299,13 @@ ILiftCdf53##x(t* F, const v3i& N, const v3i& L) {\
 }\
 } // namespace mg
 
-mg_ILiftCdf53(Z, Y, X) // X inverse lifting
-mg_ILiftCdf53(Z, X, Y) // Y inverse lifting
-mg_ILiftCdf53(Y, X, Z) // Z inverse lifting
+mg_ILiftCdf53Old(Z, Y, X) // X inverse lifting
+mg_ILiftCdf53Old(Z, X, Y) // Y inverse lifting
+mg_ILiftCdf53Old(Y, X, Z) // Z inverse lifting
 #undef mg_ILiftCdf53
 
 namespace mg {
-inline stack_array<v3i, 2> 
+inline stack_array<v3i, 2>
 DimsAtLevel(v3i N, int L) {
   for (int I = 0; I < L; ++I) {
     N = ((N / 2) * 2) + 1;
@@ -330,7 +379,7 @@ mg_T(t) void \
 ILiftExtCdf53##x(t* F, const v3i& N, const v3i& NBig, const v3i& L) {\
   (void)N;\
   mg_Assert(L.X == L.Y && L.Y == L.Z);\
-  return ILiftCdf53##x(F, NBig, L);\
+  return ILiftCdf53Old##x(F, NBig, L);\
 }\
 } // namespace mg
 

@@ -63,9 +63,9 @@ volume(t* Ptr, i64 Size)
 
 mg_Ti(t) volume::
 volume(t* Ptr, const v3i& Dims3)
-  : Buffer(Ptr, Prod<i64>(Dims3) * sizeof(t))
+  : Buffer((byte*)Ptr, Prod<i64>(Dims3) * sizeof(t))
   , Dims(Pack3i64(Dims3))
-  , Type(dtype_traits<t>::Type) { mg_Assert(Size <= (i64)traits<i32>::Max); }
+  , Type(dtype_traits<t>::Type) {}
 
 mg_Inline grid_volume::
 grid_volume() = default;
@@ -98,7 +98,7 @@ grid_volume(t* Ptr, i64 Size)
 mg_Ti(t) grid_volume::
 grid_volume(t* Ptr, const v3i& Dims3)
   : Grid(Dims3)
-  , Base(Ptr, Dims3) { mg_Assert(Size <= (i64)traits<i32>::Max); }
+  , Base(Ptr, Dims3) {}
 
 mg_Inline bool
 operator==(const volume& V1, const volume& V2) {

@@ -2,40 +2,90 @@
 #include "mg_array.h"
 #include "mg_assert.h"
 #include "mg_bitops.h"
+#include "mg_common.h"
 #include "mg_data_types.h"
 #include "mg_math.h"
-#include "mg_common.h"
-#include "mg_volume.h"
 #include "mg_wavelet.h"
 
 namespace mg {
 
 // TODO: this won't work for a general (sub)volume
 void
-ForwardCdf53(volume* Vol, int NLevels) {
+ForwardCdf53Old(volume* Vol, int NLevels) {
 #define Body(type)\
   v3i Dims3 = Dims(*Vol);\
   type* FPtr = (type*)(Vol->Buffer.Data);\
   for (int I = 0; I < NLevels; ++I) {\
-    FLiftCdf53X(FPtr, Dims3, v3i(I));\
-    FLiftCdf53Y(FPtr, Dims3, v3i(I));\
-    FLiftCdf53Z(FPtr, Dims3, v3i(I));\
+    FLiftCdf53OldX(FPtr, Dims3, v3i(I));\
+    FLiftCdf53OldY(FPtr, Dims3, v3i(I));\
+    FLiftCdf53OldZ(FPtr, Dims3, v3i(I));\
   }\
 
   mg_DispatchOnType(Vol->Type)
 #undef Body
 }
 
+void
+ForwardCdf53(grid_volume* Vol, int NLevels) {
+  grid_volume VolBackup = *Vol;
+  v3i Dims3 = Dims(*Vol), M = Dims(VolBackup);
+  v3i Strd3 = v3i::One;
+  for (int I = 0; I < NLevels; ++I) {
+    FLiftCdf53X<double>(Vol, M, 0, false);
+    Dims3.X += IsEven(Dims3.X); // extrapolate
+    FLiftCdf53Y<double>(Vol, M, 2, false);
+    Dims3.Y += IsEven(Dims3.Y); // extrapolate
+    FLiftCdf53Z<double>(Vol, M, 3, false);
+    Dims3.Z += IsEven(Dims3.Z); // extrapolate
+    Strd3 = Strd3 * 2;
+    Dims3 = (Dims3 + 1) / 2;
+    Vol->Grid = grid(v3i::Zero, Dims3, Strd3);
+  }
+  *Vol = VolBackup;
+}
+
+void
+InverseCdf53(grid_volume* Vol, int NLevels) {
+  struct Para { grid Grid; u8 Flag; };
+  grid_volume VolBackup = *Vol;
+  v3i Dims3 = Dims(*Vol), M = Dims(VolBackup);
+  v3i Strd3 = v3i::One;
+  array<Para> Params;
+  for (int I = 0; I < NLevels; ++I) {
+    PushBack(&Params, Para{grid(v3i::Zero, Dims3, Strd3), 0});
+    Dims3.X += IsEven(Dims3.X); // extrapolate
+    PushBack(&Params, Para{grid(v3i::Zero, Dims3, Strd3), 2});
+    Dims3.Y += IsEven(Dims3.Y); // extrapolate
+    PushBack(&Params, Para{grid(v3i::Zero, Dims3, Strd3), 3});
+    Dims3.Z += IsEven(Dims3.Z); // extrapolate
+    Strd3 = Strd3 * 2;
+    Dims3 = (Dims3 + 1) / 2;
+  }
+  int J = Size(Params) - 1;
+  for (int I = NLevels - 1; I >= 0; --I) {
+    Vol->Grid = Params[J].Grid;
+    printf("-----z\n");
+    ILiftCdf53Z<double>(Vol, M, Params[J--].Flag, false);
+    Vol->Grid = Params[J].Grid;
+    printf("-----y\n");
+    ILiftCdf53Y<double>(Vol, M, Params[J--].Flag, false);
+    Vol->Grid = Params[J].Grid;
+    printf("-----x\n");
+    ILiftCdf53X<double>(Vol, M, Params[J--].Flag, false);
+  }
+  *Vol = VolBackup;
+}
+
 // TODO: this won't work for a general (sub)volume
 void
-InverseCdf53(volume* Vol, int NLevels) {
+InverseCdf53Old(volume* Vol, int NLevels) {
 #define Body(type)\
   v3i Dims3 = Dims(*Vol);\
   type* FPtr = (type*)(Vol->Buffer.Data);\
   for (int I = NLevels - 1; I >= 0; --I) {\
-    ILiftCdf53Z(FPtr, Dims3, v3i(I));\
-    ILiftCdf53Y(FPtr, Dims3, v3i(I));\
-    ILiftCdf53X(FPtr, Dims3, v3i(I));\
+    ILiftCdf53OldZ(FPtr, Dims3, v3i(I));\
+    ILiftCdf53OldY(FPtr, Dims3, v3i(I));\
+    ILiftCdf53OldX(FPtr, Dims3, v3i(I));\
   }\
 
   mg_DispatchOnType(Vol->Type)

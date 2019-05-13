@@ -8,12 +8,20 @@
 namespace mg {
 
 /* Normal lifting which uses mirroring at the boundary */
-mg_T(t) void FLiftCdf53X(t* F, const v3i& N, const v3i& L);
-mg_T(t) void FLiftCdf53Y(t* F, const v3i& N, const v3i& L);
-mg_T(t) void FLiftCdf53Z(t* F, const v3i& N, const v3i& L);
-mg_T(t) void ILiftCdf53X(t* F, const v3i& N, const v3i& L);
-mg_T(t) void ILiftCdf53Y(t* F, const v3i& N, const v3i& L);
-mg_T(t) void ILiftCdf53Z(t* F, const v3i& N, const v3i& L);
+mg_T(t) void FLiftCdf53OldX(t* F, const v3i& N, const v3i& L);
+mg_T(t) void FLiftCdf53OldY(t* F, const v3i& N, const v3i& L);
+mg_T(t) void FLiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
+mg_T(t) void ILiftCdf53OldX(t* F, const v3i& N, const v3i& L);
+mg_T(t) void ILiftCdf53OldY(t* F, const v3i& N, const v3i& L);
+mg_T(t) void ILiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
+
+/* New set of lifting functions */
+mg_T(t) void FLiftCdf53X(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
+mg_T(t) void FLiftCdf53Y(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
+mg_T(t) void FLiftCdf53Z(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
+mg_T(t) void ILiftCdf53X(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
+mg_T(t) void ILiftCdf53Y(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
+mg_T(t) void ILiftCdf53Z(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
 
 /* Lifting with extrapolation */
 mg_T(t) void FLiftExtCdf53X(t* F, const v3i& N, const v3i& NBig, const v3i& L);
@@ -23,8 +31,10 @@ mg_T(t) void ILiftExtCdf53X(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 mg_T(t) void ILiftExtCdf53Y(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 mg_T(t) void ILiftExtCdf53Z(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 
-void ForwardCdf53(volume* Vol, int NLevels);
-void InverseCdf53(volume* Vol, int NLevels);
+void ForwardCdf53(grid_volume* Vol, int NLevels);
+void InverseCdf53(grid_volume* Vol, int NLEvels);
+void ForwardCdf53Old(volume* Vol, int NLevels);
+void InverseCdf53Old(volume* Vol, int NLevels);
 void ForwardCdf53Ext(grid_volume* Grid);
 void InverseCdf53Ext(grid_volume* Grid);
 
