@@ -162,7 +162,7 @@ buffer_t(buffer Buf)
   : Data((t*)Buf.Data), Size(Buf.Bytes / sizeof(t)), Alloc(Buf.Alloc) {}
 
 mg_Ti(t) t& buffer_t<t>::
-operator[](i64 Idx) { assert(Idx < Size); return Data[Idx]; }
+operator[](i64 Idx) {  if (Idx >= Size) printf("%lld %lld", Idx, Size); assert(Idx < Size); return Data[Idx]; }
 
 mg_Ti(t) i64
 Size(const buffer_t<t>& Buf) { return Buf.Size; }

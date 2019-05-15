@@ -16,12 +16,13 @@ mg_T(t) void ILiftCdf53OldY(t* F, const v3i& N, const v3i& L);
 mg_T(t) void ILiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
 
 /* New set of lifting functions */
-mg_T(t) void FLiftCdf53X(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
-mg_T(t) void FLiftCdf53Y(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
-mg_T(t) void FLiftCdf53Z(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
-mg_T(t) void ILiftCdf53X(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
-mg_T(t) void ILiftCdf53Y(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
-mg_T(t) void ILiftCdf53Z(grid_volume* Grid, const v3i& M, u8 Flag, bool Overlap);
+mg_T(t) void FLiftCdf53XTest(grid_volume* Grid, const v3i& M, bool Overlap);
+mg_T(t) void FLiftCdf53X(grid_volume* Grid, const v3i& M, bool Overlap);
+mg_T(t) void FLiftCdf53Y(grid_volume* Grid, const v3i& M, bool Overlap);
+mg_T(t) void FLiftCdf53Z(grid_volume* Grid, const v3i& M, bool Overlap);
+mg_T(t) void ILiftCdf53X(grid_volume* Grid, const v3i& M, bool Overlap);
+mg_T(t) void ILiftCdf53Y(grid_volume* Grid, const v3i& M, bool Overlap);
+mg_T(t) void ILiftCdf53Z(grid_volume* Grid, const v3i& M, bool Overlap);
 
 /* Lifting with extrapolation */
 mg_T(t) void FLiftExtCdf53X(t* F, const v3i& N, const v3i& NBig, const v3i& L);

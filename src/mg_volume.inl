@@ -67,6 +67,17 @@ volume(t* Ptr, const v3i& Dims3)
   , Dims(Pack3i64(Dims3))
   , Type(dtype_traits<t>::Type) {}
 
+mg_Ti(t) volume_indexer<t>::
+volume_indexer(volume& Vol)
+  : Buf(buffer<t>(Vol.Base))
+  , BaseDims3(Dims(Vol.Base)) {}
+
+mg_Ti(t) t& volume_indexer<t>::
+At(const v3i& P) {
+  i64 I = Row(BaseDims3, P);
+  return Buf[I];
+}
+
 mg_Inline grid_volume::
 grid_volume() = default;
 
@@ -78,6 +89,11 @@ grid_volume(const volume& Vol)
 mg_Inline grid_volume::
 grid_volume(const grid& GridIn, const volume& Vol)
   : Grid(GridIn)
+  , Base(Vol) {}
+
+mg_Inline grid_volume::
+grid_volume(const v3i& Dims, const volume& Vol)
+  : Grid(Dims)
   , Base(Vol) {}
 
 mg_Inline grid_volume::
@@ -105,6 +121,18 @@ operator==(const volume& V1, const volume& V2) {
   return V1.Buffer == V2.Buffer && V1.Dims == V2.Dims && V1.Type == V2.Type;
 }
 
+mg_Ti(t) grid_indexer<t>::
+grid_indexer(grid_volume& Grid)
+  : Buf(buffer<t>(Grid.Base.Buffer))
+  , BaseDims3(Dims(Grid.Base))
+  , GridFrom3(Dims(Grid)), GridStrd3(Strd(Grid)) {}
+
+mg_Ti(t) t& grid_indexer<t>::
+At(const v3i& P) {
+  i64 I = Row(BaseDims3, GridFrom3 + P * GridStrd3);
+  return Buf[I];
+}
+
 mg_Inline v3i From(const extent& Ext) { return Unpack3i64(Ext.From); }
 mg_Inline v3i Dims(const extent& Ext) { return Unpack3i64(Ext.Dims); }
 mg_Inline v3i Strd(const extent& Ext) { (void)Ext; return v3i::One; }
@@ -124,7 +152,45 @@ mg_Inline v3i Dims(const grid_volume& Grid) { return Dims(Grid.Grid); }
 mg_Inline v3i Strd(const grid_volume& Grid) { return Strd(Grid.Grid); }
 mg_Inline i64 Size(const grid_volume& Grid) { return Size(Grid.Grid); }
 
-mg_Ti(t) mg_Gi
+mg_Ti(t) volume_iterator<t>
+Begin(volume& Vol) {
+  volume_iterator<t> Iter;
+  Iter.P = v3i::Zero; Iter.N = Dims(Vol);
+  Iter.Ptr = (t*)Vol.Buffer.Data;
+  return Iter;
+}
+
+mg_Ti(t) volume_iterator<t>
+End(volume& Vol) {
+  volume_iterator<t> Iter;
+  v3i To3(0, 0, Dims(Vol).Z);
+  Iter.Ptr = (t*)Vol.Buffer.Data + Row(Dims(Vol), To3);
+  return Iter;
+}
+
+mg_Ti(t) volume_iterator<t>& volume_iterator<t>::
+operator++() {
+  ++Ptr;
+  if (++P.X >= N.X) {
+    P.X = 0;
+    if (++P.Y >= N.Y) {
+      P.Y = 0;
+      ++P.Z;
+    }
+  }
+  return *this;
+}
+
+mg_Ti(t) t& volume_iterator<t>::
+operator*() { return *Ptr; }
+
+mg_Ti(t) bool volume_iterator<t>::
+operator!=(const volume_iterator<t>& Other) const { return Ptr != Other.Ptr; }
+
+mg_Ti(t) bool volume_iterator<t>::
+operator==(const volume_iterator<t>& Other) const { return Ptr == Other.Ptr; }
+
+mg_Ti(t) grid_iterator<t>
 Begin(grid_volume& Grid) {
   grid_iterator<t> Iter;
   Iter.D = Dims(Grid); Iter.S = Strd(Grid); Iter.P = From(Grid);
@@ -133,7 +199,7 @@ Begin(grid_volume& Grid) {
   return Iter;
 }
 
-mg_Ti(t) mg_Gi
+mg_Ti(t) grid_iterator<t>
 End(grid_volume& Grid) {
   grid_iterator<t> Iter;
   v3i To3(0, 0, From(Grid).Z + Dims(Grid).Z * Strd(Grid).Z);
@@ -141,7 +207,7 @@ End(grid_volume& Grid) {
   return Iter;
 }
 
-mg_Ti(t) mg_Gi& mg_Gi::
+mg_Ti(t) grid_iterator<t>& grid_iterator<t>::
 operator++() {
   P.X += S.X;
   Ptr += S.X;
@@ -158,13 +224,13 @@ operator++() {
   return *this;
 }
 
-mg_Ti(t) t& mg_Gi::
+mg_Ti(t) t& grid_iterator<t>::
 operator*() { return *Ptr; }
 
-mg_Ti(t) bool mg_Gi::
+mg_Ti(t) bool grid_iterator<t>::
 operator!=(const grid_iterator<t>& Other) const { return Ptr != Other.Ptr; }
 
-mg_Ti(t) bool mg_Gi::
+mg_Ti(t) bool grid_iterator<t>::
 operator==(const grid_iterator<t>& Other) const { return Ptr == Other.Ptr; }
 
 mg_Inline i64

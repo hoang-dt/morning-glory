@@ -30,48 +30,57 @@ ForwardCdf53(grid_volume* Vol, int NLevels) {
   grid_volume VolBackup = *Vol;
   v3i Dims3 = Dims(*Vol), M = Dims(VolBackup);
   v3i Strd3 = v3i::One;
+  array<grid> Grids;
   for (int I = 0; I < NLevels; ++I) {
-    FLiftCdf53X<double>(Vol, M, 0, false);
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
     Dims3.X += IsEven(Dims3.X); // extrapolate
-    FLiftCdf53Y<double>(Vol, M, 2, false);
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
     Dims3.Y += IsEven(Dims3.Y); // extrapolate
-    FLiftCdf53Z<double>(Vol, M, 3, false);
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
     Dims3.Z += IsEven(Dims3.Z); // extrapolate
     Strd3 = Strd3 * 2;
     Dims3 = (Dims3 + 1) / 2;
-    Vol->Grid = grid(v3i::Zero, Dims3, Strd3);
+  }
+  int J = 0;
+  for (int I = 0; I < NLevels; ++I) {
+    printf("x lift\n");
+    Vol->Grid = Grids[J++];
+    FLiftCdf53X<double>(Vol, M, false);
+    printf("y lift\n");
+    Vol->Grid = Grids[J++];
+    FLiftCdf53Y<double>(Vol, M, false);
+    printf("z lift\n");
+    Vol->Grid = Grids[J++];
+    FLiftCdf53Z<double>(Vol, M, false);
   }
   *Vol = VolBackup;
+  printf("done forward transform\n");
 }
 
 void
 InverseCdf53(grid_volume* Vol, int NLevels) {
-  struct Para { grid Grid; u8 Flag; };
   grid_volume VolBackup = *Vol;
   v3i Dims3 = Dims(*Vol), M = Dims(VolBackup);
   v3i Strd3 = v3i::One;
-  array<Para> Params;
+  array<grid> Grids;
   for (int I = 0; I < NLevels; ++I) {
-    PushBack(&Params, Para{grid(v3i::Zero, Dims3, Strd3), 0});
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
     Dims3.X += IsEven(Dims3.X); // extrapolate
-    PushBack(&Params, Para{grid(v3i::Zero, Dims3, Strd3), 2});
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
     Dims3.Y += IsEven(Dims3.Y); // extrapolate
-    PushBack(&Params, Para{grid(v3i::Zero, Dims3, Strd3), 3});
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
     Dims3.Z += IsEven(Dims3.Z); // extrapolate
     Strd3 = Strd3 * 2;
     Dims3 = (Dims3 + 1) / 2;
   }
-  int J = Size(Params) - 1;
+  int J = Size(Grids) - 1;
   for (int I = NLevels - 1; I >= 0; --I) {
-    Vol->Grid = Params[J].Grid;
-    printf("-----z\n");
-    ILiftCdf53Z<double>(Vol, M, Params[J--].Flag, false);
-    Vol->Grid = Params[J].Grid;
-    printf("-----y\n");
-    ILiftCdf53Y<double>(Vol, M, Params[J--].Flag, false);
-    Vol->Grid = Params[J].Grid;
-    printf("-----x\n");
-    ILiftCdf53X<double>(Vol, M, Params[J--].Flag, false);
+    Vol->Grid = Grids[J--];
+    ILiftCdf53Z<double>(Vol, M, false);
+    Vol->Grid = Grids[J--];
+    ILiftCdf53Y<double>(Vol, M, false);
+    Vol->Grid = Grids[J--];
+    ILiftCdf53X<double>(Vol, M, false);
   }
   *Vol = VolBackup;
 }

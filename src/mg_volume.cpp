@@ -51,5 +51,11 @@ Clone(const volume& Src, volume* Dst, allocator* Alloc) {
   Dst->Type = Src.Type;
 }
 
+void
+Clone(const grid_volume& Src, grid_volume* Dst, allocator* Alloc) {
+  Clone(Src.Base, &Dst->Base, Alloc);
+  Dst->Grid = Src.Grid;
+}
+
 } // namespace mg
 

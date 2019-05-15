@@ -32,6 +32,7 @@ struct volume {
   volume(const buffer& Buf, const v3i& Dims3, dtype TypeIn);
   mg_T(t) volume(t* Ptr, i64 Size);
   mg_T(t) volume(t* Ptr, const v3i& Dims3);
+  mg_T(t) t& operator[](i64 I);
 };
 
 struct grid_volume {
@@ -39,11 +40,29 @@ struct grid_volume {
   volume Base = {};
   grid_volume();
   explicit grid_volume(const volume& Vol);
+  grid_volume(const v3i& Dims, const volume& Vol);
   grid_volume(const extent& Ext, const volume& Vol);
   grid_volume(const grid& GridIn, const volume& Vol);
   grid_volume(const v3i& From3, const v3i& Dims3, const v3i& Strd3, const volume& Vol);
   mg_T(t) grid_volume(t* Ptr, i64 Size);
   mg_T(t) grid_volume(t* Ptr, const v3i& Dims3);
+};
+
+mg_T(t)
+struct volume_indexer {
+  buffer_t<t> Buf = {};
+  v3i BaseDims3 = {};
+  explicit volume_indexer(volume& Grid);
+  t& At(const v3i& P);
+};
+
+mg_T(t)
+struct grid_indexer {
+  buffer_t<t> Buf = {};
+  v3i BaseDims3 = {};
+  v3i GridFrom3 = {}, GridStrd3 = {};
+  explicit grid_indexer(grid_volume& Grid);
+  t& At(const v3i& P);
 };
 
 bool operator==(const volume& V1, const volume& V2);
@@ -71,7 +90,17 @@ i64 Size(const grid_volume& Grid);
 i64 Row(const v3i& N, const v3i& P);
 v3i InvRow(i64 I, const v3i& N);
 
-#define mg_Gi grid_iterator<t>
+mg_T(t)
+struct volume_iterator {
+  t* Ptr = nullptr;
+  v3i P = {}, N = {};
+  volume_iterator& operator++();
+  t& operator*();
+  bool operator!=(const volume_iterator& Other) const;
+  bool operator==(const volume_iterator& Other) const;
+};
+mg_T(t) volume_iterator<t> Begin(volume& Vol);
+mg_T(t) volume_iterator<t> End(volume& Vol);
 
 mg_T(t)
 struct grid_iterator {
@@ -82,9 +111,8 @@ struct grid_iterator {
   bool operator!=(const grid_iterator& Other) const;
   bool operator==(const grid_iterator& Other) const;
 };
-
-mg_T(t) mg_Gi Begin(grid_volume& Grid);
-mg_T(t) mg_Gi End(grid_volume& Grid);
+mg_T(t) grid_iterator<t> Begin(grid_volume& Grid);
+mg_T(t) grid_iterator<t> End(grid_volume& Grid);
 
 /* assumption: Grid1 is on top of Grid2 */
 grid_volume GridCollapse(const grid& Top, const grid_volume& Bot);
@@ -96,7 +124,8 @@ error<> ReadVolume(cstr FileName, const v3i& Dims3, dtype Type, volume* Vol);
 /* Copy a region of the first volume to a region of the second volume */
 void Copy(const grid_volume& Src, grid_volume* Dst);
 
-void Clone(volume& Src, volume* Dst, allocator* Alloc = &Mallocator());
+void Clone(const volume& Src, volume* Dst, allocator* Alloc = &Mallocator());
+void Clone(const grid_volume& Src, grid_volume* Dst, allocator* Alloc = &Mallocator());
 
 /* Return the number of dimensions, given a volume size */
 int NumDims(const v3i& N);
