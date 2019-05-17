@@ -16,7 +16,6 @@ mg_T(t) void ILiftCdf53OldY(t* F, const v3i& N, const v3i& L);
 mg_T(t) void ILiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
 
 /* New set of lifting functions */
-mg_T(t) void FLiftCdf53XTest(grid_volume* Grid, const v3i& M, bool Overlap);
 mg_T(t) void FLiftCdf53X(grid_volume* Grid, const v3i& M, bool Overlap);
 mg_T(t) void FLiftCdf53Y(grid_volume* Grid, const v3i& M, bool Overlap);
 mg_T(t) void FLiftCdf53Z(grid_volume* Grid, const v3i& M, bool Overlap);
@@ -34,6 +33,8 @@ mg_T(t) void ILiftExtCdf53Z(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 
 void ForwardCdf53(grid_volume* Vol, int NLevels);
 void InverseCdf53(grid_volume* Vol, int NLEvels);
+void ForwardCdf53Block(grid_volume* Vol, const v3i& B, int NLevels);
+void InverseCdf53Block(grid_volume* Vol, const v3i& B, int NLevels);
 void ForwardCdf53Old(volume* Vol, int NLevels);
 void InverseCdf53Old(volume* Vol, int NLevels);
 void ForwardCdf53Ext(grid_volume* Grid);

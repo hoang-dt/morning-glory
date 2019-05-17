@@ -26,6 +26,58 @@ ForwardCdf53Old(volume* Vol, int NLevels) {
 }
 
 void
+ForwardCdf53Block(grid_volume* Vol, const v3i& B, int NLevels) {
+  v3i Dims3 = Dims(*Vol), M = Dims(*Vol);
+  v3i Strd3 = v3i::One;
+  array<grid> Grids;
+  for (int I = 0; I < NLevels; ++I) {
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
+    Dims3.X += IsEven(Dims3.X); // extrapolate
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
+    Dims3.Y += IsEven(Dims3.Y); // extrapolate
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
+    Dims3.Z += IsEven(Dims3.Z); // extrapolate
+    Strd3 = Strd3 * 2;
+    Dims3 = (Dims3 + 1) / 2;
+  }
+  int J = 0;
+  volume_indexer<f64> Gi(Vol->Base);
+  for (int I = 0; I < NLevels; ++I) {
+    v3i F = From(Grids[J]), D = Dims(Grids[J]), S = Strd(Grids[J]);
+    v3i P;
+    for (P.Z = F.Z; P.Z < F.Z + D.Z * S.Z; P.Z += Max(1, (B.Z - 3)) * S.Z) {
+    for (P.Y = F.Y; P.Y < F.Y + D.Y * S.Y; P.Y += Max(1, (B.Y - 3)) * S.Y) {
+    for (P.X = F.X; P.X < F.X + D.X * S.X; P.X += Max(1, (B.X - 3)) * S.X) {
+      v3i MM = F + D * S - P;
+      grid_volume VolBlock(P, Min((F + D * S - P) / S, B), S, Vol->Base);    
+      printf("transform\n");
+      FLiftCdf53XTest<f64>(&VolBlock, M, true);
+      grid_iterator It = Begin<f64>(*Vol);
+      for (; It != End<f64>(*Vol); ++It)
+        printf("%6.2f ", *It);
+      printf("\n");
+    }}}
+    ++J;
+    //F = From(Grids[J]), D = Dims(Grids[J]), S = Strd(Grids[J]);
+    //for (P.Z = F.Z; P.Z < F.Z + D.Z * S.Z; P.Z += (B.Z - 3) * S.Z) {
+    //for (P.Y = F.Y; P.Y < F.Y + D.Y * S.Y; P.Y += (B.Y - 3) * S.Y) {
+    //for (P.X = F.X; P.X < F.X + D.X * S.X; P.X += (B.X - 3) * S.X) {
+    //  grid_volume VolBlock(P, Min((F + D * S - P) / S, B), S, Vol->Base);
+    //  FLiftCdf53YTest<f64>(&VolBlock, M, true);
+    //}}}
+    //++J;
+    //F = From(Grids[J]), D = Dims(Grids[J]), S = Strd(Grids[J]);
+    //for (P.Z = F.Z; P.Z < F.Z + D.Z * S.Z; P.Z += (B.Z - 3) * S.Z) {
+    //for (P.Y = F.Y; P.Y < F.Y + D.Y * S.Y; P.Y += (B.Y - 3) * S.Y) {
+    //for (P.X = F.X; P.X < F.X + D.X * S.X; P.X += (B.X - 3) * S.X) {
+    //  grid_volume VolBlock(P, Min((F + D * S - P) / S, B), S, Vol->Base);
+    //  FLiftCdf53ZTest<f64>(&VolBlock, M, true);
+    //}}}
+    //++J;
+  }
+}
+
+void
 ForwardCdf53(grid_volume* Vol, int NLevels) {
   grid_volume VolBackup = *Vol;
   v3i Dims3 = Dims(*Vol), M = Dims(VolBackup);
@@ -42,19 +94,21 @@ ForwardCdf53(grid_volume* Vol, int NLevels) {
     Dims3 = (Dims3 + 1) / 2;
   }
   int J = 0;
+  volume_indexer<f64> Gi(Vol->Base);
   for (int I = 0; I < NLevels; ++I) {
-    printf("x lift\n");
     Vol->Grid = Grids[J++];
     FLiftCdf53X<double>(Vol, M, false);
-    printf("y lift\n");
-    Vol->Grid = Grids[J++];
-    FLiftCdf53Y<double>(Vol, M, false);
-    printf("z lift\n");
-    Vol->Grid = Grids[J++];
-    FLiftCdf53Z<double>(Vol, M, false);
+    printf("transform original\n");
+    grid_iterator It = Begin<f64>(*Vol);
+    for (; It != End<f64>(*Vol); ++It)
+      printf("%6.2f ", *It);
+    printf("\n");
+    //Vol->Grid = Grids[J++];
+    //FLiftCdf53Y<double>(Vol, M, false);
+    //Vol->Grid = Grids[J++];
+    //FLiftCdf53Z<double>(Vol, M, false);
   }
   *Vol = VolBackup;
-  printf("done forward transform\n");
 }
 
 void

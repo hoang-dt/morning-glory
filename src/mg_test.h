@@ -19,6 +19,14 @@ bool Test##Name() {\
 }\
 inline bool VarTest##Name = Test##Name();
 
+#define mg_RegisterTestOnly(Name, Func)\
+bool Test##Name() {\
+  mg::TestFuncMap.clear();\
+  mg::TestFuncMap[#Name] = Func;\
+  return true;\
+}\
+inline bool VarTest##Name = Test##Name();
+
 #define mg_TestMain \
 int main() {\
   for (const auto& Test : mg::TestFuncMap) {\

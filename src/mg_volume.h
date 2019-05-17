@@ -30,6 +30,7 @@ struct volume {
   dtype Type = dtype::__Invalid__;
   volume();
   volume(const buffer& Buf, const v3i& Dims3, dtype TypeIn);
+  volume(const v3i& Dims3, dtype TypeIn, allocator* Alloc = &Mallocator());
   mg_T(t) volume(t* Ptr, i64 Size);
   mg_T(t) volume(t* Ptr, const v3i& Dims3);
   mg_T(t) t& operator[](i64 I);

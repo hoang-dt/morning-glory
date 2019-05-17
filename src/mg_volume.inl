@@ -55,6 +55,12 @@ volume(const buffer& Buf, const v3i& Dims3, dtype TypeIn)
   , Dims(Pack3i64(Dims3))
   , Type(TypeIn) {}
 
+mg_Inline volume::
+volume(const v3i& Dims3, dtype TypeIn, allocator* Alloc)
+  : Buffer()
+  , Dims(Pack3i64(Dims3))
+  , Type(TypeIn) { AllocBuf(&Buffer, SizeOf(TypeIn) * Prod<i64>(Dims3), Alloc); }
+
 mg_Ti(t) volume::
 volume(t* Ptr, i64 Size)
   : Buffer((byte*)Ptr, Size * sizeof(t))
@@ -69,8 +75,8 @@ volume(t* Ptr, const v3i& Dims3)
 
 mg_Ti(t) volume_indexer<t>::
 volume_indexer(volume& Vol)
-  : Buf(buffer<t>(Vol.Base))
-  , BaseDims3(Dims(Vol.Base)) {}
+  : Buf(buffer_t<t>(Vol.Buffer))
+  , BaseDims3(Dims(Vol)) {}
 
 mg_Ti(t) t& volume_indexer<t>::
 At(const v3i& P) {
@@ -123,9 +129,9 @@ operator==(const volume& V1, const volume& V2) {
 
 mg_Ti(t) grid_indexer<t>::
 grid_indexer(grid_volume& Grid)
-  : Buf(buffer<t>(Grid.Base.Buffer))
+  : Buf(buffer_t<t>(Grid.Base.Buffer))
   , BaseDims3(Dims(Grid.Base))
-  , GridFrom3(Dims(Grid)), GridStrd3(Strd(Grid)) {}
+  , GridFrom3(From(Grid)), GridStrd3(Strd(Grid)) {}
 
 mg_Ti(t) t& grid_indexer<t>::
 At(const v3i& P) {
