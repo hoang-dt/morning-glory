@@ -59,10 +59,16 @@ list_iterator<t>::operator++() {
 }
 
 mg_Ti(t) list_node<t>*
-list_iterator<t>::operator->() { mg_Assert(Node); return Node; }
+list_iterator<t>::operator->() const {
+  mg_Assert(Node);
+  return const_cast<list_node<t>*>(Node);
+}
 
 mg_Ti(t) t& mg_Li::
-operator*() { mg_Assert(Node); return Node->Payload; }
+operator*() const {
+  mg_Assert(Node);
+  return const_cast<t&>(Node->Payload);
+}
 
 mg_Ti(t) bool mg_Li::
 operator!=(const list_iterator<t>& Other) { return Node != Other.Node; }

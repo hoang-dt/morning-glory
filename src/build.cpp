@@ -5,7 +5,7 @@
 #include "mg_args.cpp"
 #include "mg_assert.cpp"
 #include "mg_dataset.cpp"
-//#include "mg_file_format.cpp"
+#include "mg_file_format.cpp"
 #include "mg_filesystem.cpp"
 #include "mg_io.cpp"
 #include "mg_logger.cpp"

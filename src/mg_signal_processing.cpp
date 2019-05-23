@@ -8,6 +8,13 @@
 
 namespace mg {
 
+mg_T(t) f64
+SqError(const buffer_t<t>& FBuf, const buffer_t<t>& GBuf) {
+  mg_Assert(FBuf.Size == GBuf.Size);
+  extent Ext(v3i(SBuf.Size, 1, 1));
+  return SqError(Ext, volume(FBuf), Ext, volume(GBuf));
+}
+
 mg_T2(t1, t2) f64
 SqError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol)
 {
@@ -30,10 +37,24 @@ SqError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol
 #undef Body
 }
 
+mg_T(t) f64
+RMSError(const buffer_t<t>& FBuf, const buffer_t<t>& GBuf) {
+  mg_Assert(FBuf.Size == GBuf.Size);
+  extent Ext(v3i(SBuf.Size, 1, 1));
+  return RMSError(Ext, volume(FBuf), Ext, volume(GBuf));
+}
+
 mg_T2(t1, t2) f64
 RMSError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol)
 {
   return sqrt(SqError(FGrid, FVol, GGrid, GVol) / Size(FGrid));
+}
+
+mg_T(t) f64
+PSNR(const buffer_t<t>& FBuf, const buffer_t<t>& GBuf) {
+  mg_Assert(FBuf.Size == GBuf.Size);
+  extent Ext(v3i(SBuf.Size, 1, 1));
+  return PSNR(Ext, volume(FBuf), Ext, volume(GBuf));
 }
 
 mg_T2(t1, t2) f64
@@ -62,6 +83,15 @@ PSNR(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol) {
 #undef Body
 }
 
+mg_T2(t, u) void
+FwdNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
+  mg_Assert(is_same_type<typename traits<t>::unsigned_t, u>::Value);
+  mg_Assert(SBuf.Size == DBuf->Size);
+  extent Ext(v3i(SBuf.Size, 1, 1));
+  volume DVol(*DBuf);
+  return FwdNegaBinary(Ext, volume(SBuf), Ext, &DVol);
+}
+
 mg_T2(t1, t2) void
 FwdNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol)
 {
@@ -81,6 +111,15 @@ FwdNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol
 #undef Body
 }
 
+mg_T2(t, u) void
+InvNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
+  mg_Assert(is_same_type<typename traits<u>::unsigned_t, t>::Value);
+  mg_Assert(SBuf.Size == DBuf->Size);
+  extent Ext(v3i(SBuf.Size, 1, 1));
+  volume DVol(*DBuf);
+  return InvNegaBinary(Ext, volume(SBuf), Ext, &DVol);
+}
+
 mg_T2(t1, t2) void
 InvNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol)
 {
@@ -98,6 +137,15 @@ InvNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol
 
   mg_DispatchOnInt(DVol->Type)
 #undef Body
+}
+
+mg_T2(t, u) int
+Quantize(int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
+  mg_Assert((is_same_type<typename traits<t>::integral_t, u>::Value));
+  mg_Assert(SBuf.Size == DBuf->Size);
+  extent Ext(v3i(SBuf.Size, 1, 1));
+  volume DVol(*DBuf);
+  return Quantize(Bits, Ext, volume(SBuf), Ext, &DVol);
 }
 
 mg_T2(t1, t2) int
@@ -127,6 +175,15 @@ Quantize(int Bits, const t1& SGrid, const volume& SVol,
   mg_DispatchOnFloat(SVol.Type)
   return 0;
 #undef Body
+}
+
+mg_T2(t, u) void
+Dequantize(int EMax, int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
+  mg_Assert((is_same_type<typename traits<u>::integral_t, t>::Value));
+  mg_Assert(SBuf.Size == DBuf->Size);
+  extent Ext(v3i(SBuf.Size, 1, 1));
+  volume DVol(*DBuf);
+  return Dequantize(EMax, Bits, Ext, volume(SBuf), Ext, &DVol);
 }
 
 mg_T2(t1, t2) void

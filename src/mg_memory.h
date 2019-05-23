@@ -41,8 +41,8 @@ struct linear_allocator;
 /* A linear allocator that uses stack storage. */
 template <int Capacity>
 struct stack_linear_allocator;
-/* 
-Whenever an allocation of a size in a specific range is made, return the block 
+/*
+Whenever an allocation of a size in a specific range is made, return the block
 immediately from the head of a linked list. Otherwise forward the allocation to
 some Parent allocator. */
 struct free_list_allocator;
@@ -117,7 +117,6 @@ void ZeroBuf(buffer* Buf);
 mg_T(t) void ZeroTypedBuf(buffer_t<t>* Buf);
 /* Copy one buffer to another. Here the order of arguments are the reverse of memcpy. */
 void MemCopy(const buffer& Src, buffer* Dst);
-
 
 } // namespace mg
 

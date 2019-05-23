@@ -46,7 +46,7 @@ struct file_format {
   /* First index is by subband, second index is by tiles within each subband */
   volume Volume;
   buffer_t<buffer_t<list<buffer>>> Chunks;
-  array<grid> Subbands;
+  array<extent> Subbands;
   buffer_t<u64> TileHeaders;
   v3i TileDims = v3i(32, 32, 32);
   cstr FileName = nullptr;

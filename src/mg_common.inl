@@ -108,15 +108,18 @@ struct traits<f64> {
 #define mg_TAi template <typename t, int N> mg_Inline
 
 mg_TAi t& stack_array<t, N>::
-operator[](int Idx) { assert(Idx < N); return Arr[Idx]; }
+operator[](int Idx) const {
+  assert(Idx < N);
+  return const_cast<t&>(Arr[Idx]);
+}
 mg_TAi t*
-Begin   (stack_array<t, N>& A) { return &A.Arr[0]; }
+Begin   (const stack_array<t, N>& A) { return const_cast<t*>(&A.Arr[0]); }
 mg_TAi t*
-End     (stack_array<t, N>& A) { return &A.Arr[0] + N; }
+End     (const stack_array<t, N>& A) { return const_cast<t*>(&A.Arr[0]) + N; }
 mg_TAi t*
-RevBegin(stack_array<t, N>& A) { return &A.Arr[0] + (N - 1); }
+RevBegin(const stack_array<t, N>& A) { return const_cast<t*>(&A.Arr[0]) + (N - 1); }
 mg_TAi t*
-RevEnd  (stack_array<t, N>& A) { return &A.Arr[0] - 1; }
+RevEnd  (const stack_array<t, N>& A) { return const_cast<t*>(&A.Arr[0]) - 1; }
 mg_TAi int
 Size(const stack_array<t, N>&) { return N; }
 
@@ -125,18 +128,23 @@ mg_Inline buffer::
 buffer() = default;
 
 mg_Inline buffer::
-buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn)
-  : Data(DataIn), Bytes(BytesIn), Alloc(AllocIn) {}
+buffer(const byte* DataIn, i64 BytesIn, allocator* AllocIn)
+  : Data(const_cast<byte*>(DataIn)), Bytes(BytesIn), Alloc(AllocIn) {}
 
 mg_TAi buffer::
-buffer(t (&Arr)[N]) : Data((byte*)&Arr[0]), Bytes(sizeof(Arr)) {}
+buffer(t (&Arr)[N])
+  : Data((byte*)const_cast<t*>(&Arr[0])), Bytes(sizeof(Arr)) {}
 
 mg_Ti(t) buffer::
-buffer(buffer_t<t> Buf)
-  : Data(Buf.Data), Bytes(Buf.Size * sizeof(t)), Alloc(Buf.Alloc) {}
+buffer(const buffer_t<t>& Buf)
+  : Data((byte*)const_cast<t*>(Buf.Data))
+  , Bytes(Buf.Size * sizeof(t)), Alloc(Buf.Alloc) {}
 
 mg_Inline byte& buffer::
-operator[](i64 Idx) { assert(Idx < Bytes); return Data[Idx]; }
+operator[](i64 Idx) const {
+  assert(Idx < Bytes);
+  return const_cast<byte&>(Data[Idx]);
+}
 
 mg_Inline buffer::
 operator bool() const { return this->Data && this->Bytes; }
@@ -151,18 +159,23 @@ mg_Ti(t) buffer_t<t>::
 buffer_t() = default;
 
 mg_T(t) template <int N> mg_Inline buffer_t<t>::
-buffer_t(t (&Arr)[N]) : Data(&Arr[0]), Size(N) {}
+buffer_t(t (&Arr)[N])
+  : Data(&Arr[0]), Size(N) {}
 
 mg_Ti(t) buffer_t<t>::
-buffer_t(t* DataIn, i64 SizeIn, allocator* AllocIn)
-  : Data(DataIn), Size(SizeIn), Alloc(AllocIn) {}
+buffer_t(const t* DataIn, i64 SizeIn, allocator* AllocIn)
+  : Data(const_cast<t*>(DataIn)), Size(SizeIn), Alloc(AllocIn) {}
 
 mg_Ti(t) buffer_t<t>::
-buffer_t(buffer Buf)
-  : Data((t*)Buf.Data), Size(Buf.Bytes / sizeof(t)), Alloc(Buf.Alloc) {}
+buffer_t(const buffer& Buf)
+  : Data((t*)const_cast<byte*>(Buf.Data))
+  , Size(Buf.Bytes / sizeof(t)), Alloc(Buf.Alloc) {}
 
 mg_Ti(t) t& buffer_t<t>::
-operator[](i64 Idx) { assert(Idx < Size); return Data[Idx]; }
+operator[](i64 Idx) const {
+  assert(Idx < Size);
+  return const_cast<t&>(Data[Idx]);
+}
 
 mg_Ti(t) i64
 Size(const buffer_t<t>& Buf) { return Buf.Size; }
@@ -203,7 +216,6 @@ mg_Ti(t) t& v3<t>::
 operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
 mg_T(t) mg_Ti(u) v3<t>& v3<t>::
 operator=(const v3<u>& Rhs) { X = Rhs.X; Y = Rhs.Y; Z = Rhs.Z; return *this; }
-
 
 // TODO: move the following to mg_macros.h?
 

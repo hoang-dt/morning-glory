@@ -72,14 +72,14 @@ mg_TA
 struct stack_array {
   static_assert(N > 0);
   t Arr[N];
-  t& operator[](int Idx);
+  t& operator[](int Idx) const;
 };
 
 
-mg_TA t* Begin(stack_array<t, N>& A);
-mg_TA t* End(stack_array<t, N>& A);
-mg_TA t* RevBegin(stack_array<t, N>& A);
-mg_TA t* RevEnd(stack_array<t, N>& A);
+mg_TA t* Begin(const stack_array<t, N>& A);
+mg_TA t* End  (const stack_array<t, N>& A);
+mg_TA t* RevBegin(const stack_array<t, N>& A);
+mg_TA t* RevEnd  (const stack_array<t, N>& A);
 mg_TA int Size(const stack_array<t, N>& A);
 
 /* Vector in 2D, supports .X, .UV, and [] */
@@ -152,9 +152,9 @@ struct buffer {
   buffer();
   mg_TA
   buffer(t (&Arr)[N]);
-  buffer(byte* DataIn, i64 BytesIn, allocator* AllocIn = nullptr);
-  mg_T(t) buffer(buffer_t<t> Buf);
-  byte& operator[](i64 Idx);
+  buffer(const byte* DataIn, i64 BytesIn, allocator* AllocIn = nullptr);
+  mg_T(t) buffer(const buffer_t<t>& Buf);
+  byte& operator[](i64 Idx) const;
   explicit operator bool() const;
 };
 
@@ -168,9 +168,9 @@ struct buffer_t {
   buffer_t();
   template <int N>
   buffer_t(t (&Arr)[N]);
-  buffer_t(t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
-  buffer_t(buffer Buf);
-  t& operator[](i64 Idx);
+  buffer_t(const t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
+  buffer_t(const buffer& Buf);
+  t& operator[](i64 Idx) const;
   explicit operator bool() const;
 };
 

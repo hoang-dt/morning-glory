@@ -8,10 +8,10 @@ namespace mg {
 
 /*
 Only works for POD types. For other types, use std::vector.
-NOTE: elements must be explicitly initialized (they are not initialized to zero 
+NOTE: elements must be explicitly initialized (they are not initialized to zero
 or anything)
-NOTE: do not make copies of a dynamic_array using operator=, then work on them 
-as if they were independent from the original object (i.e., an array does not 
+NOTE: do not make copies of a dynamic_array using operator=, then work on them
+as if they were independent from the original object (i.e., an array does not
 assume ownership of its memory buffer) */
 mg_T(t)
 struct array {
@@ -20,20 +20,20 @@ struct array {
   i64 Capacity = 0;
   allocator* Alloc = nullptr;
   array(allocator* Alloc = &Mallocator());
-  t& operator[](i64 Idx);
+  t& operator[](i64 Idx) const;
 };
 
 mg_T(t) void Init(array<t>* Array, i64 Size);
 mg_T(t) void Init(array<t>* Array, i64 Size, const t& Val);
 
-mg_T(t) i64 Size(array<t>& Array);
+mg_T(t) i64 Size(const array<t>& Array);
 
-mg_T(t) t& Front(array<t>& Array);
-mg_T(t) t& Back (array<t>& Array);
-mg_T(t) t* Begin(array<t>& Array);
-mg_T(t) t* End  (array<t>& Array);
+mg_T(t) t& Front(const array<t>& Array);
+mg_T(t) t& Back (const array<t>& Array);
+mg_T(t) t* Begin(const array<t>& Array);
+mg_T(t) t* End  (const array<t>& Array);
 
-mg_T(t) void Clone(array<t>& Src, array<t>* Dst);
+mg_T(t) void Clone(const array<t>& Src, array<t>* Dst);
 mg_T(t) void Relocate(array<t>* Array, buffer Buf);
 
 mg_T(t) void SetCapacity(array<t>* Array, i64 NewCapacity = 0);

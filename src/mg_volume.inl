@@ -63,16 +63,18 @@ volume(const v3i& Dims3, dtype TypeIn, allocator* Alloc)
   , Type(TypeIn) { AllocBuf(&Buffer, SizeOf(TypeIn) * Prod<i64>(Dims3), Alloc); }
 
 mg_Ti(t) volume::
-volume(t* Ptr, i64 Size)
-  : Buffer((byte*)Ptr, Size * sizeof(t))
-  , Dims(Pack3i64(v3i((i32)Size, 1, 1))) // NOTE the cast // TODO: maybe try to factor Size
-  , Type(dtype_traits<t>::Type) { mg_Assert(Size <= (i64)traits<i32>::Max); }
+volume(const t* Ptr, i64 Size)
+  : volume(Ptr, v3i(Size, 1, 1)) { mg_Assert(Size <= (i64)traits<i32>::Max); }
 
 mg_Ti(t) volume::
-volume(t* Ptr, const v3i& Dims3)
-  : Buffer((byte*)Ptr, Prod<i64>(Dims3) * sizeof(t))
+volume(const t* Ptr, const v3i& Dims3)
+  : Buffer((byte*)const_cast<t*>(Ptr), Prod<i64>(Dims3) * sizeof(t))
   , Dims(Pack3i64(Dims3))
   , Type(dtype_traits<t>::Type) {}
+
+mg_Ti(t) volume::
+volume(const buffer_t<t>& Buf)
+  : volume(Buf.Data, Buf.Size) {}
 
 mg_Inline bool
 operator==(const volume& V1, const volume& V2) {
@@ -264,10 +266,11 @@ Copy(const t& SGrid, const volume& SVol, volume* DVol) {
   mg_Assert(Dims(SGrid) <= Dims(SVol));\
   mg_Assert(DVol->Buffer && SVol.Buffer);\
   mg_Assert(SVol.Type == DVol->Type);\
-  buffer_t<type> DstBuf(DVol->Buffer), SrcBuf(SVol.Buffer);\
-  mg_BeginGridLoop2(SGrid, SVol, SGrid, *DVol) {\
-    DstBuf[J] = SrcBuf[I];\
-  } mg_EndGridLoop2
+  auto SIt = Begin<type>(SGrid, SVol), SEnd = End<type>(SGrid, SVol);\
+  auto DIt = Begin<type>(SGrid, *DVol);\
+  for (; SIt != SEnd; ++SIt, ++DIt) {\
+    *DIt = *SIt;\
+  }
 
   mg_DispatchOnType(SVol.Type);
 #undef Body
@@ -281,10 +284,11 @@ Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(DGrid) <= Dims(*DVol));\
   mg_Assert(DVol->Buffer && SVol.Buffer);\
   mg_Assert(SVol.Type == DVol->Type);\
-  buffer_t<type> DstBuf(DVol->Buffer), SrcBuf(SVol.Buffer);\
-  mg_BeginGridLoop2(SGrid, SVol, DGrid, *DVol) {\
-    DstBuf[J] = SrcBuf[I];\
-  } mg_EndGridLoop2
+  auto SIt = Begin<type>(SGrid, SVol), SEnd = End<type>(SGrid, SVol);\
+  auto DIt = Begin<type>(DGrid, *DVol);\
+  for (; SIt != SEnd; ++SIt, ++DIt) {\
+    *DIt = *SIt;\
+  }
 
   mg_DispatchOnType(SVol.Type);
 #undef Body

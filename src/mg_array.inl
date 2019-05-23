@@ -12,9 +12,9 @@ array(allocator* Alloc) :
 }
 
 mg_Ti(t) t& array<t>::
-operator[](i64 Idx) {
+operator[](i64 Idx) const {
   mg_Assert(Idx < Size);
-  return ((t*)Buffer.Data)[Idx];
+  return const_cast<t&>(((t*)Buffer.Data)[Idx]);
 }
 
 mg_Ti(t) void
@@ -30,18 +30,28 @@ Init(array<t>* Array, i64 Size, const t& Val) {
 }
 
 mg_Ti(t) i64
-Size(array<t>& Array) { return Array.Size; }
+Size(const array<t>& Array) { return Array.Size; }
 
 mg_Ti(t) t&
-Front( array<t>& Array) { mg_Assert(Size(Array) > 0); return Array[0]; }
+Front(const array<t>& Array) {
+  mg_Assert(Size(Array) > 0);
+  return const_cast<t&>(Array[0]);
+}
 
 mg_Ti(t) t&
-Back(array<t>& Array) { mg_Assert(Size(Array) > 0); return Array[Size(Array) - 1]; }
+Back(const array<t>& Array) {
+  mg_Assert(Size(Array) > 0);
+  return const_cast<t&>(Array[Size(Array) - 1]);
+}
 
 mg_Ti(t) t*
-Begin(array<t>& Array) { return (t*)Array.Buffer.Data; }
+Begin(const array<t>& Array) {
+  return (t*)const_cast<byte*>(Array.Buffer.Data);
+}
 mg_Ti(t) t*
-End(array<t>& Array) { return (t*)Array.Buffer.Data + Array.Size; }
+End(const array<t>& Array) {
+  return (t*)const_cast<byte*>(Array.Buffer.Data) + Array.Size;
+}
 
 mg_T(t) void
 Relocate(array<t>* Array, buffer Buf) {
@@ -88,10 +98,10 @@ Reserve(array<t>* Array, i64 Capacity) { SetCapacity(Array, Capacity); }
 
 // TODO: test to see if t is POD, if yes, just memcpy
 mg_T(t) void
-Clone(array<t>& Src, array<t>* Dst) {
+Clone(const array<t>& Src, array<t>* Dst) {
   Resize(Dst, Size(Src));
   for (int I = 0; I < Size(Src); ++I)
-    Clone(Src[I], &(*Dst)[I]);
+    (*Dst)[I] = Src[I];
 }
 
 mg_Ti(t) void

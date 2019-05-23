@@ -26,14 +26,14 @@ mg_T(t)
 struct list_iterator {
   list_node<t>* Node = nullptr;
   list_iterator& operator++();
-  list_node<t>* operator->();
-  t& operator*();
+  list_node<t>* operator->() const;
+  t& operator*() const;
   bool operator!=(const list_iterator& Other);
   bool operator==(const list_iterator& Other);
 };
 
-mg_T(t) mg_Li Begin(list<t>& List);
-mg_T(t) mg_Li End  (list<t>& List);
+mg_T(t) mg_Li Begin(const list<t>& List);
+mg_T(t) mg_Li End  (const list<t>& List);
 mg_T(t) mg_Li Insert(list<t>* List, const mg_Li& Where, const t& Payload);
 mg_T(t) mg_Li PushBack(list<t>* List, const t& Payload);
 mg_T(t) void Dealloc(list<t>* List);
