@@ -5,35 +5,20 @@
 
 namespace mg {
 
-grid_volume
-GridCollapse(const grid& Top, const grid_volume& Bot) {
-  v3i From1 = From(Top), Dims1 = Dims(Top), Strd1 = Strd(Top);
-  v3i From2 = From(Bot), Dims2 = Dims(Bot), Strd2 = Strd(Bot);
-  mg_Assert(From1 + (Dims1 - 1) * Strd1 < Dims2);
-  return grid_volume{grid(From2 + Strd2 * From1, Dims1, Strd1 * Strd2), Bot.Base};
-}
-
-grid GridCollapse(const grid& Top, const grid& Bot) {
-  v3i From1 = From(Top), Dims1 = Dims(Top), Strd1 = Strd(Top);
-  v3i From2 = From(Bot), Dims2 = Dims(Bot), Strd2 = Strd(Bot);
-  mg_Assert(From1 + (Dims1 - 1) * Strd1 < Dims2);
-  return grid(From2 + Strd2 * From1, Dims1, Strd1 * Strd2);
-}
-
-void
-Copy(const grid_volume& Src, grid_volume* Dst) {
-#define Body(type)\
-  mg_Assert(Dims(Src) == Dims(*Dst));\
-  mg_Assert(Dst->Base.Buffer && Src.Base.Buffer);\
-  mg_Assert(Dst->Base.Type == Src.Base.Type);\
-  buffer_t<type> DstBuf(Dst->Base.Buffer), SrcBuf(Src.Base.Buffer);\
-  mg_BeginGridLoop2(Src, *Dst) {\
-    DstBuf[J] = SrcBuf[I];\
-  } mg_EndGridLoop2
-
-  mg_DispatchOnType(Value(Src.Base).Type);
-#undef Body
-}
+//grid_volume
+//GridCollapse(const grid& Top, const grid_volume& Bot) {
+//  v3i From1 = From(Top), Dims1 = Dims(Top), Strd1 = Strd(Top);
+//  v3i From2 = From(Bot), Dims2 = Dims(Bot), Strd2 = Strd(Bot);
+//  mg_Assert(From1 + (Dims1 - 1) * Strd1 < Dims2);
+//  return grid_volume{grid(From2 + Strd2 * From1, Dims1, Strd1 * Strd2), Bot.Base};
+//}
+//
+//grid GridCollapse(const grid& Top, const grid& Bot) {
+//  v3i From1 = From(Top), Dims1 = Dims(Top), Strd1 = Strd(Top);
+//  v3i From2 = From(Bot), Dims2 = Dims(Bot), Strd2 = Strd(Bot);
+//  mg_Assert(From1 + (Dims1 - 1) * Strd1 < Dims2);
+//  return grid(From2 + Strd2 * From1, Dims1, Strd1 * Strd2);
+//}
 
 error<>
 ReadVolume(cstr FileName, const v3i& Dims3, dtype Type, volume* Volume) {
@@ -49,12 +34,6 @@ Clone(const volume& Src, volume* Dst, allocator* Alloc) {
   Clone(Src.Buffer, &Dst->Buffer, Alloc);
   Dst->Dims = Src.Dims;
   Dst->Type = Src.Type;
-}
-
-void
-Clone(const grid_volume& Src, grid_volume* Dst, allocator* Alloc) {
-  Clone(Src.Base, &Dst->Base, Alloc);
-  Dst->Grid = Src.Grid;
 }
 
 } // namespace mg

@@ -26,10 +26,8 @@ ForwardCdf53Old(volume* Vol, int NLevels) {
 }
 
 void
-ForwardCdf53(grid_volume* Vol, int NLevels) {
-  grid_volume VolBackup = *Vol;
-  v3i Dims3 = Dims(*Vol), M = Dims(VolBackup);
-  v3i Strd3 = v3i::One;
+ForwardCdf53(const extent& Ext, int NLevels, volume* Vol) {
+  v3i Dims3 = Dims(Ext), M = Dims(Ext), Strd3 = v3i::One;
   array<grid> Grids;
   for (int I = 0; I < NLevels; ++I) {
     PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
@@ -41,23 +39,16 @@ ForwardCdf53(grid_volume* Vol, int NLevels) {
     Strd3 = Strd3 * 2;
     Dims3 = (Dims3 + 1) / 2;
   }
-  int J = 0;
-  for (int I = 0; I < NLevels; ++I) {
-    Vol->Grid = Grids[J++];
-    FLiftCdf53X<double>(Vol, M);
-    Vol->Grid = Grids[J++];
-    FLiftCdf53Y<double>(Vol, M);
-    Vol->Grid = Grids[J++];
-    FLiftCdf53Z<double>(Vol, M);
+  for (int I = 0, J = 0; I < NLevels; ++I) {
+    FLiftCdf53X<double>(Grids[J++], M, Vol);
+    FLiftCdf53Y<double>(Grids[J++], M, Vol);
+    FLiftCdf53Z<double>(Grids[J++], M, Vol);
   }
-  *Vol = VolBackup;
 }
 
 void
-InverseCdf53(grid_volume* Vol, int NLevels) {
-  grid_volume VolBackup = *Vol;
-  v3i Dims3 = Dims(*Vol), M = Dims(VolBackup);
-  v3i Strd3 = v3i::One;
+InverseCdf53(const extent& Ext, int NLevels, volume* Vol) {
+  v3i Dims3 = Dims(Ext), M = Dims(Ext), Strd3 = v3i::One;
   array<grid> Grids;
   for (int I = 0; I < NLevels; ++I) {
     PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
@@ -69,16 +60,11 @@ InverseCdf53(grid_volume* Vol, int NLevels) {
     Strd3 = Strd3 * 2;
     Dims3 = (Dims3 + 1) / 2;
   }
-  int J = Size(Grids) - 1;
-  for (int I = NLevels - 1; I >= 0; --I) {
-    Vol->Grid = Grids[J--];
-    ILiftCdf53Z<double>(Vol, M);
-    Vol->Grid = Grids[J--];
-    ILiftCdf53Y<double>(Vol, M);
-    Vol->Grid = Grids[J--];
-    ILiftCdf53X<double>(Vol, M);
+  for (int I = NLevels - 1, J = Size(Grids) - 1; I >= 0; --I) {
+    ILiftCdf53Z<double>(Grids[J--], M, Vol);
+    ILiftCdf53Y<double>(Grids[J--], M, Vol);
+    ILiftCdf53X<double>(Grids[J--], M, Vol);
   }
-  *Vol = VolBackup;
 }
 
 // TODO: this won't work for a general (sub)volume
@@ -99,14 +85,14 @@ InverseCdf53Old(volume* Vol, int NLevels) {
 
 // TODO: this won't work for a general (sub)volume
 void
-ForwardCdf53Ext(grid_volume* Grid) {
+ForwardCdf53Ext(const extent& Ext, volume* Vol) {
 #define Body(type)\
-  v3i N = Dims(*Grid);\
-  v3i NN = Dims(Grid->Base);\
+  v3i N = Dims(Ext);\
+  v3i NN = Dims(*Vol);\
   if (NN.Y > 1) mg_Assert(NN.X == NN.Y);\
   if (NN.Z > 1) mg_Assert(NN.Y == NN.Z);\
   mg_Assert(IsPow2(NN.X - 1));\
-  type* FPtr = (type*)(Grid->Base.Buffer.Data);\
+  type* FPtr = (type*)(Vol->Buffer.Data);\
   int NLevels = Log2Floor(NN.X - 1) + 1;\
   for (int I = 0; I < NLevels; ++I) {\
     FLiftExtCdf53X(FPtr, N, NN, v3i(I));\
@@ -114,20 +100,20 @@ ForwardCdf53Ext(grid_volume* Grid) {
     FLiftExtCdf53Z(FPtr, N, NN, v3i(I));\
   }\
 
-  mg_DispatchOnType(Grid->Base.Type)
+  mg_DispatchOnType(Vol->Type)
 #undef Body
 }
 
 // TODO: this won't work for a general (sub)volume
 void
-InverseCdf53Ext(grid_volume* Grid) {
+InverseCdf53Ext(const extent& Ext, volume* Vol) {
 #define Body(type)\
-  v3i N = Dims(*Grid);\
-  v3i NN = Dims(Grid->Base);\
+  v3i N = Dims(Ext);\
+  v3i NN = Dims(*Vol);\
   if (NN.Y > 1) mg_Assert(NN.X == NN.Y);\
   if (NN.Z > 1) mg_Assert(NN.Y == NN.Z);\
   mg_Assert(IsPow2(NN.X - 1));\
-  type* FPtr = (type*)(Grid->Base.Buffer.Data);\
+  type* FPtr = (type*)(Vol->Buffer.Data);\
   int NLevels = Log2Floor(NN.X - 1) + 1;\
   for (int I = NLevels - 1; I >= 0; --I) {\
     ILiftExtCdf53Z(FPtr, N, NN, v3i(I));\
@@ -135,7 +121,7 @@ InverseCdf53Ext(grid_volume* Grid) {
     ILiftExtCdf53X(FPtr, N, NN, v3i(I));\
   }\
 
-  mg_DispatchOnType(Grid->Base.Type)
+  mg_DispatchOnType(Vol->Type)
 #undef Body
 }
 
@@ -149,7 +135,7 @@ SubbandOrders[4] = {
 
 /* Here we assume the wavelet transform is done in X, then Y, then Z */
 void
-BuildSubbands(const v3i& N, int NLevels, array<grid>* Subbands) {
+BuildSubbands(const v3i& N, int NLevels, array<extent>* Subbands) {
   int NDims = NumDims(N);
   stack_array<u8, 8>& Order = SubbandOrders[NDims];
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
@@ -164,15 +150,15 @@ BuildSubbands(const v3i& N, int NLevels, array<grid>* Subbands) {
              (Y == 0) ? P.Y : M.Y - P.Y,
              (Z == 0) ? P.Z : M.Z - P.Z);
       if (NDims == 3 && Sm.X != 0 && Sm.Y != 0 && Sm.Z != 0) // child exists
-        PushBack(Subbands, grid(v3i(X, Y, Z) * P, Sm));
+        PushBack(Subbands, extent(v3i(X, Y, Z) * P, Sm));
       else if (NDims == 2 && Sm.X != 0 && Sm.Y != 0)
-        PushBack(Subbands, grid(v3i(X * P.X, Y * P.Y, 0), v3i(Sm.X, Sm.Y, 1)));
+        PushBack(Subbands, extent(v3i(X * P.X, Y * P.Y, 0), v3i(Sm.X, Sm.Y, 1)));
       else
-        PushBack(Subbands, grid(v3i(X * P.X, 0, 0), v3i(Sm.X, 1, 1)));
+        PushBack(Subbands, extent(v3i(X * P.X, 0, 0), v3i(Sm.X, 1, 1)));
     }
     M = P;
   }
-  PushBack(Subbands, grid(v3i(0), M));
+  PushBack(Subbands, extent(v3i(0), M));
   Reverse(Begin(*Subbands), End(*Subbands));
 }
 
@@ -219,19 +205,16 @@ LevelToSubband(const v3i& Level) {
 }
 
 void
-FormSubbands(grid_volume Dst, grid_volume Src, int NLevels) {
-  mg_Assert(Dst.Grid.Dims == Src.Grid.Dims);
-  mg_Assert(Dst.Base.Type == Src.Base.Type);
-  v3i Dims3 = Dims(Src);
-  array<grid> Subbands;
+FormSubbands(int NLevels, const volume& SVol, volume* DVol) {
+  mg_Assert(SVol.Dims == DVol->Dims);
+  mg_Assert(SVol.Type == DVol->Type);
+  v3i Dims3 = Dims(SVol);
+  array<extent> Subbands;
   array<grid> SubbandsInPlace;
   BuildSubbands(Dims3, NLevels, &Subbands);
   BuildSubbandsInPlace(Dims3, NLevels, &SubbandsInPlace);
-  for (int I = 0; I < Size(Subbands); ++I) {
-    Dst.Grid = Subbands[I];
-    Src.Grid = SubbandsInPlace[I];
-    Copy(Src, &Dst);
-  }
+  for (int I = 0; I < Size(Subbands); ++I)
+    Copy(SubbandsInPlace[I], SVol, Subbands[I], DVol);
 }
 
 //v3i SubbandToLevel(int S) {

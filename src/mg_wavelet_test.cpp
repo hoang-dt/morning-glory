@@ -39,22 +39,22 @@ TestWavelet() {
   { // 1D, one level
     f64 A[] = Array10x10;
     f64 B[] = Array10x10;
-    volume Base(A, v3i(11, 1, 1));
-    grid_volume Vol(v3i(10, 1, 1), Base);
-    ForwardCdf53(&Vol, 1);
-    InverseCdf53(&Vol, 1);
-    for (int X = 0; X < Size(Vol); ++X) {
+    volume Vol(A, v3i(11, 1, 1));
+    grid Grid(v3i(10, 1, 1));
+    ForwardCdf53(Grid, 1, &Vol);
+    InverseCdf53(Grid, 1, &Vol);
+    for (int X = 0; X < Size(Grid); ++X) {
       mg_Assert(fabs(A[X] - B[X]) < 1e-9);
     }
   }
   { // 1D, three levels
     f64 A[] = Array10x10;
     f64 B[] = Array10x10;
-    volume Base(A, v3i(11, 1, 1));
-    grid_volume Vol(v3i(10, 1, 1), Base);
-    ForwardCdf53(&Vol, 3);
-    InverseCdf53(&Vol, 3);
-    for (int X = 0; X < Size(Vol); ++X) {
+    volume Vol(A, v3i(11, 1, 1));
+    grid Grid(v3i(10, 1, 1));
+    ForwardCdf53(Grid, 3, &Vol);
+    InverseCdf53(Grid, 3, &Vol);
+    for (int X = 0; X < Size(Grid); ++X) {
       mg_Assert(fabs(A[X] - B[X]) < 1e-9);
     }
   }
@@ -62,14 +62,14 @@ TestWavelet() {
     f64 A[] = Array10x10;
     f64 B[] = Array10x10;
     f64 C[11 * 11];
-    grid_volume VolA(A, v3i(10, 10, 1));
-    grid_volume VolB(B, v3i(10, 10, 1));
-    grid_volume VolC(v3i(10, 10, 1), volume(C, v3i(11, 11, 1)));
-    Copy(VolA, &VolC);
-    ForwardCdf53(&VolC, 1);
-    InverseCdf53(&VolC, 1);
-    auto ItrC = Begin<f64>(VolC), ItrB = Begin<f64>(VolB);
-    for (; ItrC != End<f64>(VolC); ++ItrC, ++ItrB) {
+    volume VolA(A, v3i(10, 10, 1)), VolB(B, v3i(10, 10, 1)), VolC(C, v3i(11, 11, 1));
+    grid Grid(v3i(10, 10, 1));
+    Copy(Grid, VolA, Grid, &VolC);
+    ForwardCdf53(Grid, 1, &VolC);
+    InverseCdf53(Grid, 1, &VolC);
+    auto ItrC = Begin<f64>(Grid, VolC);
+    auto ItrB = Begin<f64>(VolB);
+    for (; ItrC != End<f64>(Grid, VolC); ++ItrC, ++ItrB) {
       mg_Assert(fabs(*ItrC - *ItrB) < 1e-9);
     }
   }
@@ -77,14 +77,14 @@ TestWavelet() {
     f64 A[] = Array10x10;
     f64 B[] = Array10x10;
     f64 C[11 * 11];
-    grid_volume VolA(A, v3i(10, 10, 1));
-    grid_volume VolB(B, v3i(10, 10, 1));
-    grid_volume VolC(v3i(10, 10, 1), volume(C, v3i(11, 11, 1)));
-    Copy(VolA, &VolC);
-    ForwardCdf53(&VolC, 3);
-    InverseCdf53(&VolC, 3);
-    auto ItrC = Begin<f64>(VolC), ItrB = Begin<f64>(VolB);
-    for (; ItrC != End<f64>(VolC); ++ItrC, ++ItrB) {
+    volume VolA(A, v3i(10, 10, 1)), VolB(B, v3i(10, 10, 1)), VolC(C, v3i(11, 11, 1));
+    grid Grid(v3i(10, 10, 1));
+    Copy(Grid, VolA, Grid, &VolC);
+    ForwardCdf53(Grid, 3, &VolC);
+    InverseCdf53(Grid, 3, &VolC);
+    auto ItrC = Begin<f64>(Grid, VolC);
+    auto ItrB = Begin<f64>(VolB);
+    for (; ItrC != End<f64>(Grid, VolC); ++ItrC, ++ItrB) {
       mg_Assert(fabs(*ItrC - *ItrB) < 1e-9);
     }
   }
@@ -92,14 +92,14 @@ TestWavelet() {
     f64 A[] = Array7x6x5;
     f64 B[] = Array7x6x5;
     f64 C[8 * 7 * 6];
-    grid_volume VolA(A, v3i(7, 6, 5));
-    grid_volume VolB(B, v3i(7, 6, 5));
-    grid_volume VolC(v3i(7, 6, 5), volume(C, v3i(8, 7, 6)));
-    Copy(VolA, &VolC);
-    ForwardCdf53(&VolC, 1);
-    InverseCdf53(&VolC, 1);
-    auto ItrC = Begin<f64>(VolC), ItrB = Begin<f64>(VolB);
-    for (; ItrC != End<f64>(VolC); ++ItrC, ++ItrB) {
+    volume VolA(A, v3i(7, 6, 5)), VolB(B, v3i(7, 6, 5)), VolC(C, v3i(8, 7, 6));
+    grid Grid(v3i(7, 6, 5));
+    Copy(Grid, VolA, Grid, &VolC);
+    ForwardCdf53(Grid, 1, &VolC);
+    InverseCdf53(Grid, 1, &VolC);
+    auto ItrC = Begin<f64>(Grid, VolC);
+    auto ItrB = Begin<f64>(VolB);
+    for (; ItrC != End<f64>(Grid, VolC); ++ItrC, ++ItrB) {
       mg_Assert(fabs(*ItrC - *ItrB) < 1e-9);
     }
   }
@@ -107,31 +107,30 @@ TestWavelet() {
     f64 A[] = Array7x6x5;
     f64 B[] = Array7x6x5;
     f64 C[8 * 7 * 6];
-    grid_volume VolA(A, v3i(7, 6, 5));
-    grid_volume VolB(B, v3i(7, 6, 5));
-    grid_volume VolC(v3i(7, 6, 5), volume(C, v3i(8, 7, 6)));
-    Copy(VolA, &VolC);
-    ForwardCdf53(&VolC, 2);
-    InverseCdf53(&VolC, 2);
-    auto ItrC = Begin<f64>(VolC), ItrB = Begin<f64>(VolB);
-    for (; ItrC != End<f64>(VolC); ++ItrC, ++ItrB) {
+    volume VolA(A, v3i(7, 6, 5)), VolB(B, v3i(7, 6, 5)), VolC(C, v3i(8, 7, 6));
+    grid Grid(v3i(7, 6, 5));
+    Copy(Grid, VolA, Grid, &VolC);
+    ForwardCdf53(Grid, 2, &VolC);
+    InverseCdf53(Grid, 2, &VolC);
+    auto ItrC = Begin<f64>(Grid, VolC);
+    auto ItrB = Begin<f64>(VolB);
+    for (; ItrC != End<f64>(Grid, VolC); ++ItrC, ++ItrB) {
       mg_Assert(fabs(*ItrC - *ItrB) < 1e-9);
     }
   }
   { // "real" 3d volume
-    volume Vol(v3i(64, 64, 64), dtype::float64);
+    volume Vol(v3i(64), dtype::float64);
     ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[64-64-64]-Float64.raw",
-               v3i(64, 64, 64), dtype::float64, &Vol);
-    grid_volume Grid(Vol);
-    volume VolCopy(v3i(65, 65, 65), dtype::float64);
-    grid_volume GridCopy(v3i(64, 64, 64), VolCopy);
-    Copy(Grid, &GridCopy);
-    ForwardCdf53(&GridCopy, 5);
-    InverseCdf53(&GridCopy, 5);
+               v3i(64), dtype::float64, &Vol);
+    volume VolExt(v3i(65), dtype::float64);
+    extent Ext(v3i(64));
+    Copy(Ext, Vol, &VolExt);
+    ForwardCdf53(Ext, 5, &VolExt);
+    InverseCdf53(Ext, 5, &VolExt);
     volume_iterator It = Begin<f64>(Vol), VolEnd = End<f64>(Vol);
-    grid_iterator CopyIt = Begin<f64>(GridCopy);
-    for (; It != VolEnd; ++It, ++CopyIt) {
-      mg_Assert(fabs(*It - *CopyIt) < 1e-9);
+    extent_iterator ItExt = Begin<f64>(Ext, VolExt);
+    for (; It != VolEnd; ++It, ++ItExt) {
+      mg_Assert(fabs(*It - *ItExt) < 1e-9);
     }
   }
   { // "real" 3d volume

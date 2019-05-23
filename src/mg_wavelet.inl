@@ -14,15 +14,15 @@
 /* Forward lifting */
 #define mg_FLiftCdf53(z, y, x)\
 mg_T(t) void \
-FLiftCdf53##x(grid_volume* Grid, const v3i& M) {\
-  v3i P = From(*Grid), D = Dims(*Grid), S = Strd(*Grid), N = Dims(Grid->Base);\
+FLiftCdf53##x(const grid& Grid, const v3i& M, volume* Vol) {\
+  v3i P = From(Grid), D = Dims(Grid), S = Strd(Grid), N = Dims(*Vol);\
   if (D.x == 1) return;\
   mg_Assert(M.x <= N.x);\
   mg_Assert(IsPow2(S.X) && IsPow2(S.Y) && IsPow2(S.Z));\
   mg_Assert(D.x >= 2); /* TODO: what if D.x == 2? */\
   mg_Assert(IsEven(P.x));\
   mg_Assert(P.x + S.x * (D.x - 2) < M.x);\
-  buffer_t<t> F(Grid->Base.Buffer);\
+  buffer_t<t> F(Vol->Buffer);\
   int x1 = Min(P.x + S.x * (D.x - 1), M.x); /* last position */\
   int x2 = P.x + S.x * (D.x - 2); /* second last position */\
   int x3 = P.x + S.x * (D.x - 3); /* third last position */\
@@ -66,15 +66,15 @@ FLiftCdf53##x(grid_volume* Grid, const v3i& M) {\
 
 #define mg_ILiftCdf53(z, y, x)\
 mg_T(t) void \
-ILiftCdf53##x(grid_volume* Grid, const v3i& M) {\
-  v3i P = From(*Grid), D = Dims(*Grid), S = Strd(*Grid), N = Dims(Grid->Base);\
+ILiftCdf53##x(const grid& Grid, const v3i& M, volume* Vol) {\
+  v3i P = From(Grid), D = Dims(Grid), S = Strd(Grid), N = Dims(*Vol);\
   if (D.x == 1) return;\
   mg_Assert(M.x <= N.x);\
   mg_Assert(IsPow2(S.X) && IsPow2(S.Y) && IsPow2(S.Z));\
   mg_Assert(D.x >= 2);\
   mg_Assert(IsEven(P.x));\
   mg_Assert(P.x + S.x * (D.x - 2) < M.x);\
-  buffer_t<t> F(Grid->Base.Buffer);\
+  buffer_t<t> F(Vol->Buffer);\
   int x1 = Min(P.x + S.x * (D.x - 1), M.x); /* last position */\
   int x2 = P.x + S.x * (D.x - 2); /* second last position */\
   int x3 = P.x + S.x * (D.x - 3); /* third last position */\

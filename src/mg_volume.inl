@@ -11,8 +11,13 @@ extent() = default;
 
 mg_Inline extent::
 extent(const v3i& Dims3)
-  : From(Pack3i64(v3i::Zero))
+  : From(0)
   , Dims(Pack3i64(Dims3)) {}
+
+mg_Inline extent::
+extent(const volume& Vol)
+  : From(0)
+  , Dims(Vol.Dims) {}
 
 mg_Inline extent::
 extent(const v3i& From3, const v3i& Dims3)
@@ -24,26 +29,22 @@ grid() = default;
 
 mg_Inline grid::
 grid(const v3i& Dims3)
-  : From(Pack3i64(v3i::Zero))
-  , Dims(Pack3i64(Dims3))
+  : extent(Dims3)
   , Strd(Pack3i64(v3i::One)) {}
 
 mg_Inline grid::
 grid(const v3i& From3, const v3i& Dims3)
-  : From(Pack3i64(From3))
-  , Dims(Pack3i64(Dims3))
+  : extent(From3, Dims3)
   , Strd(Pack3i64(v3i::One)) {}
 
 mg_Inline grid::
 grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3)
-  : From(Pack3i64(From3))
-  , Dims(Pack3i64(Dims3))
+  : extent(From3, Dims3)
   , Strd(Pack3i64(Strd3)) {}
 
 mg_Inline grid::
 grid(const extent& Ext)
-  : From(Ext.From)
-  , Dims(Ext.Dims)
+  : extent(Ext)
   , Strd(Pack3i64(v3i::One)) {}
 
 mg_Inline volume::
@@ -73,70 +74,9 @@ volume(t* Ptr, const v3i& Dims3)
   , Dims(Pack3i64(Dims3))
   , Type(dtype_traits<t>::Type) {}
 
-mg_Ti(t) volume_indexer<t>::
-volume_indexer(volume& Vol)
-  : Buf(buffer_t<t>(Vol.Buffer))
-  , BaseDims3(Dims(Vol)) {}
-
-mg_Ti(t) t& volume_indexer<t>::
-At(const v3i& P) {
-  i64 I = Row(BaseDims3, P);
-  return Buf[I];
-}
-
-mg_Inline grid_volume::
-grid_volume() = default;
-
-mg_Inline grid_volume::
-grid_volume(const volume& Vol)
-  : Grid(Dims(Vol))
-  , Base(Vol) {}
-
-mg_Inline grid_volume::
-grid_volume(const grid& GridIn, const volume& Vol)
-  : Grid(GridIn)
-  , Base(Vol) {}
-
-mg_Inline grid_volume::
-grid_volume(const v3i& Dims, const volume& Vol)
-  : Grid(Dims)
-  , Base(Vol) {}
-
-mg_Inline grid_volume::
-grid_volume(const extent& Ext, const volume& Vol)
-  : Grid(Ext)
-  , Base(Vol) {}
-
-mg_Inline grid_volume::
-grid_volume(const v3i& From3, const v3i& Dims3, const v3i& Strd3, const volume& Vol)
-  : Grid(From3, Dims3, Strd3)
-  , Base(Vol) {}
-
-mg_Ti(t) grid_volume::
-grid_volume(t* Ptr, i64 Size)
-  : Grid(v3i(i32(Size), 1, 1))
-  , Base(Ptr, Size) { mg_Assert(Size <= (i64)traits<i32>::Max); }
-
-mg_Ti(t) grid_volume::
-grid_volume(t* Ptr, const v3i& Dims3)
-  : Grid(Dims3)
-  , Base(Ptr, Dims3) {}
-
 mg_Inline bool
 operator==(const volume& V1, const volume& V2) {
   return V1.Buffer == V2.Buffer && V1.Dims == V2.Dims && V1.Type == V2.Type;
-}
-
-mg_Ti(t) grid_indexer<t>::
-grid_indexer(grid_volume& Grid)
-  : Buf(buffer_t<t>(Grid.Base.Buffer))
-  , BaseDims3(Dims(Grid.Base))
-  , GridFrom3(From(Grid)), GridStrd3(Strd(Grid)) {}
-
-mg_Ti(t) t& grid_indexer<t>::
-At(const v3i& P) {
-  i64 I = Row(BaseDims3, GridFrom3 + P * GridStrd3);
-  return Buf[I];
 }
 
 mg_Inline v3i From(const extent& Ext) { return Unpack3i64(Ext.From); }
@@ -153,24 +93,19 @@ mg_Inline v3i From(const volume& Vol) { (void)Vol; return v3i::Zero; }
 mg_Inline v3i Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
 mg_Inline i64 Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
 
-mg_Inline v3i From(const grid_volume& Grid) { return From(Grid.Grid); }
-mg_Inline v3i Dims(const grid_volume& Grid) { return Dims(Grid.Grid); }
-mg_Inline v3i Strd(const grid_volume& Grid) { return Strd(Grid.Grid); }
-mg_Inline i64 Size(const grid_volume& Grid) { return Size(Grid.Grid); }
-
 mg_Ti(t) volume_iterator<t>
-Begin(volume& Vol) {
+Begin(const volume& Vol) {
   volume_iterator<t> Iter;
   Iter.P = v3i::Zero; Iter.N = Dims(Vol);
-  Iter.Ptr = (t*)Vol.Buffer.Data;
+  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data);
   return Iter;
 }
 
 mg_Ti(t) volume_iterator<t>
-End(volume& Vol) {
+End(const volume& Vol) {
   volume_iterator<t> Iter;
   v3i To3(0, 0, Dims(Vol).Z);
-  Iter.Ptr = (t*)Vol.Buffer.Data + Row(Dims(Vol), To3);
+  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Dims(Vol), To3);
   return Iter;
 }
 
@@ -196,20 +131,62 @@ operator!=(const volume_iterator<t>& Other) const { return Ptr != Other.Ptr; }
 mg_Ti(t) bool volume_iterator<t>::
 operator==(const volume_iterator<t>& Other) const { return Ptr == Other.Ptr; }
 
+mg_Ti(t) extent_iterator<t>
+Begin(const extent& Ext, const volume& Vol) {
+  extent_iterator<t> Iter;
+  Iter.D = Dims(Ext); Iter.P = From(Ext); Iter.N = Dims(Vol);
+  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Iter.N, Iter.P);
+  return Iter;
+}
+
+mg_Ti(t) extent_iterator<t>
+End(const extent& Ext, const volume& Vol) {
+  extent_iterator<t> Iter;
+  v3i To3(0, 0, From(Ext).Z + Dims(Ext).Z * Strd(Ext).Z);
+  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Dims(Vol), To3);
+  return Iter;
+}
+
+mg_Ti(t) extent_iterator<t>& extent_iterator<t>::
+operator++() {
+  ++P.X;
+  ++Ptr;
+  if (P.X >= D.X) {
+    P.X = 0;
+    ++P.Y;
+    Ptr = Ptr - D.X + N.X;
+    if (P.Y >= D.Y) {
+      P.Y = 0;
+      ++P.Z;
+      Ptr = Ptr - D.Y * N.X + N.X * N.Y;
+    }
+  }
+  return *this;
+}
+
+mg_Ti(t) t& extent_iterator<t>::
+operator*() { return *Ptr; }
+
+mg_Ti(t) bool extent_iterator<t>::
+operator!=(const extent_iterator<t>& Other) const { return Ptr != Other.Ptr; }
+
+mg_Ti(t) bool extent_iterator<t>::
+operator==(const extent_iterator<t>& Other) const { return Ptr == Other.Ptr; }
+
 mg_Ti(t) grid_iterator<t>
-Begin(grid_volume& Grid) {
+Begin(const grid& Grid, const volume& Vol) {
   grid_iterator<t> Iter;
   Iter.D = Dims(Grid); Iter.S = Strd(Grid); Iter.P = From(Grid);
-  Iter.N = Dims(Grid.Base);
-  Iter.Ptr = (t*)Grid.Base.Buffer.Data + Row(Iter.N, Iter.P);
+  Iter.N = Dims(Vol);
+  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Iter.N, Iter.P);
   return Iter;
 }
 
 mg_Ti(t) grid_iterator<t>
-End(grid_volume& Grid) {
+End(const grid& Grid, const volume& Vol) {
   grid_iterator<t> Iter;
   v3i To3(0, 0, From(Grid).Z + Dims(Grid).Z * Strd(Grid).Z);
-  Iter.Ptr = (t*)Grid.Base.Buffer.Data + Row(Dims(Grid.Base), To3);
+  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Dims(Vol), To3);
   return Iter;
 }
 
@@ -253,11 +230,12 @@ mg_Inline int
 NumDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
 
 #undef mg_BeginGridLoop2
-#define mg_BeginGridLoop2(GI, GJ)\
+#define mg_BeginGridLoop2(GI, VI, GJ, VJ) /* GridI, VolumeI, GridJ, VolumeJ */\
   {\
+    mg_Assert(Dims(GI) == Dims(GJ));\
     v3i Pos;\
     v3i FromI = From(GI), FromJ = From(GJ);\
-    v3i Dims3 = Dims(GI), DimsI = Dims((GI).Base), DimsJ = Dims((GJ).Base);\
+    v3i Dims3 = Dims(GI), DimsI = Dims(VI), DimsJ = Dims(VJ);\
     v3i StrdI = Strd(GI), StrdJ = Strd(GJ);\
     mg_BeginFor3(Pos, v3i::Zero, Dims3, v3i::One) {\
       i64 I = Row(DimsI, FromI + Pos * StrdI);\
@@ -267,15 +245,49 @@ NumDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
 #define mg_EndGridLoop2 }}}}
 
 #undef mg_BeginGridLoop
-#define mg_BeginGridLoop(G)\
+#define mg_BeginGridLoop(G, V)\
   {\
     v3i Pos;\
     v3i From3 = From(G), Dims3 = Dims(G), Strd3 = Strd(G);\
-    v3i DimsB = Dims((G).Base);\
+    v3i DimsB = Dims(V);\
     mg_BeginFor3(Pos, From3, Dims3, Strd3) {\
       i64 I = Row(DimsB, Pos);\
 
 #undef mg_EndGridLoop
 #define mg_EndGridLoop }}}}
+
+// TODO: rewrite the following loops using the iterator interface
+mg_T(t) void
+Copy(const t& SGrid, const volume& SVol, volume* DVol) {
+#define Body(type)\
+  mg_Assert(Dims(SGrid) <= Dims(*DVol));\
+  mg_Assert(Dims(SGrid) <= Dims(SVol));\
+  mg_Assert(DVol->Buffer && SVol.Buffer);\
+  mg_Assert(SVol.Type == DVol->Type);\
+  buffer_t<type> DstBuf(DVol->Buffer), SrcBuf(SVol.Buffer);\
+  mg_BeginGridLoop2(SGrid, SVol, SGrid, *DVol) {\
+    DstBuf[J] = SrcBuf[I];\
+  } mg_EndGridLoop2
+
+  mg_DispatchOnType(SVol.Type);
+#undef Body
+}
+
+mg_T2(t1, t2) void
+Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
+#define Body(type)\
+  mg_Assert(Dims(SGrid) == Dims(DGrid));\
+  mg_Assert(Dims(SGrid) <= Dims(SVol));\
+  mg_Assert(Dims(DGrid) <= Dims(*DVol));\
+  mg_Assert(DVol->Buffer && SVol.Buffer);\
+  mg_Assert(SVol.Type == DVol->Type);\
+  buffer_t<type> DstBuf(DVol->Buffer), SrcBuf(SVol.Buffer);\
+  mg_BeginGridLoop2(SGrid, SVol, DGrid, *DVol) {\
+    DstBuf[J] = SrcBuf[I];\
+  } mg_EndGridLoop2
+
+  mg_DispatchOnType(SVol.Type);
+#undef Body
+}
 
 } // namespace mg
