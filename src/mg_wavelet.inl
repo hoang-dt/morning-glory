@@ -14,7 +14,7 @@
 /* Forward lifting */
 #define mg_FLiftCdf53(z, y, x)\
 mg_T(t) void \
-FLiftCdf53##x(const grid& Grid, const v3i& M, volume* Vol) {\
+FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
   v3i P = From(Grid), D = Dims(Grid), S = Strd(Grid), N = Dims(*Vol);\
   if (D.x == 1) return;\
   mg_Assert(M.x <= N.x);\
@@ -57,8 +57,9 @@ FLiftCdf53##x(const grid& Grid, const v3i& M, volume* Vol) {\
       }\
       if (!Ext) { /* no extrapolation, update at the last odd position */\
         t Val = F[mg_Row##x(x2, yy, zz, N)];\
-        F[mg_Row##x(x1, yy, zz, N)] += Val / 4;\
         F[mg_Row##x(x3, yy, zz, N)] += Val / 4;\
+        if (Opt == lift_option::Normal)\
+          F[mg_Row##x(x1, yy, zz, N)] += Val / 4;\
       }\
     }\
   }\
@@ -66,7 +67,7 @@ FLiftCdf53##x(const grid& Grid, const v3i& M, volume* Vol) {\
 
 #define mg_ILiftCdf53(z, y, x)\
 mg_T(t) void \
-ILiftCdf53##x(const grid& Grid, const v3i& M, volume* Vol) {\
+ILiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
   v3i P = From(Grid), D = Dims(Grid), S = Strd(Grid), N = Dims(*Vol);\
   if (D.x == 1) return;\
   mg_Assert(M.x <= N.x);\
@@ -91,8 +92,9 @@ ILiftCdf53##x(const grid& Grid, const v3i& M, volume* Vol) {\
       bool Ext = IsEven(D.x);\
       if (!Ext) { /* no extrapolation, inverse update at the last odd position */\
         t Val = F[mg_Row##x(x2, yy, zz, N)];\
-        F[mg_Row##x(x1, yy, zz, N)] -= Val / 4;\
         F[mg_Row##x(x3, yy, zz, N)] -= Val / 4;\
+        if (Opt == lift_option::Normal)\
+          F[mg_Row##x(x1, yy, zz, N)] -= Val / 4;\
       } else { /* extrapolation, need to "fix" the last position (odd) */\
         t A = F[mg_Row##x(M.x, yy, zz, N)];\
         t B = F[mg_Row##x(x2, yy, zz, N)];\

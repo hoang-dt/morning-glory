@@ -16,12 +16,13 @@ mg_T(t) void ILiftCdf53OldY(t* F, const v3i& N, const v3i& L);
 mg_T(t) void ILiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
 
 /* New set of lifting functions */
-mg_T(t) void FLiftCdf53X(const grid& Grid, const v3i& M, volume* Vol);
-mg_T(t) void FLiftCdf53Y(const grid& Grid, const v3i& M, volume* Vol);
-mg_T(t) void FLiftCdf53Z(const grid& Grid, const v3i& M, volume* Vol);
-mg_T(t) void ILiftCdf53X(const grid& Grid, const v3i& M, volume* Vol);
-mg_T(t) void ILiftCdf53Y(const grid& Grid, const v3i& M, volume* Vol);
-mg_T(t) void ILiftCdf53Z(const grid& Grid, const v3i& M, volume* Vol);
+enum lift_option { Normal, NoUpdateLast };
+mg_T(t) void FLiftCdf53X(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
+mg_T(t) void FLiftCdf53Y(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
+mg_T(t) void FLiftCdf53Z(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
+mg_T(t) void ILiftCdf53X(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
+mg_T(t) void ILiftCdf53Y(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
+mg_T(t) void ILiftCdf53Z(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
 
 /* Lifting with extrapolation */
 mg_T(t) void FLiftExtCdf53X(t* F, const v3i& N, const v3i& NBig, const v3i& L);

@@ -27,44 +27,52 @@ ForwardCdf53Old(volume* Vol, int NLevels) {
 
 void
 ForwardCdf53(const extent& Ext, int NLevels, volume* Vol) {
-  v3i Dims3 = Dims(Ext), M = Dims(Ext), Strd3 = v3i::One;
-  array<grid> Grids;
-  for (int I = 0; I < NLevels; ++I) {
-    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
-    Dims3.X += IsEven(Dims3.X); // extrapolate
-    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
-    Dims3.Y += IsEven(Dims3.Y); // extrapolate
-    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
-    Dims3.Z += IsEven(Dims3.Z); // extrapolate
-    Strd3 = Strd3 * 2;
-    Dims3 = (Dims3 + 1) / 2;
+#define Body(type)\
+  v3i Dims3 = Dims(Ext), M = Dims(Ext), Strd3 = v3i::One;\
+  array<grid> Grids;\
+  for (int I = 0; I < NLevels; ++I) {\
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));\
+    Dims3.X += IsEven(Dims3.X); /* extrapolate */\
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));\
+    Dims3.Y += IsEven(Dims3.Y); /* extrapolate */\
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));\
+    Dims3.Z += IsEven(Dims3.Z); /* extrapolate */\
+    Strd3 = Strd3 * 2;\
+    Dims3 = (Dims3 + 1) / 2;\
+  }\
+  for (int I = 0, J = 0; I < NLevels; ++I) {\
+    FLiftCdf53X<type>(Grids[J++], M, lift_option::Normal, Vol);\
+    FLiftCdf53Y<type>(Grids[J++], M, lift_option::Normal, Vol);\
+    FLiftCdf53Z<type>(Grids[J++], M, lift_option::Normal, Vol);\
   }
-  for (int I = 0, J = 0; I < NLevels; ++I) {
-    FLiftCdf53X<double>(Grids[J++], M, Vol);
-    FLiftCdf53Y<double>(Grids[J++], M, Vol);
-    FLiftCdf53Z<double>(Grids[J++], M, Vol);
-  }
+
+  mg_DispatchOnType(Vol->Type)
+#undef Body
 }
 
 void
 InverseCdf53(const extent& Ext, int NLevels, volume* Vol) {
-  v3i Dims3 = Dims(Ext), M = Dims(Ext), Strd3 = v3i::One;
-  array<grid> Grids;
-  for (int I = 0; I < NLevels; ++I) {
-    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
-    Dims3.X += IsEven(Dims3.X); // extrapolate
-    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
-    Dims3.Y += IsEven(Dims3.Y); // extrapolate
-    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));
-    Dims3.Z += IsEven(Dims3.Z); // extrapolate
-    Strd3 = Strd3 * 2;
-    Dims3 = (Dims3 + 1) / 2;
+#define Body(type)\
+  v3i Dims3 = Dims(Ext), M = Dims(Ext), Strd3 = v3i::One;\
+  array<grid> Grids;\
+  for (int I = 0; I < NLevels; ++I) {\
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));\
+    Dims3.X += IsEven(Dims3.X); /* extrapolate */\
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));\
+    Dims3.Y += IsEven(Dims3.Y); /* extrapolate */\
+    PushBack(&Grids, grid(v3i::Zero, Dims3, Strd3));\
+    Dims3.Z += IsEven(Dims3.Z); /* extrapolate */\
+    Strd3 = Strd3 * 2;\
+    Dims3 = (Dims3 + 1) / 2;\
+  }\
+  for (int I = NLevels - 1, J = Size(Grids) - 1; I >= 0; --I) {\
+    ILiftCdf53Z<type>(Grids[J--], M, lift_option::Normal, Vol);\
+    ILiftCdf53Y<type>(Grids[J--], M, lift_option::Normal, Vol);\
+    ILiftCdf53X<type>(Grids[J--], M, lift_option::Normal, Vol);\
   }
-  for (int I = NLevels - 1, J = Size(Grids) - 1; I >= 0; --I) {
-    ILiftCdf53Z<double>(Grids[J--], M, Vol);
-    ILiftCdf53Y<double>(Grids[J--], M, Vol);
-    ILiftCdf53X<double>(Grids[J--], M, Vol);
-  }
+
+  mg_DispatchOnType(Vol->Type)
+#undef Body
 }
 
 // TODO: this won't work for a general (sub)volume
