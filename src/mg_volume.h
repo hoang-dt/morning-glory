@@ -108,6 +108,8 @@ error<> ReadVolume(cstr FileName, const v3i& Dims3, dtype Type, volume* Vol);
 /* Copy a region of the first volume to a region of the second volume */
 mg_T(t) void Copy(const t& SGrid, const volume& SVol, volume* DVol);
 mg_T2(t1, t2) void Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);
+/* Similar to copy, but add the source to the destination instead */
+mg_T2(t1, t2) void Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);
 
 void Clone(const volume& Src, volume* Dst, allocator* Alloc = &Mallocator());
 

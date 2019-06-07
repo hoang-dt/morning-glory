@@ -60,6 +60,8 @@ FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
         F[mg_Row##x(x3, yy, zz, N)] += Val / 4;\
         if (Opt == lift_option::Normal)\
           F[mg_Row##x(x1, yy, zz, N)] += Val / 4;\
+        else if (Opt == lift_option::PartialUpdateLast)\
+          F[mg_Row##x(x1, yy, zz, N)] = Val / 4;\
       }\
     }\
   }\

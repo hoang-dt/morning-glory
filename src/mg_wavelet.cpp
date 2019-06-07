@@ -25,6 +25,150 @@ ForwardCdf53Old(volume* Vol, int NLevels) {
 #undef Body
 }
 
+//void
+//ForwardCdf53Tile(
+//  int Lvl, // level of the current tile
+//  int Idx, // index of the current tile
+//  bool Last, // acts as a "flush" signal when we reach the last tile
+//  const v3i& TDims3, // dimensions of a tile (e.g. 32 x 32 x 32)
+//  array<array<v3i>>* RDims3s, // real dimensions of the 8 tiles on each level
+//  array<array<volume>>* Vols) // data of the 8 tiles on each level
+//{
+//  mg_Assert(IsEven(TDims3.X) && IsEven(TDims3.Y) && IsEven(TDims3.Z));
+//  mg_Assert(Size(*Vols) > Lvl + 1);
+//  const int NSbands = 8; // number of subbands in 3D
+//  if (Lvl >= Size(*Vols))
+//    return; // base case, end the recursive calls
+//  /* transform the current tile */
+//  int NIdx = Idx % NSbands; // normalized index
+//  v3i& M = (*RDims3s)[Lvl][]; // dims of the current tile
+//  if (!Last)
+//    mg_Assert(IsEven(M.X) && IsEven(M.Y) && IsEven(M.Z));
+//  FLiftCdf53X<f64>(grid(M), M, lift_option::NoUpdateLast, Vols[]);
+//  M.X += IsEven(M.X);
+//  FLiftCdf53Y<f64>(grid(M), M, lift_option::NoUpdateLast, Vol);
+//  M.Y += IsEven(M.Y);
+//  FLiftCdf53Z<f64>(grid(M), M, lift_option::NoUpdateLast, Vol);
+//  M.Z += IsEven(M.Z);
+//  // TODO: update the dims3 of the parent tile
+//  /* initialize the memory for the parent tiles if this is the first children */
+//  stack_linear_allocator<8> Alloc;
+//  array<extent> Sbands(&Alloc);
+//  BuildSubbands(M, 1, &Sbands);
+//  // TODO: what about 2D?
+//  int NLvl = Lvl + 1;
+//  if (NIdx == 0) {
+//    Resize(&(*Vols)[NLvl], NSbands);
+//    Resize(&(*RDims3s)[NLvl], NSbands);
+//  }
+//  u32 NIdx = Idx % NSbands; // normalized index
+//  v3i HDims3 = (TDims3 + 1) / 2; // half dims
+//  v3i P((NIdx & 1) * HDims3.X, (NIdx & 2) * HDims3.Y, (NIdx & 4) * HDims3.Z);
+//  /* spread the samples to the 8 parent subbands */
+//  for (int Sb = 0; Sb < NSbands; ++Sb) {
+//    if (NIdx == 0) { // first children, allocate memory
+//      buffer Buf;
+//      AllocBuf0(&Buf, sizeof(f64) * Prod(TDims3 + 1));
+//      (*Vols)[NLvl][Sb] = volume(Buf, TDims3 + 1);
+//      (*RDims3s)[NLvl][Sb] = v3i::Zero;
+//    }
+//    /* copy the samples */
+//    Add(Sbands[Sb], (*Vols)[Lvl][NIdx], extent(P, Dims(Sbands[Sb])), (*Vols)[NLvl][Sb]);
+//    /* update the dimensions */
+//    v3i& PDims3 = (*RDims3s)[NLvl][Sb];
+//    if (P.X == 0 && P.Y == 0 && P.Z == 0)
+//      PDims3 += Dims(Sbands[Sb]);
+//    else if (P.X > 0 && P.Y == 0 && P.Z == 0)
+//      PDims3.X += Dims(Sbands[Sb]).X;
+//    else if (P.X == 0 && P.Y > 0 && P.Z == 0)
+//      PDims3.Y += Dims(Sbands[Sb]).Y;
+//    else if (P.X == 0 && P.Y == 0 && P.X > 0)
+//      PDims3.Z += Dims(Sbands[Sb]).Z;
+//  }
+//  ZeroBuf(&((*Vols)[Lvl][NIdx].Buffer)); // clear the current tile's buffer
+//  /* if this is the last children, recurse */
+//  if (Last || NIdx + 1 == NSbands)
+//    ForwardCdf53Tile(NLvl, Idx / NSbands, Last, TDims3, RDims3s, Vols);
+//}
+
+//void
+//ForwardCdf53Tile2D(
+//  int Lvl, // level of the current tile
+//  int Idx, // index of the current tile
+//  bool Last, // acts as a "flush" signal when we reach the last tile
+//  const v3i& TDims3, // dimensions of a tile (e.g. 32 x 32)
+//  array<array<v3i>>* RDims3s, // real dimensions of the 4 tiles on each level
+//  array<array<volume>>* Vols) // data of the 4 tiles on each level
+//{
+//  mg_Assert(IsEven(TDims3.X) && IsEven(TDims3.Y));
+//  mg_Assert(Size(*Vols) > Lvl + 1);
+//  const int NSbands = 4; // number of subbands in 2D
+//  if (Lvl >= Size(*Vols))
+//    return; // base case, end the recursive calls
+//  /* transform the current tile */
+//  v3i& M = (*RDims3s)[Lvl]; // dims of the current tile
+//  mg_Assert(M.Z == 1);
+//  if (!Last)
+//    mg_Assert(IsEven(M.X) && IsEven(M.Y));
+//  FLiftCdf53X<f64>(grid(M), M, lift_option::NoUpdateLast, Vol);
+//  M.X += IsEven(M.X);
+//  FLiftCdf53Y<f64>(grid(M), M, lift_option::NoUpdateLast, Vol);
+//  M.Y += IsEven(M.Y);
+//  /* initialize the memory for the parent tiles if this is the first children */
+//  stack_linear_allocator<4> Alloc;
+//  array<extent> Sbands(&Alloc);
+//  BuildSubbands(M, 1, &Sbands);
+//  int NLvl = Lvl + 1;
+//  if (NIdx == 0) {
+//    Resize(&(*Vols)[NLvl], NSbands);
+//    Resize(&(*RDims3s)[NLvl], NSbands);
+//  }
+//  u32 NIdx = Idx % NSbands; // normalized index
+//  v3i HDims3 = (TDims3 + 1) / 2; // half dims
+//  v3i P((NIdx & 1) * HDims3.X, (NIdx & 2) * HDims3.Y, 1);
+//  /* spread the samples to the 4 parent subbands */
+//  for (int Sb = 0; Sb < NSbands; ++Sb) {
+//    if (NIdx == 0) { // first children, allocate memory
+//      buffer Buf;
+//      AllocBuf0(&Buf, sizeof(f64) * Prod(TDims3.XY + 1));
+//      (*Vols)[NLvl][Sb] = volume(TDims3.XY + 1, Buf);
+//      (*RDims3s)[NLvl][Sb] = v3i::Zero;
+//    }
+//    /* copy the samples */
+//    Add(Sbands[Sb], (*Vols)[Lvl][NIdx], extent(P, Dims(Sbands[Sb])), (*Vols)[NLvl][Sb]);
+//    /* update the dimensions */
+//    v3i& PDims3 = (*RDims3s)[NLvl][Sb];
+//    if (P.X == 0 && P.Y == 0)
+//      PDims3 += Dims(Sbands[Sb]);
+//    else if (P.X > 0 && P.Y == 0)
+//      PDims3.X += Dims(Sbands[Sb]).X;
+//    else if (P.X == 0 && P.Y > 0)
+//      PDims3.Y += Dims(Sbands[Sb]).Y;
+//  }
+//  ZeroBuf(&((*Vols)[Lvl][NIdx].Buffer)); // clear the current tile's buffer
+//  /* if this is the last children, recurse */
+//  if (Last || NIdx + 1 == NSbands)
+//    ForwardCdf53Tile2D(NLvl, Idx / NSbands, Last, TDims3, RDims3s, Vols);
+//}
+
+//void
+//ForwardCdf53Tile(
+//  int NLvls, // number of levels
+//  const v3i& TDims3, // dimensions of a tile (e.g. 32 x 32)
+//  volume* Vol) // big volume of data
+//{
+//  /* calculate the power-of-two dimensions encompassing the volume */
+//  v3i Dims3 = Dims(*Vol);
+//  v3i BigDims3 = v3i::One;
+//  while (BigDims3.X < Dims3.X || BigDims3.Y < Dims3.Y || BigDims3.Z < Dims3.Z)
+//    BigDims3 = BigDims3 * 2;
+//  /* loop through the tiles in Z (morton) order */
+//  v3i NTiles3 = (BigDims3 + TDims3 - 1) / TDims3;
+//  for (int Idx = 0; I) {
+//
+//  }
+//}
+
 void
 ForwardCdf53(const extent& Ext, int NLevels, volume* Vol) {
 #define Body(type)\

@@ -13,6 +13,17 @@
    32, 56, 40, 8, 24, 48, 48, 40, 16, 30, 0,\
     0,  0,  0, 0,  0,  0,  0,  0,  0,  0, 0 }
 
+#define Array9x9\
+ { 56, 40,  8, 24, 48, 48, 40, 16, 30,\
+   40,  8, 24, 48, 48, 40, 16, 30, 32,\
+    8, 24, 48, 48, 40, 16, 30, 32, 56,\
+   24, 48, 48, 40, 16, 30, 32, 56, 40,\
+   48, 48, 40, 16, 30, 32, 56, 40,  8,\
+   48, 40, 16, 30, 32, 56, 40,  8, 24,\
+   40, 16, 30, 32, 56, 40,  8, 24, 48,\
+   16, 30, 32, 56, 40,  8, 24, 48, 48,\
+   30, 32, 56, 40,  8, 24, 48, 48, 40 }
+
 #define Array7x6x5\
  { 56, 40,  8, 24, 48, 48, 40,   16, 30, 32, 40,  8, 24, 48,\
    48, 40, 16, 30, 32, 56,  8,   24, 48, 48, 40, 16, 30, 32,\
@@ -151,4 +162,31 @@ TestWavelet() {
   }
 }
 
+void TestWaveletBlock() {
+  { // test with 2 tiles
+    f64 A[] = Array9x9;
+    f64 B[] = Array9x9;
+    f64 C[] = Array9x9;
+    f64 D[9 * 9] = {};
+    volume VolA(A, v3i(9, 9, 1)), VolB(B, v3i(9, 9, 1));
+    volume VolC(C, v3i(9, 9, 1)), VolD(D, v3i(9, 9, 1));
+    extent ExtLeft(v3i(0, 0, 0), v3i(5, 9, 1));
+    extent ExtRght(v3i(4, 0, 0), v3i(5, 9, 1));
+    FLiftCdf53X<f64>(grid(ExtLeft), Dims(VolA), lift_option::PartialUpdateLast, &VolA);
+    FLiftCdf53Y<f64>(grid(ExtLeft), Dims(VolA), lift_option::Normal, &VolA);
+    FLiftCdf53X<f64>(grid(ExtRght), Dims(VolB), lift_option::Normal, &VolB);
+    FLiftCdf53Y<f64>(grid(ExtRght), Dims(VolB), lift_option::Normal, &VolB);
+    Add(ExtLeft, VolA, ExtLeft, &VolD);
+    Add(ExtRght, VolB, ExtRght, &VolD);
+    FLiftCdf53X<f64>(grid(Dims(VolC)), Dims(VolC), lift_option::Normal, &VolC);
+    FLiftCdf53Y<f64>(grid(Dims(VolC)), Dims(VolC), lift_option::Normal, &VolC);
+    auto ItrC = Begin<f64>(VolC);
+    auto ItrD = Begin<f64>(VolD);
+    for (ItrC = Begin<f64>(VolC); ItrC != End<f64>(VolC); ++ItrC, ++ItrD) {
+      mg_Assert(fabs(*ItrC - *ItrD) < 1e-9);
+    }
+  }
+}
+
 mg_RegisterTest(Wavelet_TestWavelet, TestWavelet)
+mg_RegisterTest(Wavelet_TestWaveletBlock, TestWaveletBlock)

@@ -96,7 +96,7 @@ struct v2 {
   inline static const v2 One = v2(1);
   v2();
   explicit v2(t V);
-  v2(t X, t Y);
+  v2(t X_, t Y_);
   mg_T(u) v2(const v2<u>& Other);
   t& operator[](int Idx);
   mg_T(u) v2& operator=(const v2<u>& Rhs);
@@ -125,7 +125,8 @@ struct v3 {
   inline static const v3 One = v3(1);
   v3();
   explicit v3(t V);
-  v3(t X, t Y, t Z);
+  v3(t X_, t Y_, t Z_);
+  v3(const v2<t>& V2, t Z_);
   mg_T(u) v3(const v3<u>& Other);
   t& operator[](int Idx);
   mg_T(u) v3& operator=(const v3<u>& Rhs);

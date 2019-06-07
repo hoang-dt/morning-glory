@@ -195,7 +195,7 @@ v2() {}
 mg_Ti(t) v2<t>::
 v2(t V): X(V), Y(V) {}
 mg_Ti(t) v2<t>::
-v2(t X, t Y): X(X), Y(Y) {}
+v2(t X_, t Y_): X(X_), Y(Y_) {}
 mg_T(t) mg_Ti(u) v2<t>::
 v2(const v2<u>& Other) : X(Other.X), Y(Other.Y) {}
 mg_Ti(t) t& v2<t>::
@@ -209,7 +209,9 @@ v3() {}
 mg_Ti(t) v3<t>::
 v3(t V): X(V), Y(V), Z(V) {}
 mg_Ti(t) v3<t>::
-v3(t X, t Y, t Z): X(X), Y(Y), Z(Z) {}
+v3(t X_, t Y_, t Z_): X(X_), Y(Y_), Z(Z_) {}
+mg_Ti(t) v3<t>::
+v3(const v2<t>& V2, t Z_) : X(V2.X), Y(V2.Y), Z(Z_) {}
 mg_T(t) mg_Ti(u) v3<t>::
 v3(const v3<u>& Other) : X(Other.X), Y(Other.Y), Z(Other.Z) {}
 mg_Ti(t) t& v3<t>::

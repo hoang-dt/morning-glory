@@ -136,15 +136,15 @@ operator==(const volume_iterator<t>& Other) const { return Ptr == Other.Ptr; }
 mg_Ti(t) extent_iterator<t>
 Begin(const extent& Ext, const volume& Vol) {
   extent_iterator<t> Iter;
-  Iter.D = Dims(Ext); Iter.P = From(Ext); Iter.N = Dims(Vol);
-  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Iter.N, Iter.P);
+  Iter.D = Dims(Ext); Iter.P = v3i(0); Iter.N = Dims(Vol);
+  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Iter.N, From(Ext));
   return Iter;
 }
 
 mg_Ti(t) extent_iterator<t>
 End(const extent& Ext, const volume& Vol) {
   extent_iterator<t> Iter;
-  v3i To3(0, 0, From(Ext).Z + Dims(Ext).Z * Strd(Ext).Z);
+  v3i To3 = From(Ext) + v3i(0, 0, Dims(Ext).Z);
   Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Dims(Vol), To3);
   return Iter;
 }
@@ -178,16 +178,15 @@ operator==(const extent_iterator<t>& Other) const { return Ptr == Other.Ptr; }
 mg_Ti(t) grid_iterator<t>
 Begin(const grid& Grid, const volume& Vol) {
   grid_iterator<t> Iter;
-  Iter.D = Dims(Grid); Iter.S = Strd(Grid); Iter.P = From(Grid);
-  Iter.N = Dims(Vol);
-  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Iter.N, Iter.P);
+  Iter.D = Dims(Grid); Iter.S = Strd(Grid); Iter.P = v3i(0); Iter.N = Dims(Vol);
+  Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Iter.N, From(Grid));
   return Iter;
 }
 
 mg_Ti(t) grid_iterator<t>
 End(const grid& Grid, const volume& Vol) {
   grid_iterator<t> Iter;
-  v3i To3(0, 0, From(Grid).Z + Dims(Grid).Z * Strd(Grid).Z);
+  v3i To3 = From(Grid) + v3i(0, 0, Dims(Grid).Z * Strd(Grid).Z);
   Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Dims(Vol), To3);
   return Iter;
 }
@@ -268,9 +267,8 @@ Copy(const t& SGrid, const volume& SVol, volume* DVol) {
   mg_Assert(SVol.Type == DVol->Type);\
   auto SIt = Begin<type>(SGrid, SVol), SEnd = End<type>(SGrid, SVol);\
   auto DIt = Begin<type>(SGrid, *DVol);\
-  for (; SIt != SEnd; ++SIt, ++DIt) {\
-    *DIt = *SIt;\
-  }
+  for (; SIt != SEnd; ++SIt, ++DIt)\
+    *DIt = *SIt;
 
   mg_DispatchOnType(SVol.Type);
 #undef Body
@@ -286,8 +284,25 @@ Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(SVol.Type == DVol->Type);\
   auto SIt = Begin<type>(SGrid, SVol), SEnd = End<type>(SGrid, SVol);\
   auto DIt = Begin<type>(DGrid, *DVol);\
+  for (; SIt != SEnd; ++SIt, ++DIt)\
+    *DIt = *SIt;
+
+  mg_DispatchOnType(SVol.Type);
+#undef Body
+}
+
+mg_T2(t1, t2) void
+Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
+#define Body(type)\
+  mg_Assert(Dims(SGrid) == Dims(DGrid));\
+  mg_Assert(Dims(SGrid) <= Dims(SVol));\
+  mg_Assert(Dims(DGrid) <= Dims(*DVol));\
+  mg_Assert(DVol->Buffer && SVol.Buffer);\
+  mg_Assert(SVol.Type == DVol->Type);\
+  auto SIt = Begin<type>(SGrid, SVol), SEnd = End<type>(SGrid, SVol);\
+  auto DIt = Begin<type>(DGrid, *DVol);\
   for (; SIt != SEnd; ++SIt, ++DIt) {\
-    *DIt = *SIt;\
+    *DIt += *SIt;\
   }
 
   mg_DispatchOnType(SVol.Type);

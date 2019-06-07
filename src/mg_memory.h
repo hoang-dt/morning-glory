@@ -70,7 +70,7 @@ struct linear_allocator : public owning_allocator {
 template <int Capacity>
 struct stack_linear_allocator : public linear_allocator {
   stack_array<byte, Capacity> Storage;
-  stack_linear_allocator() : linear_allocator(buffer{ Storage.Arr, Capacity }) {}
+  stack_linear_allocator() : linear_allocator(buffer{Storage.Arr, Capacity}) {}
 };
 
 struct free_list_allocator : public allocator {
