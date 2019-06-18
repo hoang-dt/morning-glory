@@ -31,7 +31,7 @@ CastCStr(t Input) {
   else if constexpr (IsStdOut(#FileName))\
     Fp = stdout;\
   else\
-    Fp = mg::GetFileHandle(&mg::GlobalLogger(), CastCStr(FileName));\
+    Fp = mg::GetFileHandle(&mg::GlobalLogger, CastCStr(FileName));\
   mg::printer Pr(Fp);\
   mg_Print(&Pr, Format, __VA_ARGS__);\
 }

@@ -17,6 +17,9 @@ mg_T(t) void \
 FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
   v3i P = From(Grid), D = Dims(Grid), S = Strd(Grid), N = Dims(*Vol);\
   if (D.x == 1) return;\
+  if (M.x > N.x) {\
+    printf("%d %d\n", M.x, N.x);\
+  }\
   mg_Assert(M.x <= N.x);\
   mg_Assert(IsPow2(S.X) && IsPow2(S.Y) && IsPow2(S.Z));\
   mg_Assert(D.x >= 2); /* TODO: what if D.x == 2? */\

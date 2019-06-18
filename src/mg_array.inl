@@ -93,8 +93,10 @@ Resize(array<t>* Array, i64 NewSize) {
   Array->Size = NewSize;
 }
 
-mg_Ti(t) void
-Reserve(array<t>* Array, i64 Capacity) { SetCapacity(Array, Capacity); }
+mg_T(t) void
+Reserve(array<t>* Array, i64 Capacity) {
+  SetCapacity(Array, Capacity);
+}
 
 // TODO: test to see if t is POD, if yes, just memcpy
 mg_T(t) void

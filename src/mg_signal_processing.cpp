@@ -149,8 +149,7 @@ Quantize(int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
 }
 
 mg_T2(t1, t2) int
-Quantize(int Bits, const t1& SGrid, const volume& SVol,
-         const t2& DGrid, volume* DVol)
+Quantize(int Bits, const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol)
 {
   mg_Assert(Dims(SGrid) <= Dims(SVol));
   mg_Assert(Dims(DGrid) <= Dims(*DVol));

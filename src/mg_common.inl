@@ -215,7 +215,7 @@ v3(const v2<t>& V2, t Z_) : X(V2.X), Y(V2.Y), Z(Z_) {}
 mg_T(t) mg_Ti(u) v3<t>::
 v3(const v3<u>& Other) : X(Other.X), Y(Other.Y), Z(Other.Z) {}
 mg_Ti(t) t& v3<t>::
-operator[](int Idx) { assert(Idx < 3); return E[Idx]; }
+operator[](int Idx) const { assert(Idx < 3); return const_cast<t&>(E[Idx]); }
 mg_T(t) mg_Ti(u) v3<t>& v3<t>::
 operator=(const v3<u>& Rhs) { X = Rhs.X; Y = Rhs.Y; Z = Rhs.Z; return *this; }
 

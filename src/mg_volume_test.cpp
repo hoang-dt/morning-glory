@@ -5,46 +5,42 @@
 
 using namespace mg;
 
-void TestGridCollapse() {
-  {
-    //extent Ext(v3i(1, 2, 3), v3i(2, 3, 4));
-    //grid Grid(v3i(1, 2, 3), v3i(4, 6, 8), v3i(2, 3, 4));
-    //grid GridCollapsed = GridCollapse(grid(Ext), Grid);
-    //mg_Assert(From(GridCollapsed) == v3i(3, 8, 15));
-    //mg_Assert(Dims(GridCollapsed) == v3i(2, 3, 4));
-    //mg_Assert(Strd(GridCollapsed) == v3i(2, 3, 4));
-  }
-  {
-    //grid Grid(v3i(1, 2, 3), v3i(2, 3, 4), v3i(1, 2, 3));
-    //f64 A[1];
-    //volume Vol(buffer((byte*)A, sizeof(A)), v3i(100), dtype::float64);
-    //extent Ext(v3i(1, 2, 3), v3i(8, 12, 16));
-    //grid_volume GridCollapsed = GridCollapse(Grid, grid_volume(Ext, Vol));
-    //mg_Assert(From(GridCollapsed) == v3i(2, 4, 6));
-    //mg_Assert(Dims(GridCollapsed) == v3i(2, 3, 4));
-    //mg_Assert(Strd(GridCollapsed) == v3i(1, 2, 3));
-    //mg_Assert(Value(GridCollapsed.Base) == Vol);
-  }
-  {
-    //extent Ext1(v3i(1, 2, 3), v3i(2, 3, 4));
-    //extent Ext2(v3i(1, 2, 3), v3i(8, 12, 16));
-    //grid GridCollapsed = GridCollapse(grid(Ext1), grid(Ext2));
-    //mg_Assert(From(GridCollapsed) == v3i(2, 4, 6));
-    //mg_Assert(Dims(GridCollapsed) == v3i(2, 3, 4));
-    //mg_Assert(Strd(GridCollapsed) == v3i(1, 1, 1));
-  }
-}
-
 void TestGridIterator() {
   {
     f64 A[] = {  0,  1,  2,  3,  4,  5,  6,  7,  8,  9,
                 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
                 20, 21, 22, 23, 24, 25, 26 };
     volume Vol(buffer((byte*)A, sizeof(A)), v3i(3), dtype::float64);
-    grid Grid(extent(v3i::Zero, v3i(3)));
+    extent Ext(v3i::Zero, v3i(3));
+    int I = 0;
+    for (auto It = Begin<f64>(Ext, Vol); It != End<f64>(Ext, Vol); ++It) {
+      mg_Assert(*It == A[I++]);
+    }
+  }
+  {
+    f64 A[] = {  0,  1,  2,  3,    4,  5,  6,  7,    8,  9, 10, 11,    12, 13, 14, 15,
+                16, 17, 18, 19,   20, 21, 22, 23,   24, 25, 26, 27,    28, 29, 30, 31,
+                32, 33, 34, 35,   36, 37, 38, 39,   40, 41, 42, 43,    44, 45, 46, 47,
+                48, 49, 50, 51,   52, 53, 54, 55,   56, 57, 58, 59,    60, 61, 62, 63 };
+    f64 B[] = { 21, 22, 25, 26, 37, 38, 41, 42 };
+    volume Vol(buffer((byte*)A, sizeof(A)), v3i(4), dtype::float64);
+    extent Ext(v3i(1), v3i(2));
+    int I = 0;
+    for (auto It = Begin<f64>(Ext, Vol); It != End<f64>(Ext, Vol); ++It) {
+      mg_Assert(*It == B[I++]);
+    }
+  }
+  {
+    f64 A[] = {  0,  1,  2,  3,    4,  5,  6,  7,    8,  9, 10, 11,    12, 13, 14, 15,
+                16, 17, 18, 19,   20, 21, 22, 23,   24, 25, 26, 27,    28, 29, 30, 31,
+                32, 33, 34, 35,   36, 37, 38, 39,   40, 41, 42, 43,    44, 45, 46, 47,
+                48, 49, 50, 51,   52, 53, 54, 55,   56, 57, 58, 59,    60, 61, 62, 63 };
+    f64 B[] = { 21, 23, 29, 31, 53, 55, 61, 63 };
+    volume Vol(buffer((byte*)A, sizeof(A)), v3i(4), dtype::float64);
+    grid Grid(v3i(1), v3i(2), v3i(2));
     int I = 0;
     for (auto It = Begin<f64>(Grid, Vol); It != End<f64>(Grid, Vol); ++It) {
-      mg_Assert(*It == A[I++]);
+      mg_Assert(*It == B[I++]);
     }
   }
   {
@@ -61,20 +57,5 @@ void TestGridIterator() {
   }
 }
 
-void TestGridCopy() {
-  f64 A[27] = {};
-  f64 B[] = { 0, 1, 2, 18, 19, 20 };
-  volume VolA(buffer((byte*)A, sizeof(A)), v3i(3, 3, 3), dtype::float64);
-  volume VolB(buffer((byte*)B, sizeof(B)), v3i(3, 1, 2), dtype::float64);
-  grid GridA(Dims(VolA));
-  grid GridB(grid(v3i::Zero, v3i(3, 1, 2), v3i(1, 3, 2)));
-  Copy(GridB, VolA, GridA, &VolB);
-  int I = 0;
-  for (auto It = Begin<f64>(GridA, VolA); It != End<f64>(GridA, VolA); ++It) {
-    mg_Assert(*It == B[I++]);
-  }
-}
-
 mg_RegisterTest(Volume_GridIterator, TestGridIterator)
-mg_RegisterTest(Volume_GridCollapse, TestGridCollapse)
 

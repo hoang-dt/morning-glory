@@ -8,6 +8,8 @@
 
 namespace mg {
 
+enum dimension { X, Y, Z };
+
 struct volume;
 
 struct extent {
@@ -46,11 +48,16 @@ v3i From(const extent& Ext);
 v3i Dims(const extent& Ext);
 v3i Strd(const extent& Ext);
 i64 Size(const extent& Ext);
+void SetFrom(extent& Ext, const v3i& From3);
+void SetDims(extent& Ext, const v3i& Dims3);
 
 v3i From(const grid& Grid);
 v3i Dims(const grid& Grid);
 v3i Strd(const grid& Grid);
 i64 Size(const grid& Grid);
+void SetFrom(grid& Grid, const v3i& From3);
+void SetDims(grid& Grid, const v3i& Dims3);
+void SetStrd(grid& Grid, const v3i& Strd3);
 
 v3i From(const volume& Vol);
 v3i Dims(const volume& Vol);
@@ -110,6 +117,12 @@ mg_T(t) void Copy(const t& SGrid, const volume& SVol, volume* DVol);
 mg_T2(t1, t2) void Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);
 /* Similar to copy, but add the source to the destination instead */
 mg_T2(t1, t2) void Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);
+
+/* Return a slab (from Grid) of size N in the direction of D. If N is positive,
+take from the lower end, otherwise take from the higher end. Useful for e.g.,
+taking a boundary face/column/corner of a block. */
+mg_T(t) t Slab(const t& Grid, dimension D, int N);
+mg_T(t) t Translate(const t& Grid, dimension D, int N);
 
 void Clone(const volume& Src, volume* Dst, allocator* Alloc = &Mallocator());
 

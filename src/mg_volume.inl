@@ -85,11 +85,16 @@ mg_Inline v3i From(const extent& Ext) { return Unpack3i64(Ext.From); }
 mg_Inline v3i Dims(const extent& Ext) { return Unpack3i64(Ext.Dims); }
 mg_Inline v3i Strd(const extent& Ext) { (void)Ext; return v3i::One; }
 mg_Inline i64 Size(const extent& Ext) { return Prod<i64>(Dims(Ext)); }
+mg_Inline void SetFrom(extent& Ext, const v3i& From3) { Ext.From = Pack3i64(From3); }
+mg_Inline void SetDims(extent& Ext, const v3i& Dims3) { Ext.Dims = Pack3i64(Dims3); }
 
 mg_Inline v3i From(const grid& Grid) { return Unpack3i64(Grid.From); }
 mg_Inline v3i Dims(const grid& Grid) { return Unpack3i64(Grid.Dims); }
 mg_Inline v3i Strd(const grid& Grid) { return Unpack3i64(Grid.Strd); }
 mg_Inline i64 Size(const grid& Grid) { return Prod<i64>(Dims(Grid)); };
+mg_Inline void SetFrom(grid& Grid, const v3i& From3) { Grid.From = Pack3i64(From3); }
+mg_Inline void SetDims(grid& Grid, const v3i& Dims3) { Grid.Dims = Pack3i64(Dims3); }
+mg_Inline void SetStrd(grid& Grid, const v3i& Strd3) { Grid.Dims = Pack3i64(Strd3); }
 
 mg_Inline v3i From(const volume& Vol) { (void)Vol; return v3i::Zero; }
 mg_Inline v3i Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
@@ -175,15 +180,15 @@ operator!=(const extent_iterator<t>& Other) const { return Ptr != Other.Ptr; }
 mg_Ti(t) bool extent_iterator<t>::
 operator==(const extent_iterator<t>& Other) const { return Ptr == Other.Ptr; }
 
-mg_Ti(t) grid_iterator<t>
+mg_T(t) grid_iterator<t>
 Begin(const grid& Grid, const volume& Vol) {
   grid_iterator<t> Iter;
-  Iter.D = Dims(Grid); Iter.S = Strd(Grid); Iter.P = v3i(0); Iter.N = Dims(Vol);
+  Iter.S = Strd(Grid); Iter.D = Dims(Grid) * Iter.S; Iter.P = v3i(0); Iter.N = Dims(Vol);
   Iter.Ptr = (t*)const_cast<byte*>(Vol.Buffer.Data) + Row(Iter.N, From(Grid));
   return Iter;
 }
 
-mg_Ti(t) grid_iterator<t>
+mg_T(t) grid_iterator<t>
 End(const grid& Grid, const volume& Vol) {
   grid_iterator<t> Iter;
   v3i To3 = From(Grid) + v3i(0, 0, Dims(Grid).Z * Strd(Grid).Z);
@@ -191,18 +196,18 @@ End(const grid& Grid, const volume& Vol) {
   return Iter;
 }
 
-mg_Ti(t) grid_iterator<t>& grid_iterator<t>::
+mg_T(t) grid_iterator<t>& grid_iterator<t>::
 operator++() {
   P.X += S.X;
   Ptr += S.X;
   if (P.X >= D.X) {
     P.X = 0;
     P.Y += S.Y;
-    Ptr = Ptr - D.X * i64(S.X) + (N.X * S.Y);
+    Ptr = Ptr - D.X + (N.X * S.Y);
     if (P.Y >= D.Y) {
       P.Y = 0;
       P.Z += S.Z;
-      Ptr = Ptr - D.Y * i64(N.X) * S.Y + S.Z * i64(N.X) * N.Y;
+      Ptr = Ptr - D.Y * i64(N.X) + S.Z * i64(N.X) * N.Y;
     }
   }
   return *this;
@@ -292,6 +297,19 @@ Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
 }
 
 mg_T2(t1, t2) void
+Copy2(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
+  mg_Assert(Dims(SGrid) == Dims(DGrid));\
+  mg_Assert(Dims(SGrid) <= Dims(SVol));\
+  mg_Assert(Dims(DGrid) <= Dims(*DVol));\
+  mg_Assert(DVol->Buffer && SVol.Buffer);\
+  mg_Assert(SVol.Type == DVol->Type);\
+  auto SIt = Begin<f64>(SGrid, SVol), SEnd = End<f64>(SGrid, SVol);\
+  auto DIt = Begin<f64>(DGrid, *DVol);\
+  for (; SIt != SEnd; ++SIt, ++DIt)\
+    *DIt = *SIt;
+}
+
+mg_T2(t1, t2) void
 Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
 #define Body(type)\
   mg_Assert(Dims(SGrid) == Dims(DGrid));\
@@ -301,12 +319,51 @@ Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(SVol.Type == DVol->Type);\
   auto SIt = Begin<type>(SGrid, SVol), SEnd = End<type>(SGrid, SVol);\
   auto DIt = Begin<type>(DGrid, *DVol);\
-  for (; SIt != SEnd; ++SIt, ++DIt) {\
-    *DIt += *SIt;\
-  }
+  for (; SIt != SEnd; ++SIt, ++DIt)\
+    *DIt += *SIt;
 
   mg_DispatchOnType(SVol.Type);
 #undef Body
+}
+
+mg_T2(t1, t2) void
+Add2(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
+  mg_Assert(Dims(SGrid) == Dims(DGrid));\
+  mg_Assert(Dims(SGrid) <= Dims(SVol));\
+  mg_Assert(Dims(DGrid) <= Dims(*DVol));\
+  mg_Assert(DVol->Buffer && SVol.Buffer);\
+  mg_Assert(SVol.Type == DVol->Type);\
+  auto SBeg = Begin<f64>(SGrid, SVol);
+  auto SIt = Begin<f64>(SGrid, SVol), SEnd = End<f64>(SGrid, SVol);\
+  auto DIt = Begin<f64>(DGrid, *DVol), DEnd = End<f64>(DGrid, *DVol);\
+  for (; SIt != SEnd; ++SIt, ++DIt)\
+    *DIt += *SIt;
+}
+
+// TODO: this can be turned into a slice function ala Python[start:stop]
+mg_T(t) t
+Slab(const t& Grid, dimension D, int N) {
+  v3i Dims3 = Dims(Grid);
+  mg_Assert(abs(N) <= Dims3[D] && N != 0);
+  t Slab = Grid;
+  if (N < 0) {
+    v3i From3 = From(Grid);
+    v3i Strd3 = Strd(Grid);
+    From3[D] += (Dims3[D] + N) * Strd3[D];
+    SetFrom(Slab, From3);
+  }
+  Dims3[D] = abs(N);
+  SetDims(Slab, Dims3);
+  return Slab;
+}
+
+mg_T(t) t
+Translate(const t& Grid, dimension D, int N) {
+  v3i From3 = From(Grid);
+  From3[D] += N;
+  t Slab = Grid;
+  SetFrom(Slab, From3);
+  return Slab;
 }
 
 } // namespace mg

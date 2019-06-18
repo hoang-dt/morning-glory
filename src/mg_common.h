@@ -75,7 +75,6 @@ struct stack_array {
   t& operator[](int Idx) const;
 };
 
-
 mg_TA t* Begin(const stack_array<t, N>& A);
 mg_TA t* End  (const stack_array<t, N>& A);
 mg_TA t* RevBegin(const stack_array<t, N>& A);
@@ -128,7 +127,7 @@ struct v3 {
   v3(t X_, t Y_, t Z_);
   v3(const v2<t>& V2, t Z_);
   mg_T(u) v3(const v3<u>& Other);
-  t& operator[](int Idx);
+  t& operator[](int Idx) const;
   mg_T(u) v3& operator=(const v3<u>& Rhs);
 };
 #pragma GCC diagnostic pop

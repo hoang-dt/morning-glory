@@ -32,6 +32,7 @@ mg_T(t) void ILiftExtCdf53X(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 mg_T(t) void ILiftExtCdf53Y(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 mg_T(t) void ILiftExtCdf53Z(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 
+void ForwardCdf53Tile(int NLvls, const v3i& TDims3, volume* Vol);
 void ForwardCdf53(const extent& Ext, int NLevels, volume* Vol);
 void InverseCdf53(const extent& Ext, int NLevels, volume* Vol);
 void ForwardCdf53Old(volume* Vol, int NLevels);
