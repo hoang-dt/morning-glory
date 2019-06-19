@@ -28,7 +28,7 @@ template <> struct dtype_traits<u64> { static inline const dtype Type = dtype:: 
 template <> struct dtype_traits<f32> { static inline const dtype Type = dtype::float32    ; };
 template <> struct dtype_traits<f64> { static inline const dtype Type = dtype::float64    ; };
 
-mg_T(t) 
+mg_T(t)
 bool  MatchTypes  (dtype Type);
 int   SizeOf      (dtype Type);
 int   BitSizeOf   (dtype Type);

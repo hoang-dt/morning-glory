@@ -6,7 +6,7 @@ set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
 set "VSVersion=14.21.27702"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
-set "OUTPUT=main.exe"
+set "OUTPUT=%2.exe"
 
 :: Setup
 set "VSBasePath=%VSPath%\VC\Tools\MSVC\%VSVersion%"
@@ -53,7 +53,7 @@ if %1==Debug (set LDLIBS= libucrtd.lib libvcruntimed.lib libcmtd.lib libcpmtd.li
 ::@for %%f in (*.cpp) do clang++.exe "%%~f" -o "%%~nf.o" -c %CFLAGS% %CDEFS%
 md bin
 cd bin
-clang++.exe "../src/build.cpp" -o "build.o" -c %INCLUDE_PATHS% %COMMON_CFLAGS% %CFLAGS% %COMMON_CDEFS% %CDEFS%
+clang++.exe "../src/%2.cpp" -o "build.o" -c %INCLUDE_PATHS% %COMMON_CFLAGS% %CFLAGS% %COMMON_CDEFS% %CDEFS%
 
 :: Linking
 ::@set "LINK_FILES="

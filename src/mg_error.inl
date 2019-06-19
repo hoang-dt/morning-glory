@@ -16,7 +16,7 @@ error(t CodeIn, bool StrGenedIn, cstr MsgIn) :
 
 mg_T(t) cstr
 ToString(const error<t>& Err, bool Force) {
-  if (Force || !Err.StrGenerated) {
+  if (Force || !Err.StrGened) {
     auto ErrStr = ToString(Err.Code);
     snprintf(ScratchBuf, sizeof(ScratchBuf), "%.*s (file: %s, line %d): %s",
              ErrStr.Size, ErrStr.Ptr, Err.Files[0], Err.Lines[0], Err.Msg);

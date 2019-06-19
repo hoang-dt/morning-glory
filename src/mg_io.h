@@ -27,8 +27,8 @@ void Reset(printer* Pr, FILE* File);
 Read a text file from disk into a buffer. The buffer can be nullptr or it can be
 initialized in advance, in which case the existing memory will be reused if the
 file can fit in it. The caller is responsible to deallocate the memory. */
-error<> ReadFile (cstr FileName, buffer* Buf);
-error<> WriteFile(cstr FileName, const buffer& Buf);
+error<> ReadFile(cstr FileName, buffer* Buf);
+error<> WriteBuffer(cstr FileName, const buffer& Buf);
 
 } // namespace mg
 

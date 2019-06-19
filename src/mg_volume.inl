@@ -76,6 +76,16 @@ mg_Ti(t) volume::
 volume(const buffer_t<t>& Buf)
   : volume(Buf.Data, Buf.Size) {}
 
+mg_Ti(t) t& volume::
+At(const v3i& P) const {
+  return (const_cast<t*>((const t*)Buffer.Data))[Row(Unpack3i64(Dims), P)];
+}
+
+mg_Ti(t) t& volume::
+At(i64 Idx) const {
+  return (const_cast<t*>((const t*)Buffer.Data))[Idx];
+}
+
 mg_Inline bool
 operator==(const volume& V1, const volume& V2) {
   return V1.Buffer == V2.Buffer && V1.Dims == V2.Dims && V1.Type == V2.Type;

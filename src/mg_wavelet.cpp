@@ -21,7 +21,7 @@ ForwardCdf53Old(volume* Vol, int NLevels) {
     FLiftCdf53OldX(FPtr, Dims3, v3i(I));\
     FLiftCdf53OldY(FPtr, Dims3, v3i(I));\
     FLiftCdf53OldZ(FPtr, Dims3, v3i(I));\
-  }\
+  }
 
   mg_DispatchOnType(Vol->Type)
 #undef Body
@@ -259,7 +259,7 @@ InverseCdf53Old(volume* Vol, int NLevels) {
     ILiftCdf53OldZ(FPtr, Dims3, v3i(I));\
     ILiftCdf53OldY(FPtr, Dims3, v3i(I));\
     ILiftCdf53OldX(FPtr, Dims3, v3i(I));\
-  }\
+  }
 
   mg_DispatchOnType(Vol->Type)
 #undef Body
@@ -280,7 +280,7 @@ ForwardCdf53Ext(const extent& Ext, volume* Vol) {
     FLiftExtCdf53X(FPtr, N, NN, v3i(I));\
     FLiftExtCdf53Y(FPtr, N, NN, v3i(I));\
     FLiftExtCdf53Z(FPtr, N, NN, v3i(I));\
-  }\
+  }
 
   mg_DispatchOnType(Vol->Type)
 #undef Body
@@ -301,7 +301,7 @@ InverseCdf53Ext(const extent& Ext, volume* Vol) {
     ILiftExtCdf53Z(FPtr, N, NN, v3i(I));\
     ILiftExtCdf53Y(FPtr, N, NN, v3i(I));\
     ILiftExtCdf53X(FPtr, N, NN, v3i(I));\
-  }\
+  }
 
   mg_DispatchOnType(Vol->Type)
 #undef Body
@@ -381,9 +381,8 @@ LevelToSubband(const v3i& Level) {
     return 0;
   static constexpr i8 Table[] = { 0, 1, 2, 4, 3, 5, 6, 7 };
   int Lvl = Max(Max(Level.X, Level.Y), Level.Z);
-  return 7 * (Lvl - 1) + Table[4 * (Level.X == Lvl) +
-                               2 * (Level.Y == Lvl) +
-                               1 * (Level.Z == Lvl)];
+  return 7 * (Lvl - 1) +
+         Table[4 * (Level.X == Lvl) + 2 * (Level.Y == Lvl) + 1 * (Level.Z == Lvl)];
 }
 
 void

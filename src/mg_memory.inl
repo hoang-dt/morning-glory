@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mg_scopeguard.h"
+
 namespace mg {
 
 mg_T(t) void

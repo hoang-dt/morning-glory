@@ -25,6 +25,7 @@
 #include "mg_volume.h"
 #include "mg_zfp.h"
 #include "mg_wavelet.h"
+#include "mg_all.cpp"
 #include <stlab/concurrency/future.hpp>
 #include <stlab/concurrency/default_executor.hpp>
 

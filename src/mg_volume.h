@@ -39,7 +39,8 @@ struct volume {
   mg_T(t) volume(const t* Ptr, i64 Size);
   mg_T(t) volume(const t* Ptr, const v3i& Dims3);
   mg_T(t) explicit volume(const buffer_t<t>& Buf);
-  mg_T(t) t& operator[](i64 I);
+  mg_T(t) t& At(const v3i& P) const;
+  mg_T(t) t& At(i64 Idx) const;
 };
 
 bool operator==(const volume& V1, const volume& V2);

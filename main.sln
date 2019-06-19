@@ -74,6 +74,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		src\mg_mutex.cpp = src\mg_mutex.cpp
 		src\mg_mutex.h = src\mg_mutex.h
 		src\mg_mutex.inl = src\mg_mutex.inl
+		src\mg_rle_test.cpp = src\mg_rle_test.cpp
 		src\mg_scopeguard.h = src\mg_scopeguard.h
 		src\mg_signal_processing.cpp = src\mg_signal_processing.cpp
 		src\mg_signal_processing.h = src\mg_signal_processing.h
@@ -100,6 +101,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		src\mg_zfp.cpp = src\mg_zfp.cpp
 		src\mg_zfp.h = src\mg_zfp.h
 		src\mg_zfp.inl = src\mg_zfp.inl
+		src\rle_test.cpp = src\rle_test.cpp
 	EndProjectSection
 EndProject
 Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "test", "bin\test.exe", "{F22AE3ED-2813-4665-90C3-FE47987A2838}"
@@ -115,6 +117,20 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "test", "bin\test.exe", "{F2
 		AttachLaunchAction = No
 	EndProjectSection
 EndProject
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "rle_test", "bin\rle_test.exe", "{EC16BEE7-5BD8-4591-9BEB-A88D9437C6BA}"
+	ProjectSection(DebuggerProjectSystem) = preProject
+		PortSupplier = 00000000-0000-0000-0000-000000000000
+		Executable = E:\Workspace\file-format-new\bin\rle_test.exe
+		RemoteMachine = DESKTOP-LC1M4MT
+		StartingDirectory = E:\Workspace\file-format-new\bin
+		Arguments = --input D:/Datasets/3D/Small/MIRANDA-DENSITY-[64-64-64]-Float64.raw --output out.raw --num_levels 3 --tile_dims 4 4 4 --threshold 1e-6
+		Environment = Default
+		LaunchingEngine = 00000000-0000-0000-0000-000000000000
+		UseLegacyDebugEngines = No
+		LaunchSQLEngine = No
+		AttachLaunchAction = No
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Release|x64 = Release|x64
@@ -122,6 +138,7 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{05531BF2-0140-4B69-8BBC-50D8506418E5}.Release|x64.ActiveCfg = Release
 		{F22AE3ED-2813-4665-90C3-FE47987A2838}.Release|x64.ActiveCfg = Release|x64
+		{EC16BEE7-5BD8-4591-9BEB-A88D9437C6BA}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

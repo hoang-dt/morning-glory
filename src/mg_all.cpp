@@ -19,4 +19,3 @@
 #include "mg_wavelet.cpp"
 #include "mg_volume.cpp"
 #include "mg_zfp.cpp"
-//#include "main.cpp"

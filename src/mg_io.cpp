@@ -58,7 +58,7 @@ ReadFile(cstr FileName, buffer* Buf) {
 }
 
 error<>
-WriteFile(cstr FileName, const buffer& Buf) {
+WriteBuffer(cstr FileName, const buffer& Buf) {
   mg_Assert(Buf.Data && Buf.Bytes);
 
   FILE* Fp = fopen(FileName, "wb");
