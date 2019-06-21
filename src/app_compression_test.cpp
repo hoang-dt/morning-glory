@@ -172,6 +172,7 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   InitWrite(&Bs2, Bs2.Stream);
   std::vector<bool> SigVec(Prod(TileDims3));
   v3i Dims3 = Dims(Vol);
+  array<u16> OriginalPos; Init(&OriginalPos, Prod(TileDims3));
   //Roaring R1;
   for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
     v3i SbFrom3 = From(Sbands[Sb]);
@@ -179,17 +180,11 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
     v3i NTiles3 = (SbDims3 + TileDims3 - 1) / TileDims3;
     v3i T; // tile counter
     mg_BeginFor3(T, v3i::Zero, NTiles3, v3i::One) { // through tiles
-      std::fill(SigVec.begin(), SigVec.end(), false);
-      //R1 = Roaring();
-      //for (int I = 0; I < Prod(TileDims3); ++I) {
-      //  R1.add(I);
-      //}
-      if (Meta.Type == dtype::float32)
-        Fill(Begin<u32>(TileVolO), End<u32>(TileVolO), 0);
-      else if (Meta.Type == dtype::float64)
-        Fill(Begin<u64>(TileVolO), End<u64>(TileVolO), 0);
+      Fill(Begin<u64>(TileVolO), End<u64>(TileVolO), 0);
+      Fill(Begin(OriginalPos), End(OriginalPos), 0);
       v3i TileFrom3 = SbFrom3 + TileDims3 * T;
       v3i RealDims3 = Min(SbFrom3 + SbDims3 - TileFrom3, TileDims3);
+      int NSamples = Prod(RealDims3);
       for (u32 Idx = 0; Idx < Prod<u32>(TileDims3); ++Idx) { // through tile samples
         v3i P(DecodeMorton3X(Idx), DecodeMorton3Y(Idx), DecodeMorton3Z(Idx));
         if (!(P < RealDims3)) // outside the domain
@@ -203,16 +198,24 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
       /* extract bits */
       u64 Threshold = (Meta.Type == dtype::float32) ? (1 << 31) : (1ull << 63);
       int Bp = NBitplanes - 1;
+      int Pos = 0, Pos2 = 0;
       while ((Threshold > 0) && (NBitplanes - Bp <= EMax - Exponent(Tolerance) + 1)) { // through bit planes
-        for (int I = 0; I < Prod(RealDims3); ++I) { // through tile samples
-          u64 Val = TileVolN.At<u64>(I);
-          int AlreadySig = (Val >> 1) >= Threshold;
-          if (!AlreadySig) {
-            Write(&Bs, BitSet(Val, Bp));
-          } else {
-            Write(&Bs2, BitSet(Val, Bp));
+        // for all significant values
+        for (int I = 0; I < Pos; ++I) {
+          u64& Val = TileVolN.At<u64>(I);
+          Write(&Bs2, BitSet(Val, Bp));
+        }
+        // for all insignificant values
+        for (int I = Pos; I < NSamples; ++I) {
+          u64& Val = TileVolN.At<u64>(I);
+          bool Significant = BitSet(Val, Bp);
+          if (Significant) {
+            u64& Temp = TileVolN.At<u64>(Pos++);
+            Swap(&Temp, &Val);
           }
-        } // end sample loop
+          Write(&Bs, Significant);
+        }
+
         /* compress the significant map */
         Flush(&Bs);
         Flush(&Bs2);
@@ -232,32 +235,34 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
         TotalTime2 += Value.count();
         InitRead(&Bs, Bs.Stream);
         InitRead(&Bs2, Bs2.Stream);
-        int NSamples = Prod(RealDims3);
         u64 BitBuf = ReadLong(&Bs, 64);
         u64 BitBuf2 = ReadLong(&Bs2, 64);
         int J = 0, K = 0;
-        for (int I = 0; I < NSamples; ++I) { // through tile samples
-          u64& Val = TileVolO.At<u64>(I);
-          if (SigVec[I]) {
-            if (BitBuf2 & 1)
-              Val |= 1ull << Bp;
-            BitBuf2 >>= 1;
-            if (K++ == 63) {
-              BitBuf2 = ReadLong(&Bs2, 64);
-              K = 0;
-            }
-            continue;
-          }
-          if (BitBuf & 1) {
+        // for all significant values
+        for (int I = 0; I < Pos2; ++I) {
+          if (Read(&Bs2)) {
+            u64& Val = TileVolO.At<u64>(I);
             Val |= 1ull << Bp;
-            SigVec[I] = true;
           }
-          BitBuf >>= 1;
-          if (J++ == 63) {
-            BitBuf = ReadLong(&Bs, 64);
-            J = 0;
+          //BitBuf2 >>= 1;
+          //if (K++ == 63) {
+          //  BitBuf2 = ReadLong(&Bs2, 64);
+          //  K = 0;
+          //}
+        }
+        // for all non-significant values
+        for (int I = Pos2; I < NSamples; ++I) {
+          if (Read(&Bs)) { // significant
+            u64& Val = TileVolO.At<u64>(Pos2);
+            Val |= 1ull << Bp;
+            OriginalPos[Pos2++] = (u16)I;
           }
-        } // end sample loop
+          //BitBuf >>= 1;
+          //if (J++ == 63) {
+          //  BitBuf = ReadLong(&Bs, 64);
+          //  J = 0;
+          //}
+        }
         InitWrite(&Bs, Bs.Stream);
         InitWrite(&Bs2, Bs2.Stream);
         Threshold /= 2;
