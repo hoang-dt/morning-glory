@@ -12,9 +12,13 @@
 #include "mg_zfp.h"
 #include "mg_wavelet.h"
 #include "mg_all.cpp"
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wlanguage-extension-token"
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #include <lz4/lz4.h>
 #include <lz4/lz4_all.c>
 #include <lz4/xxhash.c>
+#pragma clang diagnostic pop
 //#include <roaring/roaring.hh>
 //#include <roaring/roaring.c>
 #include <chrono>
@@ -27,7 +31,7 @@ namespace chrono = std::chrono;
 
 void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 Tolerance) {
   /* perform wavelet transform and allocate necessary buffers */
-  //ForwardCdf53Old(&Vol, NLevels);
+  ForwardCdf53Old(&Vol, NLevels);
   array<extent> Sbands; BuildSubbands(Meta.Dims, NLevels, &Sbands);
   buffer Buf; AllocBuf(&Buf, SizeOf(Meta.Type) * Prod(TileDims3));
   volume TileVol(Buf, TileDims3, Vol.Type);
@@ -39,30 +43,22 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   volume TileVolO(BufO, TileDims3, TileVolN.Type); // decompression output
   buffer BsBuf; AllocBuf(&BsBuf, Vol.Buffer.Bytes);
   bitstream Bs; InitWrite(&Bs, BsBuf);
-  buffer BsBuf2; AllocBuf(&BsBuf2, Vol.Buffer.Bytes);
-  bitstream Bs2; InitWrite(&Bs2, BsBuf2);
   int SrcSizeMax = (Prod(TileDims3) + 7) / 8;
   int DstCapacity = LZ4_compressBound(SrcSizeMax);
   buffer DstBuf; AllocBuf(&DstBuf, DstCapacity);
   buffer DecompBuf; AllocBuf(&DecompBuf, SrcSizeMax);
   timer Timer;
   i64 TotalTime = 0;
-  i64 TotalTime2 = 0;
-  i64 TotalSize = 0;
   i64 TotalCompressedSize = 0;
   i64 TotalUncompressedSize = 0;
-  i64 TotalTailBits = 0;
 
   /* encode the data */
   InitWrite(&Bs, Bs.Stream);
-  InitWrite(&Bs2, Bs2.Stream);
   std::vector<bool> SigVec(Prod(TileDims3));
   v3i BlockDims3(4);
   v3i NBlocks3 = (TileDims3 + BlockDims3 - 1) / BlockDims3;
   array<i8> Ns; Init(&Ns, Prod(NBlocks3), i8(0));
-  array<i8> Ms; Init(&Ms, Prod(NBlocks3), i8(0));
   array<i8> NOs; Init(&NOs, Prod(NBlocks3), i8(0));
-  array<i8> MOs; Init(&MOs, Prod(NBlocks3), i8(0));
   v3i Dims3 = Dims(Vol);
   std::vector<bool> Check(Prod(Dims3), false);
   for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
@@ -74,6 +70,8 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
       std::fill(SigVec.begin(), SigVec.end(), false);
       Fill(Begin<u64>(TileVolO), End<u64>(TileVolO), 0);
       Fill(Begin<u64>(TileVol), End<u64>(TileVol), 0);
+      Fill(Begin<i8>(Ns), End<i8>(Ns), 0);
+      Fill(Begin<i8>(NOs), End<i8>(NOs), 0);
       v3i TileFrom3 = SbFrom3 + TileDims3 * T;
       v3i RealDims3 = Min(SbFrom3 + SbDims3 - TileFrom3, TileDims3);
       v3i P;
@@ -92,41 +90,44 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
       /* quantize */
       int NBitplanes = Meta.Type == dtype::float32 ? 32 : 64;
       int EMax = Quantize(NBitplanes - 1, extent(RealDims3), TileVol, extent(RealDims3), &TileVolQ);
+      FwdNegaBinary(extent(RealDims3), TileVolQ, extent(RealDims3), &TileVolN);
       /* do zfp transform */
+      auto Start = chrono::steady_clock::now();
       for (int B = 0; B < Prod(NBlocks3); ++B) {
         ForwardZfp((i64*)TileVolQ.Buffer.Data + B * Prod(BlockDims3));
         ForwardShuffle((i64*)TileVolQ.Buffer.Data + B * Prod(BlockDims3),
                        (u64*)TileVolN.Buffer.Data + B * Prod(BlockDims3));
       }
+      auto End = chrono::high_resolution_clock::now();
+      auto Diff = End - Start;
+      auto Value = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff);
+      TotalTime += Value.count();
       /* extract bits */
       u64 Threshold = (Meta.Type == dtype::float32) ? (1 << 31) : (1ull << 63);
       int Bp = NBitplanes - 1;
       while ((Threshold > 0) && (NBitplanes - Bp <= EMax - Exponent(Tolerance) + 1)) { // through bit planes
         for (int B = 0; B < Prod(NBlocks3); ++B) {
-          Ms[B] = 0;
-          Encode((u64*)TileVolN.Buffer.Data + B * Prod(BlockDims3), Bp, 1e9,
-                 Ns[B], Ms[B], &Bs);
+          u64* Beg = (u64*)TileVolN.Buffer.Data + B * Prod(BlockDims3);
+          Encode(Beg, Bp, 1e9, Ns[B], &Bs);
         }
         Flush(&Bs);
-        TotalCompressedSize += Size(Bs);
+        TotalCompressedSize += Size(Bs) + 1;
         /* decompress here */
         StartTimer(&Timer);
-        auto Start = chrono::steady_clock::now();
+        Start = chrono::steady_clock::now();
         InitRead(&Bs, Bs.Stream);
-        int NSamples = Prod(RealDims3);
         for (int B = 0; B < Prod(NBlocks3); ++B) {
-          MOs[B] = 0;
-          Decode((u64*)TileVolO.Buffer.Data + B * Prod(BlockDims3), Bp, 1e9,
-                 NOs[B], MOs[B], &Bs);
+          u64* Beg = (u64*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
+          Decode(Beg, Bp, 1e9, NOs[B], &Bs);
         }
         TotalUncompressedSize += Size(Bs);
         InitWrite(&Bs, Bs.Stream);
         Threshold /= 2;
         --Bp;
         TotalTime += ElapsedTime(&Timer);
-        auto End = chrono::high_resolution_clock::now();
-        auto Diff = End - Start;
-        auto Value = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff);
+        End = chrono::high_resolution_clock::now();
+        Diff = End - Start;
+        Value = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff);
         TotalTime += Value.count();
         ResetTimer(&Timer);
       } // end bit plane loop
@@ -163,15 +164,10 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   i64 TotalTime2 = 0;
   i64 TotalSize = 0;
   i64 TotalUncompressedSize = 0;
-  i64 TotalTailBits = 0;
-  //FILE* Fp = fopen("in.raw", "w");
-  //FILE* Fp2 = fopen("out.raw", "w");
 
   /* encode the data */
   InitWrite(&Bs, Bs.Stream);
-  InitWrite(&Bs2, Bs2.Stream);
   std::vector<bool> SigVec(Prod(TileDims3));
-  v3i Dims3 = Dims(Vol);
   array<u16> OriginalPos; Init(&OriginalPos, Prod(TileDims3));
   //Roaring R1;
   for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
@@ -203,7 +199,7 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
         // for all significant values
         for (int I = 0; I < Pos; ++I) {
           u64& Val = TileVolN.At<u64>(I);
-          Write(&Bs2, BitSet(Val, Bp));
+          Write(&Bs, BitSet(Val, Bp));
         }
         // for all insignificant values
         for (int I = Pos; I < NSamples; ++I) {
@@ -218,9 +214,7 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
 
         /* compress the significant map */
         Flush(&Bs);
-        Flush(&Bs2);
         TotalUncompressedSize += Size(Bs);
-        TotalTailBits += Size(Bs2);
         int CompressedSize =
           LZ4_compress_default((char*)Bs.Stream.Data, (char*)DstBuf.Data, Size(Bs), DstCapacity);
         /* decompress here */
@@ -234,21 +228,12 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
         auto Value = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff);
         TotalTime2 += Value.count();
         InitRead(&Bs, Bs.Stream);
-        InitRead(&Bs2, Bs2.Stream);
-        u64 BitBuf = ReadLong(&Bs, 64);
-        u64 BitBuf2 = ReadLong(&Bs2, 64);
-        int J = 0, K = 0;
         // for all significant values
         for (int I = 0; I < Pos2; ++I) {
-          if (Read(&Bs2)) {
+          if (Read(&Bs)) {
             u64& Val = TileVolO.At<u64>(I);
             Val |= 1ull << Bp;
           }
-          //BitBuf2 >>= 1;
-          //if (K++ == 63) {
-          //  BitBuf2 = ReadLong(&Bs2, 64);
-          //  K = 0;
-          //}
         }
         // for all non-significant values
         for (int I = Pos2; I < NSamples; ++I) {
@@ -257,14 +242,8 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
             Val |= 1ull << Bp;
             OriginalPos[Pos2++] = (u16)I;
           }
-          //BitBuf >>= 1;
-          //if (J++ == 63) {
-          //  BitBuf = ReadLong(&Bs, 64);
-          //  J = 0;
-          //}
         }
         InitWrite(&Bs, Bs.Stream);
-        InitWrite(&Bs2, Bs2.Stream);
         Threshold /= 2;
         --Bp;
         TotalTime += ElapsedTime(&Timer);
@@ -278,8 +257,7 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   } // end subband loop
   /* write the bit stream */
   Flush(&Bs);
-  Flush(&Bs2);
-  printf("%lld %lld %lld\n", TotalTailBits, TotalUncompressedSize, TotalSize);
+  printf("%lld %lld\n", TotalUncompressedSize, TotalSize);
   std::cout << (TotalTime / 1e6) << " ms" << std::endl;
   std::cout << (TotalTime2 / 1e6) << " ms" << std::endl;
   //Err = WriteBuffer(OutputFile, buffer(Bs.Stream.Data, Size(Bs)));

@@ -17,7 +17,7 @@ set "PATH=%LLVMPath%\bin;%VSBasePath%\bin\Hostx64\x64;%PATH%"
 set INCLUDE_PATHS=-I../src
 set CFLAGS="Please provide a build config: Debug, FastDebug, Release"
 set COMMON_CFLAGS= -Xclang -flto-visibility-public-std -std=gnu++2a ^
-  -fdiagnostics-absolute-paths -fopenmp -fopenmp-simd ^
+  -fdiagnostics-absolute-paths -fopenmp -fopenmp-simd -fms-extensions^
   -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors ^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces -Wlanguage-extension-token^
   -g -gcodeview -gno-column-info

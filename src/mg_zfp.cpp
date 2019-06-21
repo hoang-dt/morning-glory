@@ -100,11 +100,11 @@ Encode(u64* Block, int B, int S, i8& N, i8& M, bitstream* Bs) {
   // TODO: we may be able to speed this up by getting rid of the shift of X
   // or the call bit BitSize()
   for (; BitSize(*Bs) < S && N < 64;) {
-    if ((Lb = Write(Bs, !!X))) {
+    if ((Lb = Write(Bs, !!X))) { // group is significant
       for (; BitSize(*Bs) < S && N < 64 - 1;) {
-        if (Write(Bs, X & 1u)) {
+        if (Write(Bs, X & 1u)) { // found a significant coeff, break and retest
           break;
-        } else {
+        } else { // have not found a significant coeff, continue until we find one
           X >>= 1;
           ++N;
           ++P;
@@ -133,6 +133,7 @@ Decode(u64* Block, int B, int S, i8& N, i8& M, bitstream* Bs) {
   u64 Lb = 1;
   for (; BitSize(*Bs) < S && N < 64;) {
     if ((Lb = Read(Bs))) {
+      //printf("1\n");
       for (; BitSize(*Bs) < S && N < 64 - 1;) {
         if (Read(Bs)) {
           break;
@@ -147,6 +148,7 @@ Decode(u64* Block, int B, int S, i8& N, i8& M, bitstream* Bs) {
       X += 1ull << (P++);
       ++N;
     } else {
+      //printf("0\n");
       break;
     }
   }
@@ -155,6 +157,69 @@ Decode(u64* Block, int B, int S, i8& N, i8& M, bitstream* Bs) {
     Block[I] += (u64)(X & 1u) << B;
   M += P;
   return ((N == 64 && M == N)|| Lb == 0);
+}
+
+void
+Encode(u64* Block, int B, int S, i8& N, bitstream* Bs) {
+  mg_Assert(N <= 64);
+  u64 X = 0;
+  for (int I = 0; I < 64; ++I)
+    X += u64((Block[I] >> B) & 1u) << I;
+  i8 P = Min((int)N, S - (int)BitSize(*Bs));
+  if (P > 0) {
+    WriteLong(Bs, X, P);
+    X >>= P; // P == 64 is fine since in that case we don't need X any more
+  }
+  u64 Lb = 1;
+  // TODO: we may be able to speed this up by getting rid of the shift of X
+  // or the call bit BitSize()
+  for (; BitSize(*Bs) < S && N < 64;) {
+    if ((Lb = Write(Bs, !!X))) { // group is significant
+      for (; BitSize(*Bs) < S && N < 64 - 1;) {
+        if (Write(Bs, X & 1u)) { // found a significant coeff, break and retest
+          break;
+        } else { // have not found a significant coeff, continue until we find one
+          X >>= 1;
+          ++N;
+        }
+      }
+      if (BitSize(*Bs) >= S) {
+        break;
+      }
+      X >>= 1;
+      ++N;
+    } else {
+      break;
+    }
+  }
+  mg_Assert(N <= 64);
+}
+
+void
+Decode(u64* Block, int B, int S, i8& N, bitstream* Bs) {
+  i8 P = Min((int)N, S - (int)BitSize(*Bs));
+  u64 X = P > 0 ? ReadLong(Bs, P) : 0;
+  u64 Lb = 1;
+  for (; BitSize(*Bs) < S && N < 64;) {
+    if ((Lb = Read(Bs))) {
+      for (; BitSize(*Bs) < S && N < 64 - 1;) {
+        if (Read(Bs)) {
+          break;
+        } else {
+          ++N;
+        }
+      }
+      if (BitSize(*Bs) >= S) {
+        break;
+      }
+      X += 1ull << (N++);
+    } else {
+      break;
+    }
+  }
+  /* deposit bit plane from x */
+  for (int I = 0; X; ++I, X >>= 1)
+    Block[I] += (u64)(X & 1u) << B;
 }
 
 } // namespace mg
