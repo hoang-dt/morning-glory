@@ -29,6 +29,8 @@ struct bitstream;
 // TODO: turn this into a template? TODO: pointer aliasing?
 bool Encode(u64* Block, int B, int Bits, i8& N, i8& M, bool& In, bitstream* Bs);
 bool Decode(u64* Block, int B, int Bits, i8& N, i8& M, bool& In, bitstream* Bs);
+bool Encode(u64* Block, int B, int Bits, i8& N, i8& M, bitstream* Bs);
+bool Decode(u64* Block, int B, int Bits, i8& N, i8& M, bitstream* Bs);
 
 } // namespace mg
 

@@ -12,7 +12,7 @@ struct timer {
   inline const static i64 PCFreq = []() {
     LARGE_INTEGER Li;
     bool Ok = QueryPerformanceFrequency(&Li);
-    return Ok ? Li.QuadPart / 1000 : 0;
+    return Ok ? Li.QuadPart : 0;
   }();
   i64 CounterStart = 0;
 };
@@ -29,7 +29,7 @@ mg_Inline i64
 ElapsedTime(timer* Timer) {
   LARGE_INTEGER Li;
   QueryPerformanceCounter(&Li);
-  return (Li.QuadPart - Timer->CounterStart) / Timer->PCFreq;
+  return (Li.QuadPart - Timer->CounterStart)/* / (PCFreq / 1e9)*/;
 }
 
 } // namespace mg
@@ -51,20 +51,24 @@ mg_Inline i64
 ElapsedTime(timer* Timer) {
   timespec End;
   clock_gettime(CLOCK_MONOTONIC, &End);
-  return 1000 * (End.tv_sec - Timer->Start.tv_sec) + (End.tv_nsec - Timer->Start.tv_nsec) / 1e6;
-
-
+  return 1e9 * (End.tv_sec - Timer->Start.tv_sec) + (End.tv_nsec - Timer->Start.tv_nsec);
 } // namespace mg
 #endif
 
 namespace mg {
 
-i64
+mg_Inline i64
 ResetTimer(timer* Timer) {
   i64 Elapsed = ElapsedTime(Timer);
   StartTimer(Timer);
   return Elapsed;
 }
+
+mg_Inline f64
+Milliseconds(i64 Nanosecs) { return f64(Nanosecs) / 1e6; }
+
+mg_Inline f64
+Seconds(i64 Nanosecs) { return f64(Nanosecs) / 1e9; }
 
 } // namespace mg
 

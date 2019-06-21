@@ -85,5 +85,77 @@ INNER_LOOP:
   return ((N == 64 && M == N)|| Lb == 0);
 }
 
+bool
+Encode(u64* Block, int B, int S, i8& N, i8& M, bitstream* Bs) {
+  mg_Assert(N <= 64);
+  u64 X = 0;
+  for (int I = M; I < 64; ++I)
+    X += u64((Block[I] >> B) & 1u) << (I - M);
+  i8 P = Min(N - M, S - (int)BitSize(*Bs));
+  if (P > 0) {
+    WriteLong(Bs, X, P);
+    X >>= P; // P == 64 is fine since in that case we don't need X any more
+  }
+  u64 Lb = 1;
+  // TODO: we may be able to speed this up by getting rid of the shift of X
+  // or the call bit BitSize()
+  for (; BitSize(*Bs) < S && N < 64;) {
+    if ((Lb = Write(Bs, !!X))) {
+      for (; BitSize(*Bs) < S && N < 64 - 1;) {
+        if (Write(Bs, X & 1u)) {
+          break;
+        } else {
+          X >>= 1;
+          ++N;
+          ++P;
+        }
+      }
+      if (BitSize(*Bs) >= S) {
+        break;
+      }
+      X >>= 1;
+      ++N;
+      ++P;
+    } else {
+      break;
+    }
+  }
+  mg_Assert(N <= 64);
+  M += P;
+  return ((N == 64 && M == N) || Lb == 0);
+}
+
+/* Only return true if the block is fully decoded */
+bool
+Decode(u64* Block, int B, int S, i8& N, i8& M, bitstream* Bs) {
+  i8 P = Min(N - M, S - (int)BitSize(*Bs));
+  u64 X = P > 0 ? ReadLong(Bs, P) : 0;
+  u64 Lb = 1;
+  for (; BitSize(*Bs) < S && N < 64;) {
+    if ((Lb = Read(Bs))) {
+      for (; BitSize(*Bs) < S && N < 64 - 1;) {
+        if (Read(Bs)) {
+          break;
+        } else {
+          ++N;
+          ++P;
+        }
+      }
+      if (BitSize(*Bs) >= S) {
+        break;
+      }
+      X += 1ull << (P++);
+      ++N;
+    } else {
+      break;
+    }
+  }
+  /* deposit bit plane from x */
+  for (int I = M; X; ++I, X >>= 1)
+    Block[I] += (u64)(X & 1u) << B;
+  M += P;
+  return ((N == 64 && M == N)|| Lb == 0);
+}
+
 } // namespace mg
 

@@ -6,8 +6,10 @@ namespace mg {
 
 struct timer;
 void StartTimer (timer* Timer);
-i64  ElapsedTime(timer* Timer);
-i64  ResetTimer (timer* Timer);
+i64  ElapsedTime(timer* Timer); // return nanoseconds
+i64  ResetTimer (timer* Timer); // return nanoseconds
+f64  Milliseconds(i64 Nanosecs);
+f64  Seconds(i64 Nanosecs);
 
 } // namespace mg
 
