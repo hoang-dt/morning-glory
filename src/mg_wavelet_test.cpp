@@ -1,4 +1,8 @@
 #include "mg_test.h"
+#include "mg_common.h"
+#include "mg_wavelet.h"
+#include "mg_volume.h"
+#include <math.h>
 
 #define Array10x10\
  { 56, 40, 8, 24, 48, 48, 40, 16, 30, 32, 0,\
@@ -23,6 +27,28 @@
    40, 16, 30, 32, 56, 40,  8, 24, 48,\
    16, 30, 32, 56, 40,  8, 24, 48, 48,\
    30, 32, 56, 40,  8, 24, 48, 48, 40 }
+
+#define Array2_9x9\
+ {  1,  2,  3,  4,  5,  6,  7,  8,  9,\
+   10, 11, 12, 13, 14, 15, 16, 17, 18,\
+   19, 20, 21, 22, 23, 24, 25, 26, 27,\
+   28, 29, 30, 31, 32, 33, 34, 35, 36,\
+   37, 38, 39, 40, 41, 42, 43, 44, 45,\
+   46, 47, 48, 49, 50, 51, 52, 53, 54,\
+   55, 56, 57, 58, 59, 60, 61, 62, 63,\
+   64, 65, 66, 67, 68, 69, 70, 71, 72,\
+   73, 74, 75, 76, 77, 78, 79, 80, 81 }
+
+#define Array3_9x9\
+ {  1,  1,  1,  1,  1,  1,  1,  1,  1,\
+    1,  1,  1,  1,  1,  1,  1,  1,  1,\
+    1,  1,  1,  1,  1,  1,  1,  1,  1,\
+    1,  1,  1,  1,  1,  1,  1,  1,  1,\
+    1,  1,  1,  1,  1,  1,  1,  1,  1,\
+    1,  1,  1,  1,  1,  1,  1,  1,  1,\
+    1,  1,  1,  1,  1,  1,  1,  1,  1,\
+    1,  1,  1,  1,  1,  1,  1,  1,  1,\
+    1,  1,  1,  1,  1,  1,  1,  1,  1 }
 
 #define Array9x9x9\
  { 56, 40,  8, 24, 48, 48, 40, 16, 30,  40,  8, 24, 48, 48, 40, 16, 30, 32,   8, 24, 48, 48, 40, 16, 30, 32, 56,\
@@ -223,19 +249,70 @@ void TestWaveletBlock() {
   //    mg_Assert(fabs(*ItrC - *ItrD) < 1e-9);
   //  }
   //}
-  { // 3D test
-    f64 A[] = Array9x9x9;
-    v3i M(9);
+  { // 2D test
+    f64 A[] = Array9x9;
+    v3i M(9, 9, 1);
     volume VolA(A, M);
-    ForwardCdf53Tile(1, v3i(4), &VolA);
+    volume VolB; Clone(VolA, &VolB);
+    Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+    ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
+    ForwardCdf53Old(&VolA, 1);
+    for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB); 
+         ItA != End<f64>(VolA); ++ItA, ++ItB) {
+      mg_Assert(*ItA == *ItB);
+    }
   }
+  { // bigger 2D test
+    f64 A[17 * 17];
+    for (int Y = 0; Y < 17; ++Y) {
+      f64 Vy = 3 / sqrt(2 * Pi) * exp(-0.5 * (Y / 2.0) * (Y / 2.0));
+      for (int X = 0; X < 17; ++X) {
+        f64 Vx = 3 / sqrt(2 * Pi) * exp(-0.5 * (X / 2.0) * (X / 2.0));
+        A[Y * 17 + X] = Vx * Vy;
+      }
+    }
+    v3i M(17, 17, 1);
+    volume VolA(A, M);
+    volume VolB; Clone(VolA, &VolB);
+    Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+    ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
+    ForwardCdf53Old(&VolA, 1);
+    FILE* Fp = fopen("A.txt", "w");
+    for (int Y = 0; Y < 17; ++Y) {
+      for (int X = 0; X < 17; ++X) {
+        fprintf(Fp, "%8.1e ", VolA.At<f64>(v3i(X, Y, 0)));
+      }
+      fprintf(Fp, "\n");
+    }
+    fclose(Fp);
+    Fp = fopen("B.txt", "w");
+    for (int Y = 0; Y < 17; ++Y) {
+      for (int X = 0; X < 17; ++X) {
+        fprintf(Fp, "%8.1e ", VolB.At<f64>(v3i(X, Y, 0)));
+      }
+      fprintf(Fp, "\n");
+    }
+    fclose(Fp);
+  }
+  //{ // 3D test
+  //  printf("3D test\n");
+  //  f64 A[] = Array9x9x9;
+  //  v3i M(9);
+  //  volume VolA(A, M);
+  //  volume VolB; Clone(VolA, &VolB);
+  //  Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+  //  ForwardCdf53Tile(1, v3i(4), VolA, &VolB);
+  //  //ForwardCdf53Old(&VolA, 1);
+  //  DumpText("A.txt", Begin<f64>(VolA), End<f64>(VolA), "%f\n");
+  //  DumpText("B.txt", Begin<f64>(VolB), End<f64>(VolB), "%f\n");
+  //}
   { // 3D test
-    volume Vol(v3i(64), dtype::float64);
-    ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[64-64-64]-Float64.raw",
-               v3i(64), dtype::float64, &Vol);
-    ForwardCdf53Tile(2, v3i(4), &Vol);
+    //volume Vol(v3i(64), dtype::float64);
+    //ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[64-64-64]-Float64.raw",
+    //           v3i(64), dtype::float64, &Vol);
+    //ForwardCdf53Tile(2, v3i(4), &Vol);
   }
 }
 
-//mg_RegisterTest(Wavelet_TestWavelet, TestWavelet)
-mg_RegisterTest(Wavelet_TestWaveletBlock, TestWaveletBlock)
+mg_RegisterTest(Wavelet_TestWavelet, TestWavelet)
+mg_RegisterTestOnly(Wavelet_TestWaveletBlock, TestWaveletBlock)

@@ -61,6 +61,7 @@ Msb(u64 V) {
 }
 #endif
 
+#if defined(__BMI2__)
 #if defined(__clang__) || defined(__GNUC__)
 #include <intrin.h>
 #include <mmintrin.h>
@@ -76,6 +77,7 @@ LzCnt(u32 V) { return (i8)__lzcnt(V); }
 mg_Inline i8
 LzCnt(u64 V) { return (i8)__lzcnt64(V); }
 #endif
+#endif
 
 /* Reverse the operation that inserts two 0 bits after every bit of x */
 mg_Inline u32
@@ -88,6 +90,16 @@ CompactBy2(u32 X) {
   return X;
 }
 
+mg_Inline u32
+CompactBy1(u32 X) {
+  X &= 0x55555555;                 // X = -5-4 -3-2 -1-0 -9-8 -7-6 -5-4 -3-2 -1-0
+  X = (X ^ (X >> 1)) & 0x33333333; // X = --54 --32 --10 --98 --76 --54 --32 --10
+  X = (X ^ (X >> 2)) & 0x0f0f0f0f; // X = ---- 5432 ---- 1098 ---- 7654 ---- 3210
+  X = (X ^ (X >> 4)) & 0x00ff00ff; // X = ---- ---- 5432 1098 ---- ---- 7654 3210
+  X = (X ^ (X >> 8)) & 0x0000ffff; // X = ---- ---- ---- ---- 5432 1098 7654 3210
+  return X;
+}
+
 /* Morton decoding */
 mg_Inline u32
 DecodeMorton3X(u32 Code) { return CompactBy2(Code >> 0); }
@@ -95,6 +107,10 @@ mg_Inline u32
 DecodeMorton3Y(u32 Code) { return CompactBy2(Code >> 1); }
 mg_Inline u32
 DecodeMorton3Z(u32 Code) { return CompactBy2(Code >> 2); }
+mg_Inline u32
+DecodeMorton2X(u32 Code) { return CompactBy1(Code >> 0); }
+mg_Inline u32
+DecodeMorton2Y(u32 Code) { return CompactBy1(Code >> 1); }
 
 mg_Inline u32
 SplitBy2(u32 X) {

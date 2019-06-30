@@ -32,7 +32,13 @@ mg_T(t) void ILiftExtCdf53X(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 mg_T(t) void ILiftExtCdf53Y(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 mg_T(t) void ILiftExtCdf53Z(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 
-void ForwardCdf53Tile(int NLvls, const v3i& TDims3, volume* Vol);
+#define mg_Cdf53TileDebug
+
+void ForwardCdf53Tile(int NLvls, const v3i& TDims3, volume* Vol
+#if defined(mg_Cdf53TileDebug)
+  , volume* OutVol
+#endif
+);
 void ForwardCdf53(const extent& Ext, int NLevels, volume* Vol);
 void InverseCdf53(const extent& Ext, int NLevels, volume* Vol);
 void ForwardCdf53Old(volume* Vol, int NLevels);
@@ -49,6 +55,9 @@ void FormSubbands(int NLevels, const grid& SrcGrid, const volume& SrcVol,
 /* Assume the wavelet transform is done in X, then Y, then Z */
 int LevelToSubband(const v3i& Level);
 v3i ExpandDomain(const v3i& N, int NLevels);
+
+v2i SubbandToLevel2(int S);
+v3i SubbandToLevel3(int S);
 
 } // namespace mg
 

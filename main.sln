@@ -119,6 +119,19 @@ Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "app_compression_test", "bin
 		AttachLaunchAction = No
 	EndProjectSection
 EndProject
+Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "mg_tests", "bin\mg_tests.exe", "{A5E21470-61E7-4E11-8A00-CCC4E6ACD941}"
+	ProjectSection(DebuggerProjectSystem) = preProject
+		PortSupplier = 00000000-0000-0000-0000-000000000000
+		Executable = E:\Workspace\file-format-new\bin\mg_tests.exe
+		RemoteMachine = DESKTOP-LC1M4MT
+		StartingDirectory = E:\Workspace\file-format-new\bin
+		Environment = Default
+		LaunchingEngine = 00000000-0000-0000-0000-000000000000
+		UseLegacyDebugEngines = No
+		LaunchSQLEngine = No
+		AttachLaunchAction = No
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Release|x64 = Release|x64
@@ -126,6 +139,7 @@ Global
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{05531BF2-0140-4B69-8BBC-50D8506418E5}.Release|x64.ActiveCfg = Release
 		{D14BF20F-A7C5-4CA7-88EF-D261B979D431}.Release|x64.ActiveCfg = Release|x64
+		{A5E21470-61E7-4E11-8A00-CCC4E6ACD941}.Release|x64.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

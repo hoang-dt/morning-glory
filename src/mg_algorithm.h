@@ -8,6 +8,7 @@ namespace mg {
 mg_T(t) t Min(const t& a, const t& b);
 mg_T(t) t Max(const t& a, const t& b);
 
+mg_T(i) i MaxElem(i Beg, i End);
 mg_T2(i, f) i MaxElem(i Beg, i End, const f& Comp);
 mg_T(i) struct MinMax { i Min, Max; };
 mg_T(i) MinMax<i> MinMaxElem(i Beg, i End);

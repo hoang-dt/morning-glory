@@ -25,6 +25,8 @@ i8 LzCnt(u64 V);
 u32 DecodeMorton3X(u32 Code);
 u32 DecodeMorton3Y(u32 Code);
 u32 DecodeMorton3Z(u32 Code);
+u32 DecodeMorton2X(u32 Code);
+u32 DecodeMorton2Y(u32 Code);
 u32 EncodeMorton3(u32 X, u32 Y, u32 Z);
 
 /* Stuff three 21-bit uints into one 64-bit uint */

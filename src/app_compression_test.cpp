@@ -43,10 +43,6 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   volume TileVolO(BufO, TileDims3, TileVolN.Type); // decompression output
   buffer BsBuf; AllocBuf(&BsBuf, Vol.Buffer.Bytes);
   bitstream Bs; InitWrite(&Bs, BsBuf);
-  int SrcSizeMax = (Prod(TileDims3) + 7) / 8;
-  int DstCapacity = LZ4_compressBound(SrcSizeMax);
-  buffer DstBuf; AllocBuf(&DstBuf, DstCapacity);
-  buffer DecompBuf; AllocBuf(&DecompBuf, SrcSizeMax);
   timer Timer;
   i64 TotalTime = 0;
   i64 TotalCompressedSize = 0;
@@ -57,10 +53,15 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   std::vector<bool> SigVec(Prod(TileDims3));
   v3i BlockDims3(4);
   v3i NBlocks3 = (TileDims3 + BlockDims3 - 1) / BlockDims3;
+  array<i16> EMaxes; Init(&EMaxes, Prod(NBlocks3), i16(0));
   array<i8> Ns; Init(&Ns, Prod(NBlocks3), i8(0));
   array<i8> NOs; Init(&NOs, Prod(NBlocks3), i8(0));
   v3i Dims3 = Dims(Vol);
   std::vector<bool> Check(Prod(Dims3), false);
+  i64 TotalEMaxSize = 0;
+  i64 TotalEMaxCompressedSize = 0;
+  int DstCapacity = LZ4_compressBound(sizeof(i16) * Size(EMaxes));
+  buffer EMaxComp; AllocBuf(&EMaxComp, DstCapacity);
   for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
     v3i SbFrom3 = From(Sbands[Sb]);
     v3i SbDims3 = Dims(Sbands[Sb]);
@@ -89,20 +90,33 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
       } mg_EndFor3 // end sample loop
       /* quantize */
       int NBitplanes = Meta.Type == dtype::float32 ? 32 : 64;
-      int EMax = Quantize(NBitplanes - 1, extent(RealDims3), TileVol, extent(RealDims3), &TileVolQ);
       FwdNegaBinary(extent(RealDims3), TileVolQ, extent(RealDims3), &TileVolN);
       /* do zfp transform */
       auto Start = chrono::steady_clock::now();
-      for (int B = 0; B < Prod(NBlocks3); ++B) {
+      //for (int B = 0; B < Prod(NBlocks3); ++B) {
+      mg_BeginFor3(P, v3i::Zero, NBlocks3, v3i::One) { // through blocks
+        int B = Row(NBlocks3, P);
+        extent Ext(P * BlockDims3, BlockDims3);
+        EMaxes[B] = Quantize(NBitplanes - 1, Ext, TileVol, Ext, &TileVolQ);
         ForwardZfp((i64*)TileVolQ.Buffer.Data + B * Prod(BlockDims3));
         ForwardShuffle((i64*)TileVolQ.Buffer.Data + B * Prod(BlockDims3),
                        (u64*)TileVolN.Buffer.Data + B * Prod(BlockDims3));
+      } mg_EndFor3
+      for (int I = Size(EMaxes) - 1; I > 0; --I) {
+        EMaxes[I] -= EMaxes[I - 1];
+        if (EMaxes[I] >= 0) EMaxes[I] = 2 * EMaxes[I];
+        else EMaxes[I] = 2 * abs(EMaxes[I]) - 1;
       }
-      auto End = chrono::high_resolution_clock::now();
-      auto Diff = End - Start;
+      TotalEMaxCompressedSize +=
+        LZ4_compress_default((char*)&EMaxes[0], (char*)EMaxComp.Data,
+                             sizeof(i16) * Size(EMaxes), DstCapacity);
+      TotalEMaxSize += 11 * Size(EMaxes);
+      auto EndTime = chrono::high_resolution_clock::now();
+      auto Diff = EndTime - Start;
       auto Value = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff);
       TotalTime += Value.count();
       /* extract bits */
+      int EMax = *(MaxElem(Begin(EMaxes), End(EMaxes)));
       u64 Threshold = (Meta.Type == dtype::float32) ? (1 << 31) : (1ull << 63);
       int Bp = NBitplanes - 1;
       while ((Threshold > 0) && (NBitplanes - Bp <= EMax - Exponent(Tolerance) + 1)) { // through bit planes
@@ -125,8 +139,8 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
         Threshold /= 2;
         --Bp;
         TotalTime += ElapsedTime(&Timer);
-        End = chrono::high_resolution_clock::now();
-        Diff = End - Start;
+        EndTime = chrono::high_resolution_clock::now();
+        Diff = EndTime - Start;
         Value = std::chrono::duration_cast<std::chrono::nanoseconds>(Diff);
         TotalTime += Value.count();
         ResetTimer(&Timer);
@@ -136,6 +150,7 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   /* write the bit stream */
   Flush(&Bs);
   printf("%lld %lld\n", TotalCompressedSize, TotalUncompressedSize);
+  printf("%lld %lld\n", TotalEMaxSize / 8, TotalEMaxCompressedSize);
   std::cout << (TotalTime / 1e6) << " ms" << std::endl;
 }
 

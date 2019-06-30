@@ -69,6 +69,7 @@ SetCapacity(array<t>* Array, i64 NewCapacity) {
   if (Array->Capacity < NewCapacity) {
     buffer Buf;
     Array->Alloc->Alloc(&Buf, NewCapacity * sizeof(t));
+    mg_Assert(Buf);
     Relocate(Array, Buf);
     Array->Capacity = NewCapacity;
   }
@@ -93,7 +94,7 @@ Resize(array<t>* Array, i64 NewSize) {
   Array->Size = NewSize;
 }
 
-mg_T(t) void
+mg_Ti(t) void
 Reserve(array<t>* Array, i64 Capacity) {
   SetCapacity(Array, Capacity);
 }

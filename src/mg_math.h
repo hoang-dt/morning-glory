@@ -5,6 +5,8 @@
 
 namespace mg {
 
+constexpr f64 Pi = 3.14159265358979323846;
+
 /* Generate a power table for a particular base and type */
 template <int N>
 int (&Power(int Base))[N];

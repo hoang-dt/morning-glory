@@ -30,6 +30,9 @@ file can fit in it. The caller is responsible to deallocate the memory. */
 error<> ReadFile(cstr FileName, buffer* Buf);
 error<> WriteBuffer(cstr FileName, const buffer& Buf);
 
+/* Dump a range of stuffs into a text file */
+mg_T(i) error<> DumpText(cstr FileName, i Begin, i End, cstr Format);
+
 } // namespace mg
 
 #include "mg_io.inl"

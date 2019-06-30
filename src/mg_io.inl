@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include "mg_scopeguard.h"
 
 #undef mg_FSeek
 #undef mg_FTell
@@ -34,6 +35,19 @@ namespace mg {
   } else {\
     assert(false && "unavailable or ambiguous printer destination");\
   }\
+}
+
+mg_T(i) error<>
+DumpText(cstr FileName, i Begin, i End, cstr Format) {
+  FILE* Fp = fopen(FileName, "w");
+  mg_CleanUp(0, if (Fp) fclose(Fp));
+  if (!Fp)
+    return mg_Error(err_code::FileCreateFailed, "%s", FileName);
+  for (i It = Begin; It != End; ++It) {
+    if (fprintf(Fp, Format, *It) < 0)
+      return mg_Error(err_code::FileWriteFailed);
+  }
+  return mg_Error(err_code::NoError);
 }
 
 } // namespace mg

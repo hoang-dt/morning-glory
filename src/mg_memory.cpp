@@ -6,7 +6,7 @@
 
 namespace mg {
 
-void 
+void
 MemCopy(const buffer& Src, buffer* Dst) {
   mg_Assert(Dst->Data, "Copy to null");
   mg_Assert(Src.Data || Src.Bytes == 0, "Copy from null");
@@ -14,7 +14,7 @@ MemCopy(const buffer& Src, buffer* Dst) {
   memcpy(Dst->Data, Src.Data, size_t(Src.Bytes));
 }
 
-void 
+void
 ZeroBuf(buffer* Buf) {
   mg_Assert(Buf->Data);
   memset(Buf->Data, 0, size_t(Buf->Bytes));

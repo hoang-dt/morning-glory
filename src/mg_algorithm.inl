@@ -5,6 +5,16 @@ namespace mg {
 mg_Ti(t) t Min(const t& a, const t& b) { return b < a ? b : a; }
 mg_Ti(t) t Max(const t& a, const t& b) { return a < b ? b : a; }
 
+mg_T(i) i
+MaxElem(i Beg, i End) {
+  auto MaxElem = Beg;
+  for (i Pos = Beg; Pos != End; ++Pos) {
+    if (*MaxElem < *Pos)
+      MaxElem = Pos;
+  }
+  return MaxElem;
+}
+
 mg_T2(i, f) i
 MaxElem(i Beg, i End, f& Comp) {
   auto MaxElem = Beg;
