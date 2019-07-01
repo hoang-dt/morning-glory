@@ -277,7 +277,7 @@ void TestWaveletBlock() {
     volume VolA(A, M);
     volume VolB; Clone(VolA, &VolB);
     Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
-    int NLevels = 1;
+    int NLevels = 2;
     v3i TDims3(4, 4, 1);
     ForwardCdf53Tile2D(NLevels, TDims3, VolA, &VolB);
     ForwardCdf53Old(&VolA, NLevels);

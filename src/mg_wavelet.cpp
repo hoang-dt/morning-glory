@@ -83,7 +83,8 @@ ForwardCdf53Tile2D(
   if (LvlNxt > NLevels) { // last level, no need to add to the next level
 #if defined(mg_Cdf53TileDebug)
     v3i CopyM = Min(M, TDims3);
-    Copy(extent(CopyM), Vol, extent(Pos3 * TDims3, CopyM), BigVol);
+    if (CopyM > 0)
+      Copy(extent(CopyM), Vol, extent(Pos3 * TDims3, CopyM), BigVol);
     char FileName[256];
     sprintf(FileName, "B-sb-(0)-tile-(%d-%d).txt", Pos3.X, Pos3.Y);
     DumpText(FileName, Begin<f64>(extent(CopyM), Vol), End<f64>(extent(CopyM), Vol), "%8.1e ");
@@ -171,8 +172,8 @@ ForwardCdf53Tile2D(
             F3 = F3 + Pos3Nxt * TDims3;
             // NOTE: for subbands other than 0, F3 can be outside of the big volume
             mg_Assert(VolNxt.Buffer);
-            if (F3 < Dims(*BigVol)) {
-              v3i CopyDims3 = Min(From(BigSbands[BigSb]) + Dims(BigSbands[BigSb]) - F3, TDims3);
+            v3i CopyDims3 = Min(From(BigSbands[BigSb]) + Dims(BigSbands[BigSb]) - F3, TDims3);
+            if (CopyDims3 > v3i(0)) {
               mg_Assert(F3 + CopyDims3 <= Dims(*BigVol));
               Copy(extent(CopyDims3), VolNxt, extent(F3, CopyDims3), BigVol);
               char FileName[256];
