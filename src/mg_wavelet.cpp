@@ -84,6 +84,9 @@ ForwardCdf53Tile2D(
 #if defined(mg_Cdf53TileDebug)
     v3i CopyM = Min(M, TDims3);
     Copy(extent(CopyM), Vol, extent(Pos3 * TDims3, CopyM), BigVol);
+    char FileName[256];
+    sprintf(FileName, "B-sb-(0)-tile-(%d-%d).txt", Pos3.X, Pos3.Y);
+    DumpText(FileName, Begin<f64>(extent(CopyM), Vol), End<f64>(extent(CopyM), Vol), "%8.1e ");
 #endif
     DeallocBuf(&Vol.Buffer);
     (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
@@ -101,34 +104,36 @@ ForwardCdf53Tile2D(
     grid SrcG = Sbands[Sb];
     extent DstG(v3i::Zero, Dims(SrcG));
     v2i L = SubbandToLevel2(Sb);
-    for (int Y = 0, Iy = 0; Iy < 2; Y += D11.Y, ++Iy) {
-      if (Y == 1 && L.Y == 1)
-        continue;
+    v2i Nb(0, 0); // neighbor
+    for (int Iy = 0; Iy < 2; Nb.Y += D11.Y, ++Iy) {
+      if (Nb.Y == 1 && L.Y == 1)
+        continue; // TODO: since we continue here we cannot get to the place where we update the dependency count
       grid SrcGY = SrcG;
       extent DstGY = DstG;
-      if (Y != 0) { // contributing to top/bottom parents, take 1 slab only
-        if (Y == -1) // contributing to the top parent tile, so shift down full
+      if (Nb.Y != 0) { // contributing to top/bottom parents, take 1 slab only
+        if (Nb.Y == -1) // contributing to the top parent tile, so shift down full
           DstGY = Translate(DstGY, dimension::Y, TDims3.Y);
-        SrcGY = Slab(SrcGY, dimension::Y, -Y);
+        SrcGY = Slab(SrcGY, dimension::Y, -Nb.Y);
         DstGY = Slab(DstGY, dimension::Y,  1);
       } else if (D01.Y == 1) { // second child, shift down half
         DstGY = Translate(DstGY, dimension::Y, TDims3.Y / 2);
       }
-      for (int X = 0, Ix = 0; Ix < 2; X += D11.X, ++Ix) {
-        if (X == 1 && L.X == 1)
+      Nb.X = 0;
+      for (int Ix = 0; Ix < 2; Nb.X += D11.X, ++Ix) {
+        v3i Pos3Nxt = Pos3 / 2 + v3i(Nb, 0);
+        if (Nb.X == 1 && L.X == 1)
           continue;
         grid SrcGX = SrcGY;
         extent DstGX = DstGY;
-        if (X != 0) { // contributing to left/right parents, take 1 slab only
-          if (X == -1) // contributing to left parent, shift right full
+        if (Nb.X != 0) { // contributing to left/right parents, take 1 slab only
+          if (Nb.X == -1) // contributing to left parent, shift right full
             DstGX = Translate(DstGX, dimension::X, TDims3.X);
-          SrcGX = Slab(SrcGX, dimension::X, -X);
+          SrcGX = Slab(SrcGX, dimension::X, -Nb.X);
           DstGX = Slab(DstGX, dimension::X,  1);
         } else if (D01.X == 1) { // second child, shift right half
           DstGX = Translate(DstGX, dimension::X, TDims3.X / 2);
         }
         /* locate the finer tile */
-        v3i Pos3Nxt = Pos3 / 2 + v3i(X, Y, 0);
         if (!(Pos3Nxt >= v3i::Zero && Pos3Nxt < NTiles3Nxt))
           continue; // tile outside the domain
         tile_buf& TileNxt = (*Vols)[LvlNxt][Sb][Row(NTiles3Nxt, Pos3Nxt)];
@@ -142,7 +147,7 @@ ForwardCdf53Tile2D(
           /* compute the number of dependencies for the finer tile if necessary */
           v3i MDeps3(4, 4, 1); // by default each tile depends on 16 finer tiles
           for (int I = 0; I < 2; ++I) {
-            MDeps3[I] -= Pos3Nxt[I] == 0;
+            MDeps3[I] -= (Pos3Nxt[I] == 0) || (L[I] == 1);
             MDeps3[I] -= Pos3Nxt[I] == NTiles3Nxt[I] - 1;
             MDeps3[I] -= Dims3Next[I] - Pos3Nxt[I] * TDims3[I] <= TDims3[I] / 2;
           }
@@ -167,9 +172,13 @@ ForwardCdf53Tile2D(
             // NOTE: for subbands other than 0, F3 can be outside of the big volume
             mg_Assert(VolNxt.Buffer);
             if (F3 < Dims(*BigVol)) {
-              v3i CopyDims3 = Min(Dims(*BigVol) - F3, TDims3);
+              v3i CopyDims3 = Min(From(BigSbands[BigSb]) + Dims(BigSbands[BigSb]) - F3, TDims3);
               mg_Assert(F3 + CopyDims3 <= Dims(*BigVol));
               Copy(extent(CopyDims3), VolNxt, extent(F3, CopyDims3), BigVol);
+              char FileName[256];
+              sprintf(FileName, "B-sb-(%d)-tile-(%d-%d).txt", BigSb, Pos3Nxt.X, Pos3Nxt.Y);
+              DumpText(FileName, Begin<f64>(extent(F3, CopyDims3), *BigVol),
+                       End<f64>(extent(F3, CopyDims3), *BigVol), "%8.1e ");
             }
 #endif
             DeallocBuf(&VolNxt.Buffer);
@@ -219,6 +228,7 @@ ForwardCdf53Tile2D(int NLvls, const v3i& TDims3, const volume& Vol
   for (u32 I = 0; I < Prod<u32>(NTilesBig3); ++I) {
     // TODO: count the number of tiles processed and break if we are done
     u32 X = DecodeMorton2X(I), Y = DecodeMorton2Y(I);
+    printf("------------- %d %d %d\n", I, X, Y);
     v3i Pos3(X, Y, 0);
     if (!(Pos3 * TDims3 < M)) // tile outside the domain
       continue;

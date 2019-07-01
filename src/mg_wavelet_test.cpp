@@ -250,33 +250,51 @@ void TestWaveletBlock() {
   //  }
   //}
   { // 2D test
-    f64 A[] = Array9x9;
-    v3i M(9, 9, 1);
-    volume VolA(A, M);
-    volume VolB; Clone(VolA, &VolB);
-    Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
-    ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
-    ForwardCdf53Old(&VolA, 1);
-    for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB); 
-         ItA != End<f64>(VolA); ++ItA, ++ItB) {
-      mg_Assert(*ItA == *ItB);
-    }
+    //f64 A[] = Array9x9;
+    //v3i M(9, 9, 1);
+    //volume VolA(A, M);
+    //volume VolB; Clone(VolA, &VolB);
+    //Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+    //ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
+    //ForwardCdf53Old(&VolA, 1);
+    //for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB);
+    //     ItA != End<f64>(VolA); ++ItA, ++ItB) {
+    //  mg_Assert(*ItA == *ItB);
+    //}
   }
   { // bigger 2D test
-    f64 A[17 * 17];
-    for (int Y = 0; Y < 17; ++Y) {
-      f64 Vy = 3 / sqrt(2 * Pi) * exp(-0.5 * (Y / 2.0) * (Y / 2.0));
-      for (int X = 0; X < 17; ++X) {
-        f64 Vx = 3 / sqrt(2 * Pi) * exp(-0.5 * (X / 2.0) * (X / 2.0));
+    v3i M(17, 17, 1);
+    f64 A[M.X * M.Y];
+    for (int Y = 0; Y < M.Y; ++Y) {
+      f64 YY = (Y - M.Y / 2.0) / 2.0;
+      f64 Vy = 3 / sqrt(2 * Pi) * exp(-0.5 * YY * YY);
+      for (int X = 0; X < M.X; ++X) {
+        f64 XX = (X - M.X / 2.0) / 2.0;
+        f64 Vx = 3 / sqrt(2 * Pi) * exp(-0.5 * XX * XX);
         A[Y * 17 + X] = Vx * Vy;
       }
     }
-    v3i M(17, 17, 1);
     volume VolA(A, M);
     volume VolB; Clone(VolA, &VolB);
     Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
-    ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
-    ForwardCdf53Old(&VolA, 1);
+    int NLevels = 1;
+    v3i TDims3(4, 4, 1);
+    ForwardCdf53Tile2D(NLevels, TDims3, VolA, &VolB);
+    ForwardCdf53Old(&VolA, NLevels);
+    array<extent> Sbands; BuildSubbands(M, NLevels, &Sbands);
+    for (int Sb = 0; Sb < Size(Sbands); ++Sb) {
+      v3i SbFrom3 = From(Sbands[Sb]);
+      v3i SbDims3 = Dims(Sbands[Sb]);
+      v3i NTiles3 = (SbDims3 + TDims3 - 1) / TDims3;
+      v3i Tile;
+      mg_BeginFor3(Tile, v3i::Zero, NTiles3, v3i::One) {
+        v3i TFrom3 = SbFrom3 + Tile * TDims3;
+        extent Ext3(TFrom3, Min(SbFrom3 + SbDims3 - TFrom3, TDims3));
+        char FileName[256];
+        sprintf(FileName, "A-sb-(%d)-tile-(%d-%d).txt", Sb, Tile.X, Tile.Y);
+        DumpText(FileName, Begin<f64>(Ext3, VolA), End<f64>(Ext3, VolA), "%8.1e ");
+      } mg_EndFor3
+    }
     FILE* Fp = fopen("A.txt", "w");
     for (int Y = 0; Y < 17; ++Y) {
       for (int X = 0; X < 17; ++X) {
