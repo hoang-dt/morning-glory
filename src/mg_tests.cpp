@@ -1,3 +1,5 @@
+#define mg_Slow
+
 #include "mg_all.cpp"
 #include "mg_signal_processing_test.cpp"
 #include "mg_volume_test.cpp"

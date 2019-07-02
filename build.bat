@@ -19,7 +19,7 @@ set CFLAGS="Please provide a build config: Debug, FastDebug, Release"
 set COMMON_CFLAGS= -Xclang -flto-visibility-public-std -std=gnu++2a ^
   -fdiagnostics-absolute-paths -fopenmp -fopenmp-simd -fms-extensions^
   -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors ^
-  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces -Wlanguage-extension-token^
+  -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces -Wno-vla-extension^
   -g -gcodeview -gno-column-info
 if %1==Release (set CFLAGS= -O2 -DNDEBUG -ftree-vectorize -march=native)
 if %1==FastDebug (set CFLAGS= -Og -DNDEBUG -ftree-vectorize -march=native)

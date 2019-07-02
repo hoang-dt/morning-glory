@@ -1,8 +1,13 @@
 #include "mg_test.h"
 #include "mg_common.h"
+#include "mg_timer.h"
 #include "mg_wavelet.h"
 #include "mg_volume.h"
 #include <math.h>
+#include <chrono>
+#include <iostream>
+
+namespace chrono = std::chrono;
 
 #define Array10x10\
  { 56, 40, 8, 24, 48, 48, 40, 16, 30, 32, 0,\
@@ -226,41 +231,41 @@ TestWavelet() {
 }
 
 void TestWaveletBlock() {
-  //{ // test with 2 tiles
-  //  f64 A[] = Array9x9;
-  //  f64 B[] = Array9x9;
-  //  f64 C[] = Array9x9;
-  //  f64 D[9 * 9] = {};
-  //  volume VolA(A, v3i(9, 9, 1)), VolB(B, v3i(9, 9, 1));
-  //  volume VolC(C, v3i(9, 9, 1)), VolD(D, v3i(9, 9, 1));
-  //  extent ExtLeft(v3i(0, 0, 0), v3i(5, 9, 1));
-  //  extent ExtRght(v3i(4, 0, 0), v3i(5, 9, 1));
-  //  FLiftCdf53X<f64>(grid(ExtLeft), Dims(VolA), lift_option::PartialUpdateLast, &VolA);
-  //  FLiftCdf53Y<f64>(grid(ExtLeft), Dims(VolA), lift_option::Normal, &VolA);
-  //  FLiftCdf53X<f64>(grid(ExtRght), Dims(VolB), lift_option::Normal, &VolB);
-  //  FLiftCdf53Y<f64>(grid(ExtRght), Dims(VolB), lift_option::Normal, &VolB);
-  //  Add(ExtLeft, VolA, ExtLeft, &VolD);
-  //  Add(ExtRght, VolB, ExtRght, &VolD);
-  //  FLiftCdf53X<f64>(grid(Dims(VolC)), Dims(VolC), lift_option::Normal, &VolC);
-  //  FLiftCdf53Y<f64>(grid(Dims(VolC)), Dims(VolC), lift_option::Normal, &VolC);
-  //  auto ItrC = Begin<f64>(VolC);
-  //  auto ItrD = Begin<f64>(VolD);
-  //  for (ItrC = Begin<f64>(VolC); ItrC != End<f64>(VolC); ++ItrC, ++ItrD) {
-  //    mg_Assert(fabs(*ItrC - *ItrD) < 1e-9);
-  //  }
-  //}
+  { // test with 2 tiles
+    f64 A[] = Array9x9;
+    f64 B[] = Array9x9;
+    f64 C[] = Array9x9;
+    f64 D[9 * 9] = {};
+    volume VolA(A, v3i(9, 9, 1)), VolB(B, v3i(9, 9, 1));
+    volume VolC(C, v3i(9, 9, 1)), VolD(D, v3i(9, 9, 1));
+    extent ExtLeft(v3i(0, 0, 0), v3i(5, 9, 1));
+    extent ExtRght(v3i(4, 0, 0), v3i(5, 9, 1));
+    FLiftCdf53X<f64>(grid(ExtLeft), Dims(VolA), lift_option::PartialUpdateLast, &VolA);
+    FLiftCdf53Y<f64>(grid(ExtLeft), Dims(VolA), lift_option::Normal, &VolA);
+    FLiftCdf53X<f64>(grid(ExtRght), Dims(VolB), lift_option::Normal, &VolB);
+    FLiftCdf53Y<f64>(grid(ExtRght), Dims(VolB), lift_option::Normal, &VolB);
+    Add(ExtLeft, VolA, ExtLeft, &VolD);
+    Add(ExtRght, VolB, ExtRght, &VolD);
+    FLiftCdf53X<f64>(grid(Dims(VolC)), Dims(VolC), lift_option::Normal, &VolC);
+    FLiftCdf53Y<f64>(grid(Dims(VolC)), Dims(VolC), lift_option::Normal, &VolC);
+    auto ItrC = Begin<f64>(VolC);
+    auto ItrD = Begin<f64>(VolD);
+    for (ItrC = Begin<f64>(VolC); ItrC != End<f64>(VolC); ++ItrC, ++ItrD) {
+      mg_Assert(fabs(*ItrC - *ItrD) < 1e-15);
+    }
+  }
   { // 2D test
-    //f64 A[] = Array9x9;
-    //v3i M(9, 9, 1);
-    //volume VolA(A, M);
-    //volume VolB; Clone(VolA, &VolB);
-    //Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
-    //ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
-    //ForwardCdf53Old(&VolA, 1);
-    //for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB);
-    //     ItA != End<f64>(VolA); ++ItA, ++ItB) {
-    //  mg_Assert(*ItA == *ItB);
-    //}
+    f64 A[] = Array9x9;
+    v3i M(9, 9, 1);
+    volume VolA(A, M);
+    volume VolB; Clone(VolA, &VolB);
+    Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+    ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
+    ForwardCdf53Old(&VolA, 1);
+    for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB);
+         ItA != End<f64>(VolA); ++ItA, ++ItB) {
+      mg_Assert(*ItA == *ItB);
+    }
   }
   { // bigger 2D test
     v3i M(17, 17, 1);
@@ -281,56 +286,56 @@ void TestWaveletBlock() {
     v3i TDims3(4, 4, 1);
     ForwardCdf53Tile2D(NLevels, TDims3, VolA, &VolB);
     ForwardCdf53Old(&VolA, NLevels);
-    array<extent> Sbands; BuildSubbands(M, NLevels, &Sbands);
+    for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB);
+         ItA != End<f64>(VolA); ++ItA, ++ItB) {
+      mg_Assert(fabs(*ItA - *ItB) < 1e-15);
+    }
+  }
+  { // small 3D test
+    f64 A[] = Array9x9x9;
+    v3i M(9);
+    volume VolA(A, M);
+    volume VolB; Clone(VolA, &VolB);
+    Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+    ForwardCdf53Tile(1, v3i(4), VolA, &VolB);
+    ForwardCdf53Old(&VolA, 1);
+    array<extent> Sbands; BuildSubbands(M, 1, &Sbands);
     for (int Sb = 0; Sb < Size(Sbands); ++Sb) {
       v3i SbFrom3 = From(Sbands[Sb]);
       v3i SbDims3 = Dims(Sbands[Sb]);
-      v3i NTiles3 = (SbDims3 + TDims3 - 1) / TDims3;
-      v3i Tile;
-      mg_BeginFor3(Tile, v3i::Zero, NTiles3, v3i::One) {
-        v3i TFrom3 = SbFrom3 + Tile * TDims3;
-        extent Ext3(TFrom3, Min(SbFrom3 + SbDims3 - TFrom3, TDims3));
-        char FileName[256];
-        sprintf(FileName, "A-sb-(%d)-tile-(%d-%d).txt", Sb, Tile.X, Tile.Y);
-        DumpText(FileName, Begin<f64>(Ext3, VolA), End<f64>(Ext3, VolA), "%8.1e ");
+      v3i T;
+      mg_BeginFor3(T, SbFrom3, SbFrom3 + SbDims3, v3i(4)) {
+        v3i P;
+        v3i D3 = Min(SbFrom3 + SbDims3 - P, v3i(4));
+        mg_BeginFor3(P, T, T + D3, v3i::One) {
+          f64 Va = VolA.At<f64>(P);
+          f64 Vb = VolB.At<f64>(P);
+          mg_Assert(fabs(Va - Vb) < 1e-9);
+        } mg_EndFor3
       } mg_EndFor3
     }
-    FILE* Fp = fopen("A.txt", "w");
-    for (int Y = 0; Y < 17; ++Y) {
-      for (int X = 0; X < 17; ++X) {
-        fprintf(Fp, "%8.1e ", VolA.At<f64>(v3i(X, Y, 0)));
-      }
-      fprintf(Fp, "\n");
-    }
-    fclose(Fp);
-    Fp = fopen("B.txt", "w");
-    for (int Y = 0; Y < 17; ++Y) {
-      for (int X = 0; X < 17; ++X) {
-        fprintf(Fp, "%8.1e ", VolB.At<f64>(v3i(X, Y, 0)));
-      }
-      fprintf(Fp, "\n");
-    }
-    fclose(Fp);
   }
-  //{ // 3D test
-  //  printf("3D test\n");
-  //  f64 A[] = Array9x9x9;
-  //  v3i M(9);
-  //  volume VolA(A, M);
-  //  volume VolB; Clone(VolA, &VolB);
-  //  Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
-  //  ForwardCdf53Tile(1, v3i(4), VolA, &VolB);
-  //  //ForwardCdf53Old(&VolA, 1);
-  //  DumpText("A.txt", Begin<f64>(VolA), End<f64>(VolA), "%f\n");
-  //  DumpText("B.txt", Begin<f64>(VolB), End<f64>(VolB), "%f\n");
-  //}
-  { // 3D test
-    //volume Vol(v3i(64), dtype::float64);
-    //ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[64-64-64]-Float64.raw",
-    //           v3i(64), dtype::float64, &Vol);
-    //ForwardCdf53Tile(2, v3i(4), &Vol);
+  { // big 3D test
+    v3i M(384, 384, 256);
+    volume Vol;
+    volume OutVol(M, dtype::float64);
+    ReadVolume("D:/Datasets/3D/Miranda/MIRANDA-DENSITY-[384-384-256]-Float64.raw",
+               M, dtype::float64, &Vol);
+    timer Timer;
+    StartTimer(&Timer);
+    auto StartTime = chrono::high_resolution_clock::now();
+    ForwardCdf53Tile(3, v3i(32), Vol, &OutVol);
+    auto EndTime = chrono::high_resolution_clock::now();
+    auto Diff = EndTime - StartTime;
+    auto Value = std::chrono::duration_cast<std::chrono::milliseconds>(Diff);
+    auto TotalTime3 = Value.count();
+    auto TotalTime = ResetTimer(&Timer) / 10000.0f;
+    ForwardCdf53Old(&Vol, 3);
+    auto TotalTime2 = ElapsedTime(&Timer) / 10000.0f;
+    printf("Time1 %fms Time2 %fms\n", TotalTime, TotalTime2);
+    std::cout << "Time3 " << TotalTime3 << "\n";
   }
 }
 
 mg_RegisterTest(Wavelet_TestWavelet, TestWavelet)
-mg_RegisterTestOnly(Wavelet_TestWaveletBlock, TestWaveletBlock)
+mg_RegisterTest(Wavelet_TestWaveletBlock, TestWaveletBlock)

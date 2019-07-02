@@ -64,8 +64,7 @@ ForwardCdf53Tile2D(
   mg_Assert(Vol.Buffer);
   int LvlNxt = Lvl + 1;
   if (LvlNxt <= NLevels) {
-    M.X += IsEven(M.X);
-    M.Y += IsEven(M.Y);
+    M = M + IsEven(M);
     if (M.X > 1) {
       if (Pos3.X + 1 < NTiles3.X) // not last tile in X
         FLiftCdf53X<f64>(grid(M), M, lift_option::PartialUpdateLast, &Vol);
@@ -83,18 +82,18 @@ ForwardCdf53Tile2D(
   if (LvlNxt > NLevels) { // last level, no need to add to the next level
 #if defined(mg_Cdf53TileDebug)
     v3i CopyM = Min(M, TDims3);
-    if (CopyM > 0)
+    if (CopyM > v3i::Zero)
       Copy(extent(CopyM), Vol, extent(Pos3 * TDims3, CopyM), BigVol);
-    char FileName[256];
-    sprintf(FileName, "B-sb-(0)-tile-(%d-%d).txt", Pos3.X, Pos3.Y);
-    DumpText(FileName, Begin<f64>(extent(CopyM), Vol), End<f64>(extent(CopyM), Vol), "%8.1e ");
+    //char FileName[256];
+    //sprintf(FileName, "B-sb-(0)-tile-(%d-%d).txt", Pos3.X, Pos3.Y);
+    //DumpText(FileName, Begin<f64>(extent(CopyM), Vol), End<f64>(extent(CopyM), Vol), "%8.1e ");
 #endif
     DeallocBuf(&Vol.Buffer);
     (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
     return;
   }
   v3i TDims3Ext = TDims3 + v3i(1, 1, 0);
-  stack_linear_allocator<4 * sizeof(grid)> Alloc;
+  stack_linear_allocator<NSbands * sizeof(grid)> Alloc;
   array<grid> Sbands(&Alloc); BuildSubbandsInPlace(TDims3Ext, 1, &Sbands);
   /* spread the samples to the parent subbands */
   v3i Dims3Next = Dims3s[LvlNxt];
@@ -105,10 +104,10 @@ ForwardCdf53Tile2D(
     grid SrcG = Sbands[Sb];
     extent DstG(v3i::Zero, Dims(SrcG));
     v2i L = SubbandToLevel2(Sb);
-    v2i Nb(0, 0); // neighbor
+    v2i Nb(0); // neighbor
     for (int Iy = 0; Iy < 2; Nb.Y += D11.Y, ++Iy) {
       if (Nb.Y == 1 && L.Y == 1)
-        continue; // TODO: since we continue here we cannot get to the place where we update the dependency count
+        continue;
       grid SrcGY = SrcG;
       extent DstGY = DstG;
       if (Nb.Y != 0) { // contributing to top/bottom parents, take 1 slab only
@@ -168,18 +167,17 @@ ForwardCdf53Tile2D(
 #if defined(mg_Cdf53TileDebug)
             int BigSb = (NLevels - LvlNxt) * 3 + Sb;
             v3i F3 = From(BigSbands[BigSb]);
-            v3i D3 = Dims(BigSbands[BigSb]);
             F3 = F3 + Pos3Nxt * TDims3;
             // NOTE: for subbands other than 0, F3 can be outside of the big volume
             mg_Assert(VolNxt.Buffer);
             v3i CopyDims3 = Min(From(BigSbands[BigSb]) + Dims(BigSbands[BigSb]) - F3, TDims3);
-            if (CopyDims3 > v3i(0)) {
+            if (CopyDims3 > v3i::Zero) {
               mg_Assert(F3 + CopyDims3 <= Dims(*BigVol));
               Copy(extent(CopyDims3), VolNxt, extent(F3, CopyDims3), BigVol);
-              char FileName[256];
-              sprintf(FileName, "B-sb-(%d)-tile-(%d-%d).txt", BigSb, Pos3Nxt.X, Pos3Nxt.Y);
-              DumpText(FileName, Begin<f64>(extent(F3, CopyDims3), *BigVol),
-                       End<f64>(extent(F3, CopyDims3), *BigVol), "%8.1e ");
+              //char FileName[256];
+              //sprintf(FileName, "B-sb-(%d)-tile-(%d-%d).txt", BigSb, Pos3Nxt.X, Pos3Nxt.Y);
+              //DumpText(FileName, Begin<f64>(extent(F3, CopyDims3), *BigVol),
+              //         End<f64>(extent(F3, CopyDims3), *BigVol), "%8.1e ");
             }
 #endif
             DeallocBuf(&VolNxt.Buffer);
@@ -229,7 +227,6 @@ ForwardCdf53Tile2D(int NLvls, const v3i& TDims3, const volume& Vol
   for (u32 I = 0; I < Prod<u32>(NTilesBig3); ++I) {
     // TODO: count the number of tiles processed and break if we are done
     u32 X = DecodeMorton2X(I), Y = DecodeMorton2Y(I);
-    printf("------------- %d %d %d\n", I, X, Y);
     v3i Pos3(X, Y, 0);
     if (!(Pos3 * TDims3 < M)) // tile outside the domain
       continue;
@@ -268,8 +265,6 @@ ForwardCdf53Tile(
 #endif
 )
 {
-  static int Counter = 0;
-  ++Counter;
   mg_Assert(IsEven(TDims3.X) && IsEven(TDims3.Y) && IsEven(TDims3.Z));
   int NLevels = Size(*Vols) - 1;
   mg_Assert(Size(Dims3s) == NLevels + 1);
@@ -281,99 +276,115 @@ ForwardCdf53Tile(
   v3i M(Min(TDims3, v3i(Dims3s[Lvl] - Pos3 * TDims3))); // dims of the current tile
   volume Vol = (*Vols)[Lvl][0][Row(NTiles3, Pos3)].Vol;
   mg_Assert(Vol.Buffer);
-  //if (Pos3.X + 1 < NTiles3.X)
-  //  FLiftCdf53X<f64>(grid(M), M, lift_option::PartialUpdateLast, &Vol);
-  //else if (M.X > 1)// last tile in X
-  //  FLiftCdf53X<f64>(grid(M), M, lift_option::Normal, &Vol);
-  M.X += IsEven(M.X);
-  //if (Pos3.Y + 1 < NTiles3.Y)
-  //  FLiftCdf53Y<f64>(grid(M), M, lift_option::PartialUpdateLast, &Vol);
-  //else if (M.Y > 1)// last tile in Y
-  //  FLiftCdf53Y<f64>(grid(M), M, lift_option::Normal, &Vol);
-  M.Y += IsEven(M.Y);
-  //if (Pos3.Z + 1 < NTiles3.Z)
-  //  FLiftCdf53Z<f64>(grid(M), M, lift_option::PartialUpdateLast, &Vol);
-  //else if (M.Z > 1)// last tile in Z
-  //  FLiftCdf53Z<f64>(grid(M), M, lift_option::Normal, &Vol);
-  M.Z += IsEven(M.Z);
-  /* end the recursion if this is the last level */
   int LvlNxt = Lvl + 1;
+  if (LvlNxt <= NLevels) {
+    M = M + IsEven(M);
+    if (M.X > 1) {
+      if (Pos3.X + 1 < NTiles3.X)
+        FLiftCdf53X<f64>(grid(M), M, lift_option::PartialUpdateLast, &Vol);
+      else if (M.X > 1)// last tile in X
+        FLiftCdf53X<f64>(grid(M), M, lift_option::Normal, &Vol);
+    }
+    if (M.Y > 1) {
+      if (Pos3.Y + 1 < NTiles3.Y)
+        FLiftCdf53Y<f64>(grid(M), M, lift_option::PartialUpdateLast, &Vol);
+      else if (M.Y > 1)// last tile in Y
+        FLiftCdf53Y<f64>(grid(M), M, lift_option::Normal, &Vol);
+    }
+    if (M.Z > 1) {
+      if (Pos3.Z + 1 < NTiles3.Z)
+        FLiftCdf53Z<f64>(grid(M), M, lift_option::PartialUpdateLast, &Vol);
+      else if (M.Z > 1)// last tile in Z
+        FLiftCdf53Z<f64>(grid(M), M, lift_option::Normal, &Vol);
+    }
+  }
+  /* end the recursion if this is the last level */
   if (LvlNxt > NLevels) { // last level, no need to add to the next level
 #if defined(mg_Cdf53TileDebug)
-    v3i MM = Pos3 * TDims3;
-    printf("copy1 (%d %d %d) (%d %d %d)\n", M.X, M.Y, M.Z, MM.X, MM.Y, MM.Z);
-    Copy(extent(M), Vol, extent(Pos3 * TDims3, M), BigVol);
+    v3i CopyM = Min(M, TDims3);
+    if (CopyM > v3i::Zero)
+      Copy(extent(CopyM), Vol, extent(Pos3 * TDims3, CopyM), BigVol);
 #endif
     DeallocBuf(&Vol.Buffer);
     (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
-    //printf("deleting %d %d (%d %d %d) (%d %d %d) %d\n", Lvl, 0,
-    //  NTiles3.X, NTiles3.Y, NTiles3.Z, Pos3.X, Pos3.Y, Pos3.Z, Row(NTiles3, Pos3));
     return;
   }
-  stack_linear_allocator<16 * sizeof(grid)> Alloc;
-  array<extent> Sbands(&Alloc); BuildSubbands(TDims3 + 1, 1, &Sbands);
-  array<grid> SbandsInPlc(&Alloc); BuildSubbandsInPlace(TDims3 + 1, 1, &SbandsInPlc);
+  v3i TDims3Ext = TDims3 + v3i(1);
+  stack_linear_allocator<NSbands * sizeof(grid)> Alloc;
+  array<grid> Sbands(&Alloc); BuildSubbandsInPlace(TDims3Ext, 1, &Sbands);
   /* spread the samples to the parent subbands */
   v3i Dims3Next = Dims3s[LvlNxt];
   v3i NTiles3Nxt = (Dims3Next + TDims3 - 1) / TDims3;
   for (int Sb = 0; Sb < NSbands; ++Sb) { // through subbands
-    v3i D = Pos3 - (Pos3 / 2) * 2; // either 0 or 1 in each dimension
-    D = D * 2 - 1; // map [0, 1] to [-1, 1]
-    extent DstG = Sbands[Sb];
-    grid SrcG = SbandsInPlc[Sb];
-    for (int Z = 0, Iz = 0; Iz < 2; Z += D.Z, ++Iz) { // through (next-level) neighbors
+    v3i D01 = Pos3 - (Pos3 / 2) * 2; // either 0 or 1 in each dimension
+    v3i D11 = D01 * 2 - 1; // map [0, 1] to [-1, 1]
+    grid SrcG = Sbands[Sb];
+    extent DstG(v3i::Zero, Dims(SrcG));
+    v3i L = SubbandToLevel3(Sb);
+    v3i Nb(0); // neighbor
+    for (int Iz = 0; Iz < 2; Nb.Z += D11.Z, ++Iz) { // through (next-level) neighbors
+      if (Nb.Z == 1 && L.Z == 1)
+        continue;
       grid SrcGZ = SrcG;
       extent DstGZ = DstG;
-      if (Z != 0)  {
-        SrcGZ = Slab(SrcGZ, dimension::Z, -Z);
-        DstGZ = Slab(DstGZ, dimension::Z,  Z);
-        if (Z == 1) Translate(DstGZ, dimension::Z, TDims3.Z / 2);
+      if (Nb.Z != 0)  {
+        if (Nb.Z == -1)
+          DstGZ = Translate(DstGZ, dimension::Z, TDims3.Z);
+        SrcGZ = Slab(SrcGZ, dimension::Z, -Nb.Z);
+        DstGZ = Slab(DstGZ, dimension::Z,  1);
+      } else if (D01.Z == 1) {
+        DstGZ = Translate(DstGZ, dimension::Z, TDims3.Z / 2);
       }
-      for (int Y = 0, Iy = 0; Iy < 2; Y += D.Y, ++Iy) {
+      Nb.Y = 0;
+      for (int Iy = 0; Iy < 2; Nb.Y += D11.Y, ++Iy) {
+        if (Nb.Y == 1 && L.Y == 1)
+          continue;
         grid SrcGY = SrcGZ;
         extent DstGY = DstGZ;
-        if (Y != 0) {
-          SrcGY = Slab(SrcGY, dimension::Y, -Y);
-          DstGY = Slab(DstGY, dimension::Y,  Y);
-          if (Y == 1) Translate(DstGY, dimension::Y, TDims3.Y / 2);
+        if (Nb.Y != 0) {
+          if (Nb.Y == -1)
+            DstGY = Translate(DstGY, dimension::Y, TDims3.Y);
+          SrcGY = Slab(SrcGY, dimension::Y, -Nb.Y);
+          DstGY = Slab(DstGY, dimension::Y,  1);
+        } else if (D01.Y == 1) {
+          DstGY = Translate(DstGY, dimension::Y, TDims3.Y / 2);
         }
-        for (int X = 0, Ix = 0; Ix < 2; X += D.X, ++Ix) {
+        Nb.X = 0;
+        for (int Ix = 0; Ix < 2; Nb.X += D11.X, ++Ix) {
+          v3i Pos3Nxt = Pos3 / 2 + Nb;
+          if (Nb.X == 1 && L.X == 1)
+            continue;
           grid SrcGX = SrcGY;
           extent DstGX = DstGY;
-          if (X != 0) {
-            SrcGX = Slab(SrcGX, dimension::X, -X);
-            DstGX = Slab(DstGX, dimension::X,  X);
-            if (X == 1) Translate(DstGX, dimension::X, TDims3.X / 2);
+          if (Nb.X != 0) {
+            if (Nb.X == -1)
+              DstGX = Translate(DstGX, dimension::X, TDims3.X);
+            SrcGX = Slab(SrcGX, dimension::X, -Nb.X);
+            DstGX = Slab(DstGX, dimension::X,  1);
+          } else if (D01.X == 1) {
+            DstGX = Translate(DstGX, dimension::X, TDims3.X / 2);
           }
           /* locate the finer tile */
-          v3i Pos3Nxt = Pos3 / 2 + v3i(X, Y, Z);
           if (!(Pos3Nxt >= v3i::Zero && Pos3Nxt < NTiles3Nxt))
             continue; // tile outside the domain
           tile_buf& TileNxt = (*Vols)[LvlNxt][Sb][Row(NTiles3Nxt, Pos3Nxt)];
-          //printf("accessing %d %d (%d %d %d) (%d %d %d) %d\n", LvlNxt, Sb,
-          //       NTiles3Nxt.X, NTiles3Nxt.Y, NTiles3Nxt.Z,
-          //       Pos3Nxt.X, Pos3Nxt.Y, Pos3Nxt.Z, Row(NTiles3Nxt, Pos3Nxt));
           volume& VolNxt = TileNxt.Vol;
           /* add contribution to the finer tile, allocating its memory if needed */
           if (TileNxt.MDeps == 0) {
             mg_Assert(TileNxt.NDeps == 0);
             mg_Assert(!VolNxt.Buffer);
-            buffer Buf; AllocBuf0(&Buf, sizeof(f64) * Prod(TDims3 + 1));
-            VolNxt = volume(Buf, TDims3 + 1, dtype::float64);
-            //printf("allocating %d %d (%d %d %d) (%d %d %d) %d\n", LvlNxt, Sb,
-            //       NTiles3Nxt.X, NTiles3Nxt.Y, NTiles3Nxt.Z,
-            //       Pos3Nxt.X, Pos3Nxt.Y, Pos3Nxt.Z, Row(NTiles3Nxt, Pos3Nxt));
+            buffer Buf; AllocBuf0(&Buf, sizeof(f64) * Prod(TDims3Ext));
+            VolNxt = volume(Buf, TDims3Ext, dtype::float64);
             /* compute the number of dependencies for the finer tile if necessary */
             v3i MDeps3(4, 4, 4); // by default each tile depends on 64 finer tiles
             for (int I = 0; I < 3; ++I) {
-              MDeps3[I] -= Pos3Nxt[I] == 0;
+              MDeps3[I] -= (Pos3Nxt[I] == 0) || (L[I] == 1);
               MDeps3[I] -= Pos3Nxt[I] == NTiles3Nxt[I] - 1;
-              // TODO: check this
               MDeps3[I] -= Dims3Next[I] - Pos3Nxt[I] * TDims3[I] <= TDims3[I] / 2;
             }
             TileNxt.MDeps = Prod(MDeps3);
           }
-          Add(SrcG, Vol, DstG, &VolNxt);
+          Add(SrcGX, Vol, DstGX, &VolNxt);
           ++TileNxt.NDeps;
           /* if the finer tile receives from all its dependencies, recurse */
           if (TileNxt.MDeps == TileNxt.NDeps) {
@@ -390,10 +401,10 @@ ForwardCdf53Tile(
               F3 = F3 + Pos3Nxt * TDims3;
               // NOTE: for subbands other than 0, F3 can be outside of the big volume
               mg_Assert(VolNxt.Buffer);
-              if (F3 < Dims(*BigVol)) {
-                mg_Assert(F3 + M <= Dims(*BigVol));
-                printf("copy2 (%d %d %d) (%d %d %d)\n", M.X, M.Y, M.Z, F3.X, F3.Y, F3.Z);
-                Copy(extent(M), VolNxt, extent(F3, M), BigVol);
+              v3i CopyDims3 = Min(From(BigSbands[BigSb]) + Dims(BigSbands[BigSb]) - F3, TDims3);
+              if (CopyDims3 > v3i::Zero) {
+                mg_Assert(F3 + CopyDims3 <= Dims(*BigVol));
+                Copy(extent(CopyDims3), VolNxt, extent(F3, CopyDims3), BigVol);
               }
 #endif
               DeallocBuf(&VolNxt.Buffer);
@@ -439,17 +450,18 @@ ForwardCdf53Tile(int NLvls, const v3i& TDims3, const volume& Vol
   M = Dims(Vol);
   v3i NTiles3 = (M + IsEven(M) + TDims3 - 1) / TDims3;
   v3i NTilesBig3 = (N + TDims3 - 1) / TDims3;
+  v3i TDims3Ext = TDims3 + v3i(1);
   array<extent> BigSbands; BuildSubbands(M, NLvls, &BigSbands);
   for (u32 I = 0; I < Prod<u32>(NTilesBig3); ++I) {
     u32 X = DecodeMorton3X(I), Y = DecodeMorton3Y(I), Z = DecodeMorton3Z(I);
     v3i Pos3(X, Y, Z);
-    if (!(Pos3 < M)) // tile outside the domain
+    if (!(Pos3 * TDims3 < M)) // tile outside the domain
       continue;
     i64 Idx = Row(NTiles3, Pos3);
-    buffer Buf; AllocBuf0(&Buf, Prod(TDims3 + 1) * sizeof(f64));
+    buffer Buf; AllocBuf0(&Buf, Prod(TDims3Ext) * sizeof(f64));
     volume& TileVol = Vols[0][0][Idx].Vol;
-    TileVol = volume(Buf, TDims3 + 1, dtype::float64);
-    extent E(Pos3 * TDims3, TDims3 + 1);
+    TileVol = volume(Buf, TDims3Ext, dtype::float64);
+    extent E(Pos3 * TDims3, TDims3Ext);
     v3i From3 = From(E);
     v3i Dims3 = Min(Dims(E), M - From3);
     SetDims(E, Dims3);
@@ -641,13 +653,12 @@ BuildSubbandsInPlace(const v3i& N, int NLevels, array<grid>* Subbands) {
 }
 
 int
-LevelToSubband(const v3i& Level) {
-  if (Level.X + Level.Y + Level.Z == 0)
+LevelToSubband(const v3i& Lvl3) {
+  if (Lvl3.X + Lvl3.Y + Lvl3.Z == 0)
     return 0;
-  static constexpr i8 Table[] = { 0, 1, 2, 4, 3, 5, 6, 7 };
-  int Lvl = Max(Max(Level.X, Level.Y), Level.Z);
+  int Lvl = Max(Max(Lvl3.X, Lvl3.Y), Lvl3.Z);
   return 7 * (Lvl - 1) +
-         Table[4 * (Level.X == Lvl) + 2 * (Level.Y == Lvl) + 1 * (Level.Z == Lvl)];
+    SubbandOrders[3][4 * (Lvl3.X == Lvl) + 2 * (Lvl3.Y == Lvl) + 1 * (Lvl3.Z == Lvl)];
 }
 
 void
@@ -686,6 +697,7 @@ SubbandToLevel3(int S) {
   /* subtract all subbands on previous levels (except the subband 0);
   basically it reduces the case to the 2x2x2 case where subband 0 is in corner */
   S -= 7 * (Lvl - 1);
+  S = SubbandOrders[3][S]; // basically swap 4 and 3
   /* bit 0 -> z axis offset; bit 1 -> y axis offset; bit 2 -> x axis offset
   we subtract from Lvl as it corresponds to the +x, +y, +z corner */
   return v3i(Lvl - !BitSet(S, 2), Lvl - !BitSet(S, 1), Lvl - !BitSet(S, 0));

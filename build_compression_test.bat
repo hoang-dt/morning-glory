@@ -1,1 +1,0 @@
-call build.bat %1 app_compression_test

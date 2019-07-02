@@ -34,7 +34,7 @@ mg_T(t) void ILiftExtCdf53Z(t* F, const v3i& N, const v3i& NBig, const v3i& L);
 
 #define mg_Cdf53TileDebug
 
-void ForwardCdf53Tile(int NLvls, const v3i& TDims3, volume* Vol
+void ForwardCdf53Tile(int NLvls, const v3i& TDims3, const volume& Vol
 #if defined(mg_Cdf53TileDebug)
   , volume* OutVol
 #endif
