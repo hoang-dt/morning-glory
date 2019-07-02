@@ -81,6 +81,7 @@ struct free_list_allocator : public allocator {
   allocator* Parent = nullptr;
   free_list_allocator();
   free_list_allocator(i64 MinBytesIn, i64 MaxBytesIn, allocator* ParentIn = nullptr);
+  free_list_allocator(i64 Bytes, allocator* ParentIn = nullptr);
   bool Alloc(buffer* Buf, i64 Bytes) override;
   void Dealloc(buffer* Buf) override;
   void DeallocAll() override;

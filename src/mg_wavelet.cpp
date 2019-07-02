@@ -5,11 +5,25 @@
 #include "mg_common.h"
 #include "mg_data_types.h"
 #include "mg_math.h"
+#include "mg_memory.h"
 #include "mg_wavelet.h"
 #include "mg_logger.h"
 #include "robin_hood.h"
 
 namespace mg {
+
+// NOTE: when called with a different parameter, the old instance will be
+// invalidated
+static inline free_list_allocator& FreeListAllocator(i64 Bytes) {
+  static int LastBytes = Bytes;
+  static free_list_allocator Instance(Bytes, &Mallocator());
+  if (LastBytes != Bytes) {
+    LastBytes = Bytes;
+    Instance.DeallocAll();
+    Instance = free_list_allocator(Bytes, &Mallocator());
+  }
+  return Instance;
+}
 
 // TODO: this won't work for a general (sub)volume
 void
@@ -250,8 +264,6 @@ ForwardCdf53Tile2D(int NLvls, const v3i& TDims3, const volume& Vol
 }
 
 // TODO: replace f64 with a template parameter
-// TODO: check if things work when we have only one sample in the block in either X, Y, Z
-// TODO: check the computation of Dims3s
 void
 ForwardCdf53Tile(
   const v3i& TDims3, // dimensions of a tile (e.g. 32 x 32 x 32)
@@ -373,7 +385,8 @@ ForwardCdf53Tile(
           if (TileNxt.MDeps == 0) {
             mg_Assert(TileNxt.NDeps == 0);
             mg_Assert(!VolNxt.Buffer);
-            buffer Buf; AllocBuf0(&Buf, sizeof(f64) * Prod(TDims3Ext));
+            i64 TileSize = sizeof(f64) * Prod(TDims3Ext);
+            buffer Buf; AllocBuf0(&Buf, TileSize, &FreeListAllocator(TileSize));
             VolNxt = volume(Buf, TDims3Ext, dtype::float64);
             /* compute the number of dependencies for the finer tile if necessary */
             v3i MDeps3(4, 4, 4); // by default each tile depends on 64 finer tiles
@@ -458,7 +471,8 @@ ForwardCdf53Tile(int NLvls, const v3i& TDims3, const volume& Vol
     if (!(Pos3 * TDims3 < M)) // tile outside the domain
       continue;
     i64 Idx = Row(NTiles3, Pos3);
-    buffer Buf; AllocBuf0(&Buf, Prod(TDims3Ext) * sizeof(f64));
+    i64 TileSize = sizeof(f64) * Prod(TDims3Ext);
+    buffer Buf; AllocBuf0(&Buf, TileSize);
     volume& TileVol = Vols[0][0][Idx].Vol;
     TileVol = volume(Buf, TDims3Ext, dtype::float64);
     extent E(Pos3 * TDims3, TDims3Ext);

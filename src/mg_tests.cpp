@@ -1,4 +1,6 @@
+#ifndef mg_Slow
 #define mg_Slow
+#endif
 
 #include "mg_all.cpp"
 #include "mg_signal_processing_test.cpp"

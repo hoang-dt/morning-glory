@@ -119,6 +119,10 @@ free_list_allocator(i64 MinBytesIn, i64 MaxBytesIn, allocator* ParentIn)
   , MaxBytes(MaxBytesIn)
   , Parent(ParentIn) {}
 
+free_list_allocator::
+free_list_allocator(i64 Bytes, allocator* ParentIn)
+  : free_list_allocator(Bytes, Bytes, ParentIn) {}
+
 bool free_list_allocator::
 Alloc(buffer* Buf, i64 Bytes) {
   if (MinBytes <= Bytes && Bytes <= MaxBytes && Head) {
@@ -128,20 +132,22 @@ Alloc(buffer* Buf, i64 Bytes) {
     Head = Head->Next;
     return true;
   }
-  return Parent->Alloc(Buf, Bytes);
+  bool Result = Parent->Alloc(Buf, MaxBytes);
+  Buf->Bytes = Bytes;
+  Buf->Alloc = this;
+  return Result;
 }
 
 void free_list_allocator::
 Dealloc(buffer* Buf) {
-  if (MinBytes <= Buf->Bytes && Buf->Bytes <= MaxBytes && Head) {
-    Buf->Data = nullptr;
+  if (MinBytes <= Buf->Bytes && Buf->Bytes <= MaxBytes) {
     Buf->Bytes = 0;
-    Buf->Alloc = nullptr;
+    Buf->Alloc = this;
     node* P = (node*)(Buf->Data);
     P->Next = Head;
     Head = P;
   } else {
-    return Parent->Dealloc(Buf);
+    Parent->Dealloc(Buf);
   }
 }
 

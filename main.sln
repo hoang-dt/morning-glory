@@ -86,6 +86,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		src\mg_string.h = src\mg_string.h
 		src\mg_string.inl = src\mg_string.inl
 		src\mg_test.h = src\mg_test.h
+		src\mg_tests.cpp = src\mg_tests.cpp
 		src\mg_timer.h = src\mg_timer.h
 		src\mg_timer.inl = src\mg_timer.inl
 		src\mg_utils.cpp = src\mg_utils.cpp
