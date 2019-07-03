@@ -44,9 +44,9 @@ set COMMON_LIB_PATHS= -libpath:"%VSBasePath%\lib\x64" ^
 set COMMON_LIBS= kernel32.lib User32.lib ^
   legacy_stdio_definitions.lib oldnames.lib legacy_stdio_wide_specifiers.lib ^
   libomp.lib dbghelp.lib
-if %1==Release (set LDLIBS= libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib)
-if %1==FastDebug (set LDLIBS= libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib)
-if %1==Debug (set LDLIBS= libucrtd.lib libvcruntimed.lib libcmtd.lib libcpmtd.lib)
+if %1==Release (set LDLIBS= libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib libconcrt.lib)
+if %1==FastDebug (set LDLIBS= libucrt.lib libvcruntime.lib libcmt.lib libcpmt.lib libconcrt.lib)
+if %1==Debug (set LDLIBS= libucrtd.lib libvcruntimed.lib libcmtd.lib libcpmtd.lib libconcrtd.lib)
 
 :: Compiling
 @echo on

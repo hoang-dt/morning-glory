@@ -8,9 +8,22 @@
 #include "mg_memory.h"
 #include "mg_wavelet.h"
 #include "mg_logger.h"
-#include "robin_hood.h"
+#include <robinhood/robin_hood.h>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#include <stlab/concurrency/default_executor.hpp>
+#include <stlab/concurrency/immediate_executor.hpp>
+#include <stlab/concurrency/future.hpp>
+#pragma clang diagnostic pop
+#include <condition_variable>
+#include <mutex>
 
 namespace mg {
+
+static i64 Counter;
+static std::mutex Mutex;
+static std::mutex MemMutex;
+static std::condition_variable Cond;
 
 // NOTE: when called with a different parameter, the old instance will be
 // invalidated
@@ -74,7 +87,11 @@ ForwardCdf53Tile2D(
   v3i NTiles3 = (Dims3s[Lvl] + TDims3 - 1) / TDims3;
   mg_Assert(Pos3 < NTiles3);
   v3i M(Min(TDims3, v3i(Dims3s[Lvl] - Pos3 * TDims3))); // dims of the current tile
-  volume Vol = (*Vols)[Lvl][0][Row(NTiles3, Pos3)].Vol;
+  volume Vol;
+  {
+    std::unique_lock<std::mutex> Lock(MemMutex);
+    Vol = (*Vols)[Lvl][0][Row(NTiles3, Pos3)].Vol;
+  }
   mg_Assert(Vol.Buffer);
   int LvlNxt = Lvl + 1;
   if (LvlNxt <= NLevels) {
@@ -98,12 +115,12 @@ ForwardCdf53Tile2D(
     v3i CopyM = Min(M, TDims3);
     if (CopyM > v3i::Zero)
       Copy(extent(CopyM), Vol, extent(Pos3 * TDims3, CopyM), BigVol);
-    //char FileName[256];
-    //sprintf(FileName, "B-sb-(0)-tile-(%d-%d).txt", Pos3.X, Pos3.Y);
-    //DumpText(FileName, Begin<f64>(extent(CopyM), Vol), End<f64>(extent(CopyM), Vol), "%8.1e ");
 #endif
-    DeallocBuf(&Vol.Buffer);
-    (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
+    {
+      std::unique_lock<std::mutex> Lock(MemMutex);
+      DeallocBuf(&Vol.Buffer);
+      (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
+    }
     return;
   }
   v3i TDims3Ext = TDims3 + v3i(1, 1, 0);
@@ -150,29 +167,36 @@ ForwardCdf53Tile2D(
         /* locate the finer tile */
         if (!(Pos3Nxt >= v3i::Zero && Pos3Nxt < NTiles3Nxt))
           continue; // tile outside the domain
-        tile_buf& TileNxt = (*Vols)[LvlNxt][Sb][Row(NTiles3Nxt, Pos3Nxt)];
-        volume& VolNxt = TileNxt.Vol;
-        /* add contribution to the finer tile, allocating its memory if needed */
-        if (TileNxt.MDeps == 0) {
-          mg_Assert(TileNxt.NDeps == 0);
-          mg_Assert(!VolNxt.Buffer);
-          buffer Buf; AllocBuf0(&Buf, sizeof(f64) * Prod(TDims3Ext));
-          VolNxt = volume(Buf, TDims3Ext, dtype::float64);
-          /* compute the number of dependencies for the finer tile if necessary */
-          v3i MDeps3(4, 4, 1); // by default each tile depends on 16 finer tiles
-          for (int I = 0; I < 2; ++I) {
-            MDeps3[I] -= (Pos3Nxt[I] == 0) || (L[I] == 1);
-            MDeps3[I] -= Pos3Nxt[I] == NTiles3Nxt[I] - 1;
-            MDeps3[I] -= Dims3Next[I] - Pos3Nxt[I] * TDims3[I] <= TDims3[I] / 2;
+        tile_buf* TileNxt = nullptr;
+        volume* VolNxt = nullptr;
+        {
+          std::unique_lock<std::mutex> Lock(MemMutex);
+          TileNxt = &(*Vols)[LvlNxt][Sb][Row(NTiles3Nxt, Pos3Nxt)];
+          VolNxt = &TileNxt->Vol;
+          /* add contribution to the finer tile, allocating its memory if needed */
+          if (TileNxt->MDeps == 0) {
+            mg_Assert(TileNxt->NDeps == 0);
+            mg_Assert(!VolNxt->Buffer);
+            buffer Buf; AllocBuf0(&Buf, sizeof(f64) * Prod(TDims3Ext));
+            *VolNxt = volume(Buf, TDims3Ext, dtype::float64);
+            /* compute the number of dependencies for the finer tile if necessary */
+            v3i MDeps3(4, 4, 1); // by default each tile depends on 16 finer tiles
+            for (int I = 0; I < 2; ++I) {
+              MDeps3[I] -= (Pos3Nxt[I] == 0) || (L[I] == 1);
+              MDeps3[I] -= Pos3Nxt[I] == NTiles3Nxt[I] - 1;
+              MDeps3[I] -= Dims3Next[I] - Pos3Nxt[I] * TDims3[I] <= TDims3[I] / 2;
+            }
+            TileNxt->MDeps = Prod(MDeps3);
           }
-          TileNxt.MDeps = Prod(MDeps3);
+          // TODO: the following line does not have to be in the same lock
+          Add(SrcGX, Vol, DstGX, VolNxt);
+          ++TileNxt->NDeps;
         }
-        Add(SrcGX, Vol, DstGX, &VolNxt);
-        ++TileNxt.NDeps;
         /* if the finer tile receives from all its dependencies, recurse */
-        if (TileNxt.MDeps == TileNxt.NDeps) {
+        if (TileNxt->MDeps == TileNxt->NDeps) {
           if (Sb == 0) { // recurse
 #if defined(mg_Cdf53TileDebug)
+            // TODO: spawn a task here
             ForwardCdf53Tile2D(TDims3, LvlNxt, Pos3Nxt, Dims3s, Vols, BigVol, BigSbands);
 #else
             ForwardCdf53Tile(TDims3, LvlNxt, Pos3Nxt, Dims3s, Vols);
@@ -183,26 +207,28 @@ ForwardCdf53Tile2D(
             v3i F3 = From(BigSbands[BigSb]);
             F3 = F3 + Pos3Nxt * TDims3;
             // NOTE: for subbands other than 0, F3 can be outside of the big volume
-            mg_Assert(VolNxt.Buffer);
+            mg_Assert(VolNxt->Buffer);
             v3i CopyDims3 = Min(From(BigSbands[BigSb]) + Dims(BigSbands[BigSb]) - F3, TDims3);
             if (CopyDims3 > v3i::Zero) {
               mg_Assert(F3 + CopyDims3 <= Dims(*BigVol));
-              Copy(extent(CopyDims3), VolNxt, extent(F3, CopyDims3), BigVol);
-              //char FileName[256];
-              //sprintf(FileName, "B-sb-(%d)-tile-(%d-%d).txt", BigSb, Pos3Nxt.X, Pos3Nxt.Y);
-              //DumpText(FileName, Begin<f64>(extent(F3, CopyDims3), *BigVol),
-              //         End<f64>(extent(F3, CopyDims3), *BigVol), "%8.1e ");
+              Copy(extent(CopyDims3), *VolNxt, extent(F3, CopyDims3), BigVol);
             }
 #endif
-            DeallocBuf(&VolNxt.Buffer);
-            (*Vols)[LvlNxt][Sb].erase(Row(NTiles3Nxt, Pos3Nxt));
+            {
+              std::unique_lock<std::mutex> Lock(MemMutex);
+              DeallocBuf(&VolNxt->Buffer);
+              (*Vols)[LvlNxt][Sb].erase(Row(NTiles3Nxt, Pos3Nxt));
+            }
           }
         }
       } // end X loop
     } // end Y loop
   } // end subband loop
-  DeallocBuf(&Vol.Buffer);
-  (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
+  {
+    std::unique_lock<std::mutex> Lock(MemMutex);
+    DeallocBuf(&Vol.Buffer);
+    (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
+  }
 }
 
 void
@@ -286,7 +312,11 @@ ForwardCdf53Tile(
   v3i NTiles3 = (Dims3s[Lvl] + TDims3 - 1) / TDims3;
   mg_Assert(Pos3 < NTiles3);
   v3i M(Min(TDims3, v3i(Dims3s[Lvl] - Pos3 * TDims3))); // dims of the current tile
-  volume Vol = (*Vols)[Lvl][0][Row(NTiles3, Pos3)].Vol;
+  volume Vol;
+  {
+    std::unique_lock<std::mutex> Lock(MemMutex);
+    Vol = (*Vols)[Lvl][0][Row(NTiles3, Pos3)].Vol;
+  }
   mg_Assert(Vol.Buffer);
   int LvlNxt = Lvl + 1;
   if (LvlNxt <= NLevels) {
@@ -317,8 +347,11 @@ ForwardCdf53Tile(
     if (CopyM > v3i::Zero)
       Copy(extent(CopyM), Vol, extent(Pos3 * TDims3, CopyM), BigVol);
 #endif
-    DeallocBuf(&Vol.Buffer);
-    (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
+    {
+      std::unique_lock<std::mutex> Lock(MemMutex);
+      DeallocBuf(&Vol.Buffer);
+      (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
+    }
     return;
   }
   v3i TDims3Ext = TDims3 + v3i(1);
@@ -379,30 +412,37 @@ ForwardCdf53Tile(
           /* locate the finer tile */
           if (!(Pos3Nxt >= v3i::Zero && Pos3Nxt < NTiles3Nxt))
             continue; // tile outside the domain
-          tile_buf& TileNxt = (*Vols)[LvlNxt][Sb][Row(NTiles3Nxt, Pos3Nxt)];
-          volume& VolNxt = TileNxt.Vol;
-          /* add contribution to the finer tile, allocating its memory if needed */
-          if (TileNxt.MDeps == 0) {
-            mg_Assert(TileNxt.NDeps == 0);
-            mg_Assert(!VolNxt.Buffer);
-            i64 TileSize = sizeof(f64) * Prod(TDims3Ext);
-            buffer Buf; AllocBuf0(&Buf, TileSize, &FreeListAllocator(TileSize));
-            VolNxt = volume(Buf, TDims3Ext, dtype::float64);
-            /* compute the number of dependencies for the finer tile if necessary */
-            v3i MDeps3(4, 4, 4); // by default each tile depends on 64 finer tiles
-            for (int I = 0; I < 3; ++I) {
-              MDeps3[I] -= (Pos3Nxt[I] == 0) || (L[I] == 1);
-              MDeps3[I] -= Pos3Nxt[I] == NTiles3Nxt[I] - 1;
-              MDeps3[I] -= Dims3Next[I] - Pos3Nxt[I] * TDims3[I] <= TDims3[I] / 2;
+          tile_buf* TileNxt = nullptr;
+          volume* VolNxt = nullptr;
+          {
+            std::unique_lock<std::mutex> Lock(MemMutex);
+            TileNxt = &(*Vols)[LvlNxt][Sb][Row(NTiles3Nxt, Pos3Nxt)];
+            VolNxt = &TileNxt->Vol;
+            /* add contribution to the finer tile, allocating its memory if needed */
+            if (TileNxt->MDeps == 0) {
+              mg_Assert(TileNxt->NDeps == 0);
+              mg_Assert(!VolNxt->Buffer);
+              i64 TileSize = sizeof(f64) * Prod(TDims3Ext);
+              buffer Buf; AllocBuf0(&Buf, TileSize, &FreeListAllocator(TileSize));
+              *VolNxt = volume(Buf, TDims3Ext, dtype::float64);
+              /* compute the number of dependencies for the finer tile if necessary */
+              v3i MDeps3(4, 4, 4); // by default each tile depends on 64 finer tiles
+              for (int I = 0; I < 3; ++I) {
+                MDeps3[I] -= (Pos3Nxt[I] == 0) || (L[I] == 1);
+                MDeps3[I] -= Pos3Nxt[I] == NTiles3Nxt[I] - 1;
+                MDeps3[I] -= Dims3Next[I] - Pos3Nxt[I] * TDims3[I] <= TDims3[I] / 2;
+              }
+              TileNxt->MDeps = Prod(MDeps3);
             }
-            TileNxt.MDeps = Prod(MDeps3);
+            // TODO: the following line does not have to be in the same lock
+            Add(SrcGX, Vol, DstGX, VolNxt);
+            ++TileNxt->NDeps;
           }
-          Add(SrcGX, Vol, DstGX, &VolNxt);
-          ++TileNxt.NDeps;
           /* if the finer tile receives from all its dependencies, recurse */
-          if (TileNxt.MDeps == TileNxt.NDeps) {
+          if (TileNxt->MDeps == TileNxt->NDeps) {
             if (Sb == 0) { // recurse
 #if defined(mg_Cdf53TileDebug)
+              // TODO: spawn a task here
               ForwardCdf53Tile(TDims3, LvlNxt, Pos3Nxt, Dims3s, Vols, BigVol, BigSbands);
 #else
               ForwardCdf53Tile(TDims3, LvlNxt, Pos3Nxt, Dims3s, Vols);
@@ -413,23 +453,29 @@ ForwardCdf53Tile(
               v3i F3 = From(BigSbands[BigSb]);
               F3 = F3 + Pos3Nxt * TDims3;
               // NOTE: for subbands other than 0, F3 can be outside of the big volume
-              mg_Assert(VolNxt.Buffer);
+              mg_Assert(VolNxt->Buffer);
               v3i CopyDims3 = Min(From(BigSbands[BigSb]) + Dims(BigSbands[BigSb]) - F3, TDims3);
               if (CopyDims3 > v3i::Zero) {
                 mg_Assert(F3 + CopyDims3 <= Dims(*BigVol));
-                Copy(extent(CopyDims3), VolNxt, extent(F3, CopyDims3), BigVol);
+                Copy(extent(CopyDims3), *VolNxt, extent(F3, CopyDims3), BigVol);
               }
 #endif
-              DeallocBuf(&VolNxt.Buffer);
-              (*Vols)[LvlNxt][Sb].erase(Row(NTiles3Nxt, Pos3Nxt));
+              {
+                std::unique_lock<std::mutex> Lock(MemMutex);
+                DeallocBuf(&VolNxt->Buffer);
+                (*Vols)[LvlNxt][Sb].erase(Row(NTiles3Nxt, Pos3Nxt));
+              }
             }
           }
         } // end X loop
       } // end Y loop
     } // end neighbor loop
   } // end subband loop
-  DeallocBuf(&Vol.Buffer);
-  (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
+  {
+    std::unique_lock<std::mutex> Lock(MemMutex);
+    DeallocBuf(&Vol.Buffer);
+    (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
+  }
 }
 
 // TODO: replace f64 with a generic type
@@ -465,9 +511,9 @@ ForwardCdf53Tile(int NLvls, const v3i& TDims3, const volume& Vol
   v3i NTilesBig3 = (N + TDims3 - 1) / TDims3;
   v3i TDims3Ext = TDims3 + v3i(1);
   array<extent> BigSbands; BuildSubbands(M, NLvls, &BigSbands);
+  // TODO: use 64-bit morton code
   for (u32 I = 0; I < Prod<u32>(NTilesBig3); ++I) {
-    u32 X = DecodeMorton3X(I), Y = DecodeMorton3Y(I), Z = DecodeMorton3Z(I);
-    v3i Pos3(X, Y, Z);
+    v3i Pos3(DecodeMorton3X(I), DecodeMorton3Y(I), DecodeMorton3Z(I));
     if (!(Pos3 * TDims3 < M)) // tile outside the domain
       continue;
     i64 Idx = Row(NTiles3, Pos3);
@@ -482,12 +528,27 @@ ForwardCdf53Tile(int NLvls, const v3i& TDims3, const volume& Vol
     if (!(From3 < M)) // tile outside domain
       continue;
     Copy(E, Vol, extent(v3i::Zero, Dims(E)), &TileVol);
-    ForwardCdf53Tile(TDims3, 0, Pos3, Dims3s, &Vols
+    {
+      std::unique_lock<std::mutex> Lock(Mutex);
+      ++Counter;
+    }
+    auto Fut = stlab::async(stlab::default_executor, [&, Pos3, Dims3s, TDims3]() {
+      ForwardCdf53Tile(TDims3, 0, Pos3, Dims3s, &Vols
 #if defined(mg_Cdf53TileDebug)
       , OutVol, BigSbands
 #endif
-    );
+      );
+      {
+        std::unique_lock<std::mutex> Lock(Mutex);
+        --Counter;
+      }
+      if (Counter == 0)
+        Cond.notify_all();
+    });
+    Fut.detach();
   }
+  std::unique_lock<std::mutex> Lock(Mutex);
+  Cond.wait(Lock, []{ return Counter == 0; });
 }
 
 void

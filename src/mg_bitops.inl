@@ -61,23 +61,24 @@ Msb(u64 V) {
 }
 #endif
 
-#if defined(__BMI2__)
-#if defined(__clang__) || defined(__GNUC__)
-#include <intrin.h>
-#include <mmintrin.h>
-#include <x86intrin.h>
-mg_Inline i8
-LzCnt(u32 V) { return (i8)_lzcnt_u32(V); }
-mg_Inline i8
-LzCnt(u64 V) { return (i8)_lzcnt_u64(V); }
-#elif defined(_MSC_VER)
-#include <intrin.h>
-mg_Inline i8
-LzCnt(u32 V) { return (i8)__lzcnt(V); }
-mg_Inline i8
-LzCnt(u64 V) { return (i8)__lzcnt64(V); }
-#endif
-#endif
+// TODO: the following clashes with stlab which brings in MSVC's intrin.h
+//#if defined(__BMI2__)
+//#if defined(__clang__) || defined(__GNUC__)
+//#include <intrin.h>
+//#include <mmintrin.h>
+//#include <x86intrin.h>
+//mg_Inline i8
+//LzCnt(u32 V) { return (i8)_lzcnt_u32(V); }
+//mg_Inline i8
+//LzCnt(u64 V) { return (i8)_lzcnt_u64(V); }
+//#elif defined(_MSC_VER)
+//#include <intrin.h>
+//mg_Inline i8
+//LzCnt(u32 V) { return (i8)__lzcnt(V); }
+//mg_Inline i8
+//LzCnt(u64 V) { return (i8)__lzcnt64(V); }
+//#endif
+//#endif
 
 /* Reverse the operation that inserts two 0 bits after every bit of x */
 mg_Inline u32

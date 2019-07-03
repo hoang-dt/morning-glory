@@ -22,9 +22,6 @@
 //#include <roaring/roaring.hh>
 //#include <roaring/roaring.c>
 #include <chrono>
-#include <iostream>
-#include <algorithm>
-#include <vector>
 
 using namespace mg;
 namespace chrono = std::chrono;
