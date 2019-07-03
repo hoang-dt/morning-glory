@@ -8,6 +8,7 @@
 #include "mg_memory.h"
 #include "mg_wavelet.h"
 #include "mg_logger.h"
+#include "mg_scopeguard.h"
 #include <robinhood/robin_hood.h>
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
@@ -244,15 +245,22 @@ ForwardCdf53Tile2D(int NLvls, const v3i& TDims3, const volume& Vol
     N = N * 2;
   N.Z = 1;
   /* loop through the tiles in Z (morton) order */
-  array<v3i> Dims3s;
-  Init(&Dims3s, NLvls + 1);
+  array<v3i> Dims3s; Init(&Dims3s, NLvls + 1);
+  mg_CleanUp(0, Dealloc(&Dims3s); )
   for (int I = 0; I < Size(Dims3s); ++I) {
     M = M + IsEven(M);
     Dims3s[I] = M;
     M = (M + 1) / 2;
   }
-  array<array<tile_map>> Vols;
-  Init(&Vols, NLvls + 1);
+  array<array<tile_map>> Vols; Init(&Vols, NLvls + 1);
+  mg_CleanUp(1,
+    for (int I = 0; I < Size(Vols); ++I) {
+      for (int J = 0; J < Size(Vols[I]); ++J)
+        Vols[I][J].~tile_map();
+      Dealloc(&Vols[I]);
+    }
+    Dealloc(&Vols);
+  );
   for (int I = 0; I < Size(Vols); ++I) {
     Vols[I] = array<tile_map>();
     Init(&Vols[I], 4);
@@ -264,6 +272,7 @@ ForwardCdf53Tile2D(int NLvls, const v3i& TDims3, const volume& Vol
   v3i NTilesBig3 = (N + TDims3 - 1) / TDims3;
   v3i TDims3Ext = TDims3 + v3i(1, 1, 0);
   array<extent> BigSbands; BuildSubbands(M, NLvls, &BigSbands);
+  mg_CleanUp(2, Dealloc(&BigSbands))
   for (u32 I = 0; I < Prod<u32>(NTilesBig3); ++I) {
     // TODO: count the number of tiles processed and break if we are done
     u32 X = DecodeMorton2X(I), Y = DecodeMorton2Y(I);
@@ -357,6 +366,7 @@ ForwardCdf53Tile(
   v3i TDims3Ext = TDims3 + v3i(1);
   stack_linear_allocator<NSbands * sizeof(grid)> Alloc;
   array<grid> Sbands(&Alloc); BuildSubbandsInPlace(TDims3Ext, 1, &Sbands);
+  mg_CleanUp(0, Dealloc(&Sbands));
   /* spread the samples to the parent subbands */
   v3i Dims3Next = Dims3s[LvlNxt];
   v3i NTiles3Nxt = (Dims3Next + TDims3 - 1) / TDims3;
@@ -491,15 +501,23 @@ ForwardCdf53Tile(int NLvls, const v3i& TDims3, const volume& Vol
   while (N.X < M.X || N.Y < M.Y || N.Z < M.Z)
     N = N * 2;
   /* loop through the tiles in Z (morton) order */
-  array<v3i> Dims3s;
-  Init(&Dims3s, NLvls + 1);
+  array<v3i> Dims3s; Init(&Dims3s, NLvls + 1);
+  mg_CleanUp(0, Dealloc(&Dims3s))
   for (int I = 0; I < Size(Dims3s); ++I) {
     M = M + IsEven(M);
     Dims3s[I] = M;
     M = (M + 1) / 2;
   }
-  array<array<tile_map>> Vols;
-  Init(&Vols, NLvls + 1);
+  // TODO: release the memory for this array
+  array<array<tile_map>> Vols; Init(&Vols, NLvls + 1);
+  mg_CleanUp(1,
+    for (int I = 0; I < Size(Vols); ++I) {
+      for (int J = 0; J < Size(Vols[I]); ++J)
+        Vols[I][J].~tile_map();
+      Dealloc(&Vols[I]);
+    }
+    Dealloc(&Vols);
+  );
   for (int I = 0; I < Size(Vols); ++I) {
     Vols[I] = array<tile_map>();
     Init(&Vols[I], 8);
@@ -511,6 +529,7 @@ ForwardCdf53Tile(int NLvls, const v3i& TDims3, const volume& Vol
   v3i NTilesBig3 = (N + TDims3 - 1) / TDims3;
   v3i TDims3Ext = TDims3 + v3i(1);
   array<extent> BigSbands; BuildSubbands(M, NLvls, &BigSbands);
+  mg_CleanUp(2, Dealloc(&BigSbands);)
   // TODO: use 64-bit morton code
   for (u32 I = 0; I < Prod<u32>(NTilesBig3); ++I) {
     v3i Pos3(DecodeMorton3X(I), DecodeMorton3Y(I), DecodeMorton3Z(I));
