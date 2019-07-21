@@ -29,11 +29,17 @@ template <> struct dtype_traits<f32> { static inline const dtype Type = dtype::f
 template <> struct dtype_traits<f64> { static inline const dtype Type = dtype::float64    ; };
 
 mg_T(t)
-bool  MatchTypes  (dtype Type);
-int   SizeOf      (dtype Type);
-int   BitSizeOf   (dtype Type);
-dtype IntType     (dtype Type);
-dtype UnsignedType(dtype Type);
+bool  ISameType       (dtype Type);
+bool  IsIntegral      (dtype Type);
+bool  IsSigned        (dtype Type);
+bool  IsUnsigned      (dtype Type);
+bool  IsFloatingPoint (dtype Type);
+int   SizeOf          (dtype Type);
+int   BitSizeOf       (dtype Type);
+dtype IntType         (dtype Type);
+dtype FloatType       (dtype Type);
+dtype UnsignedType    (dtype Type);
+dtype SignedType      (dtype Type);
 
 } // namespace mg
 

@@ -33,7 +33,7 @@
 #define mg_Inline
 
 /* Short for template <typename ...> which sometimes can get too verbose */
-#define mg_T(t) template <typename t>
+#define mg_T(...) template <__VA_OPT__(typename) __VA_ARGS__>
 #define mg_T2(t, u) template <typename t, typename u>
 #define mg_Ti(t) mg_T(t) mg_Inline
 #define mg_T2i(t, u) mg_T2(t, u) mg_Inline

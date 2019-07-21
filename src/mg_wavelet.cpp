@@ -322,7 +322,7 @@ ForwardCdf53Tile(
   mg_Assert(Pos3 < NTiles3);
   v3i M(Min(TDims3, v3i(Dims3s[Lvl] - Pos3 * TDims3))); // dims of the current tile
   volume Vol;
-  {
+  { // TODO: consider using a pin lock here
     std::unique_lock<std::mutex> Lock(MemMutex);
     Vol = (*Vols)[Lvl][0][Row(NTiles3, Pos3)].Vol;
   }
@@ -356,7 +356,7 @@ ForwardCdf53Tile(
     if (CopyM > v3i::Zero)
       Copy(extent(CopyM), Vol, extent(Pos3 * TDims3, CopyM), BigVol);
 #endif
-    {
+    { // TODO: consider using a spin lock here
       std::unique_lock<std::mutex> Lock(MemMutex);
       DeallocBuf(&Vol.Buffer);
       (*Vols)[Lvl][0].erase(Row(NTiles3, Pos3));
@@ -424,7 +424,7 @@ ForwardCdf53Tile(
             continue; // tile outside the domain
           tile_buf* TileNxt = nullptr;
           volume* VolNxt = nullptr;
-          {
+          { // TODO: consider using a spin lock here
             std::unique_lock<std::mutex> Lock(MemMutex);
             TileNxt = &(*Vols)[LvlNxt][Sb][Row(NTiles3Nxt, Pos3Nxt)];
             VolNxt = &TileNxt->Vol;
@@ -445,6 +445,7 @@ ForwardCdf53Tile(
               TileNxt->MDeps = Prod(MDeps3);
             }
             // TODO: the following line does not have to be in the same lock
+            // To solve this we could add a lock to the tile_map struct
             Add(SrcGX, Vol, DstGX, VolNxt);
             ++TileNxt->NDeps;
           }
@@ -470,7 +471,7 @@ ForwardCdf53Tile(
                 Copy(extent(CopyDims3), *VolNxt, extent(F3, CopyDims3), BigVol);
               }
 #endif
-              {
+              { // TODO: consider using a spin lock here
                 std::unique_lock<std::mutex> Lock(MemMutex);
                 DeallocBuf(&VolNxt->Buffer);
                 (*Vols)[LvlNxt][Sb].erase(Row(NTiles3Nxt, Pos3Nxt));

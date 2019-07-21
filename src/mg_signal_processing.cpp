@@ -8,23 +8,21 @@
 
 namespace mg {
 
-mg_T(t) f64
-SqError(const buffer_t<t>& FBuf, const buffer_t<t>& GBuf) {
+mg_T2(t1, t2) f64
+SqError(const buffer_t<t1>& FBuf, const buffer_t<t2>& GBuf) {
   mg_Assert(FBuf.Size == GBuf.Size);
-  extent Ext(v3i(SBuf.Size, 1, 1));
+  extent Ext(v3i(FBuf.Size, 1, 1));
   return SqError(Ext, volume(FBuf), Ext, volume(GBuf));
 }
 
 mg_T2(t1, t2) f64
-SqError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol)
-{
+SqError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol) {
   mg_Assert(Dims(FGrid) <= Dims(FVol));
   mg_Assert(Dims(GGrid) <= Dims(GVol));
   mg_Assert(Dims(FGrid) == Dims(GGrid));
-  mg_Assert(FVol.Type == GVol.Type);
-#define Body(type)\
-  auto FIt = Begin<type>(FGrid, FVol), FEnd = End<type>(FGrid, FVol);\
-  auto GIt = Begin<type>(GGrid, GVol);\
+#define Body(type1, type2)\
+  auto FIt = Begin<type1>(FGrid, FVol), FEnd = End<type1>(FGrid, FVol);\
+  auto GIt = Begin<type2>(GGrid, GVol);\
   f64 Err = 0;\
   for (; FIt != FEnd; ++FIt, ++GIt) {\
     f64 Diff = f64(*FIt) - f64(*GIt);\
@@ -32,26 +30,35 @@ SqError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol
   }\
   return Err;
 
-  mg_DispatchOnType(FVol.Type)
+  mg_DispatchOn2Types(FVol.Type, GVol.Type)
   return 0;
 #undef Body
 }
 
-mg_T(t) f64
-RMSError(const buffer_t<t>& FBuf, const buffer_t<t>& GBuf) {
+f64
+SqError(const volume& FVol, const volume& GVol) {
+  return SqError(extent(FVol), FVol, extent(GVol), GVol);
+}
+
+mg_T2(t1, t2) f64
+RMSError(const buffer_t<t1>& FBuf, const buffer_t<t2>& GBuf) {
   mg_Assert(FBuf.Size == GBuf.Size);
   extent Ext(v3i(SBuf.Size, 1, 1));
   return RMSError(Ext, volume(FBuf), Ext, volume(GBuf));
 }
 
 mg_T2(t1, t2) f64
-RMSError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol)
-{
+RMSError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol) {
   return sqrt(SqError(FGrid, FVol, GGrid, GVol) / Size(FGrid));
 }
 
-mg_T(t) f64
-PSNR(const buffer_t<t>& FBuf, const buffer_t<t>& GBuf) {
+f64
+RMSError(const volume& FVol, const volume& GVol) {
+  return RMSError(extent(FVol), FVol, extent(GVol), GVol);
+}
+
+mg_T2(t1, t2) f64
+PSNR(const buffer_t<t1>& FBuf, const buffer_t<t2>& GBuf) {
   mg_Assert(FBuf.Size == GBuf.Size);
   extent Ext(v3i(SBuf.Size, 1, 1));
   return PSNR(Ext, volume(FBuf), Ext, volume(GBuf));
@@ -62,12 +69,11 @@ PSNR(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol) {
   mg_Assert(Dims(FGrid) <= Dims(FVol));
   mg_Assert(Dims(GGrid) <= Dims(GVol));
   mg_Assert(Dims(FGrid) == Dims(GGrid));
-  mg_Assert(FVol.Type == GVol.Type);
-#define Body(type)\
-  auto FIt = Begin<type>(FGrid, FVol), FEnd = End<type>(FGrid, FVol);\
-  auto GIt = Begin<type>(GGrid, GVol);\
+#define Body(type1, type2)\
+  auto FIt = Begin<type1>(FGrid, FVol), FEnd = End<type1>(FGrid, FVol);\
+  auto GIt = Begin<type2>(GGrid, GVol);\
   f64 Err = 0;\
-  type MinElem = traits<type>::Max, MaxElem = traits<type>::Min;\
+  type1 MinElem = traits<type1>::Max, MaxElem = traits<type1>::Min;\
   for (; FIt != FEnd; ++FIt, ++GIt) {\
     f64 Diff = f64(*FIt) - f64(*GIt);\
     Err += Diff * Diff;\
@@ -78,14 +84,22 @@ PSNR(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol) {
   Err = Err / Size(FGrid);\
   return 20.0 * log10(D) - 10.0 * log10(Err);
 
-  mg_DispatchOnType(FVol.Type)
+  mg_DispatchOn2Types(FVol.Type, GVol.Type)
   return 0;
 #undef Body
 }
 
+f64
+PSNR(const volume& FVol, const volume& GVol) {
+  return PSNR(extent(FVol), FVol, extent(GVol), GVol);
+}
+
 mg_T2(t, u) void
 FwdNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
+  mg_Assert(is_signed<t>::Value);
   mg_Assert(is_same_type<typename traits<t>::unsigned_t, u>::Value);
+  if (!(*DBuf))
+    AllocTypedBuf(DBuf, SBuf.Size);
   mg_Assert(SBuf.Size == DBuf->Size);
   extent Ext(v3i(SBuf.Size, 1, 1));
   volume DVol(*DBuf);
@@ -93,11 +107,13 @@ FwdNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
 }
 
 mg_T2(t1, t2) void
-FwdNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol)
-{
+FwdNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), UnsignedType(SVol.Type));
   mg_Assert(Dims(SGrid) <= Dims(SVol));
   mg_Assert(Dims(DGrid) <= Dims(*DVol));
   mg_Assert(Dims(SGrid) == Dims(DGrid));
+  mg_Assert(IsSigned(SVol.Type));
   mg_Assert(DVol->Type == UnsignedType(SVol.Type));
 #define Body(type)\
   using utype = typename traits<type>::unsigned_t;\
@@ -111,9 +127,19 @@ FwdNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol
 #undef Body
 }
 
+void
+FwdNegaBinary(const volume& SVol, volume* DVol) {
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), UnsignedType(SVol.Type));
+  return FwdNegaBinary(extent(SVol), SVol, extent(*DVol), DVol);
+}
+
 mg_T2(t, u) void
 InvNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
+  mg_Assert(is_signed<u>::Value);
   mg_Assert(is_same_type<typename traits<u>::unsigned_t, t>::Value);
+  if (!(*DBuf))
+    AllocTypedBuf(DBuf, SBuf.Size);
   mg_Assert(SBuf.Size == DBuf->Size);
   extent Ext(v3i(SBuf.Size, 1, 1));
   volume DVol(*DBuf);
@@ -121,11 +147,13 @@ InvNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
 }
 
 mg_T2(t1, t2) void
-InvNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol)
-{
+InvNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) <= Dims(SVol));
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), SignedType(SVol.Type));
   mg_Assert(Dims(DGrid) <= Dims(*DVol));
   mg_Assert(Dims(SGrid) == Dims(DGrid));
+  mg_Assert(IsSigned(DVol->Type));
   mg_Assert(SVol.Type == UnsignedType(DVol->Type));
 #define Body(type)\
   using utype = typename traits<type>::unsigned_t;\
@@ -139,9 +167,20 @@ InvNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol
 #undef Body
 }
 
+void
+InvNegaBinary(const volume& SVol, volume* DVol) {
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), SignedType(SVol.Type));
+  return InvNegaBinary(extent(SVol), SVol, extent(*DVol), DVol);
+}
+
 mg_T2(t, u) int
 Quantize(int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
-  mg_Assert((is_same_type<typename traits<t>::integral_t, u>::Value));
+  mg_Assert(is_floating_point<t>::Value);
+  mg_Assert(is_integral<u>::Value);
+  mg_Assert(mg_BitSizeOf(u) >= Bits);
+  if (!(*DBuf))
+    AllocTypedBuf(DBuf, SBuf.Size);
   mg_Assert(SBuf.Size == DBuf->Size);
   extent Ext(v3i(SBuf.Size, 1, 1));
   volume DVol(*DBuf);
@@ -149,12 +188,15 @@ Quantize(int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
 }
 
 mg_T2(t1, t2) int
-Quantize(int Bits, const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol)
-{
+Quantize(int Bits, const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) <= Dims(SVol));
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), IntType(SVol.Type));
   mg_Assert(Dims(DGrid) <= Dims(*DVol));
   mg_Assert(Dims(SGrid) == Dims(DGrid));
-  mg_Assert(DVol->Type == IntType(SVol.Type));
+  mg_Assert(IsFloatingPoint(SVol.Type));
+  mg_Assert(IsIntegral(DVol->Type));
+  mg_Assert(BitSizeOf(DVol->Type) >= Bits);
 #define Body(type)\
   using itype = typename traits<type>::integral_t;\
   auto SIt = Begin<type>(SGrid, SVol), SEnd = End<type>(SGrid, SVol);\
@@ -176,9 +218,21 @@ Quantize(int Bits, const t1& SGrid, const volume& SVol, const t2& DGrid, volume*
 #undef Body
 }
 
+int
+Quantize(int Bits, const volume& SVol, volume* DVol) {
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), IntType(SVol.Type));
+  return Quantize(Bits, extent(SVol), SVol, extent(*DVol), DVol);
+}
+
 mg_T2(t, u) void
 Dequantize(int EMax, int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
-  mg_Assert((is_same_type<typename traits<u>::integral_t, t>::Value));
+  //mg_Assert((is_same_type<typename traits<u>::integral_t, t>::Value));
+
+  mg_Assert(is_integral<t>::Value);
+  mg_Assert(mg_BitSizeOf(t) >= Bits);
+  if (!(*DBuf))
+    AllocTypedBuf(DBuf, SBuf.Size);
   mg_Assert(SBuf.Size == DBuf->Size);
   extent Ext(v3i(SBuf.Size, 1, 1));
   volume DVol(*DBuf);
@@ -186,13 +240,15 @@ Dequantize(int EMax, int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
 }
 
 mg_T2(t1, t2) void
-Dequantize(int EMax, int Bits, const t1& SGrid, const volume& SVol,
-           const t2& DGrid, volume* DVol)
-{
+Dequantize(int EMax, int Bits, const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) <= Dims(SVol));
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), FloatType(SVol.Type));
   mg_Assert(Dims(DGrid) <= Dims(*DVol));
   mg_Assert(Dims(SGrid) == Dims(DGrid));
-  mg_Assert(SVol.Type == IntType(DVol->Type));
+  mg_Assert(BitSizeOf(SVol.Type) >= Bits);
+  mg_Assert(BitSizeOf(DVol->Type) >= Bits);
+  mg_Assert(IsFloatingPoint(DVol->Type));
 #define Body(type)\
   using itype = typename traits<type>::integral_t;\
   auto SIt = Begin<itype>(SGrid, SVol), SEnd = End<itype>(SGrid, SVol);\
@@ -203,6 +259,40 @@ Dequantize(int EMax, int Bits, const t1& SGrid, const volume& SVol,
 
   mg_DispatchOnFloat(DVol->Type)
 #undef Body
+}
+
+void
+Dequantize(int EMax, int Bits, const volume& SVol, volume* DVol) {
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), FloatType(SVol.Type));
+  return Dequantize(EMax, Bits, extent(SVol), SVol, extent(*DVol), DVol);
+}
+
+mg_T2(t1, t2) void
+ConvertType(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
+  mg_Assert(DVol->Type != dtype::__Invalid__);
+  mg_Assert(Dims(SGrid) <= Dims(SVol));
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), DVol->Type);
+  mg_Assert(Dims(DGrid) <= Dims(*DVol));
+  mg_Assert(Dims(SGrid) == Dims(DGrid));
+  mg_Assert(SVol.Type != DVol->Type);
+#define Body(type1, type2)\
+  auto SIt = Begin<type1>(SGrid, SVol), SEnd = End<type1>(SGrid, SVol);\
+  auto DIt = Begin<type2>(DGrid, *DVol);\
+  for (; SIt != SEnd; ++SIt, ++DIt)\
+    *DIt = (type2)(*SIt);\
+
+  mg_DispatchOn2Types(SVol.Type, DVol->Type)
+#undef Body
+}
+
+void
+ConvertType(const volume& SVol, volume* DVol) {
+  mg_Assert(DVol->Type != dtype::__Invalid__);
+  if (!DVol->Buffer)
+    *DVol = volume(Dims(SVol), DVol->Type);
+  return ConvertType(extent(SVol), SVol, extent(*DVol), DVol);
 }
 
 } // namespace mg

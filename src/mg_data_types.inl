@@ -10,15 +10,74 @@
     Body(f32)\
   } else if (Type == mg::dtype::int64) {\
     Body(i64)\
+  } else if (Type == mg::dtype::uint64) {\
+    Body(u64)\
   } else if (Type == mg::dtype::int32) {\
     Body(i32)\
+  } else if (Type == mg::dtype::uint32) {\
+    Body(u32)\
   } else if (Type == mg::dtype::int16) {\
     Body(i16)\
+  } else if (Type == mg::dtype::uint16) {\
+    Body(u16)\
   } else if (Type == mg::dtype::int8) {\
     Body(i8)\
+  } else if (Type == mg::dtype::uint8) {\
+    Body(u8)\
   } else {\
     mg_Assert(false, "type not supported");\
   }
+
+#undef mg_DispatchOn2Types
+#define mg_DispatchOn2TypesHelper(Type1, Type2)\
+  if (Type2 == mg::dtype::float64) {\
+    Body(Type1, f64)\
+  } else if (Type2 == mg::dtype::float32) {\
+    Body(Type1, f32)\
+  } else if (Type2 == mg::dtype::int64) {\
+    Body(Type1, i64)\
+  } else if (Type2 == mg::dtype::uint64) {\
+    Body(Type1, u64)\
+  } else if (Type2 == mg::dtype::int32) {\
+    Body(Type1, i32)\
+  } else if (Type2 == mg::dtype::uint32) {\
+    Body(Type1, u32)\
+  } else if (Type2 == mg::dtype::int16) {\
+    Body(Type1, i16)\
+  } else if (Type2 == mg::dtype::uint16) {\
+    Body(Type1, u16)\
+  } else if (Type2 == mg::dtype::int8) {\
+    Body(Type1, i8)\
+  } else if (Type2 == mg::dtype::uint8) {\
+    Body(Type1, u8)\
+  } else {\
+    mg_Assert(false, "type not supported");\
+  }
+#define mg_DispatchOn2Types(Type1, Type2)\
+  if (Type1 == mg::dtype::float64) {\
+    mg_DispatchOn2TypesHelper(f64, Type2)\
+  } else if (Type1 == mg::dtype::float32) {\
+    mg_DispatchOn2TypesHelper(f32, Type2)\
+  } else if (Type1 == mg::dtype::int64) {\
+    mg_DispatchOn2TypesHelper(i64, Type2)\
+  } else if (Type1 == mg::dtype::uint64) {\
+    mg_DispatchOn2TypesHelper(u64, Type2)\
+  } else if (Type1 == mg::dtype::int32) {\
+    mg_DispatchOn2TypesHelper(i32, Type2)\
+  } else if (Type1 == mg::dtype::uint32) {\
+    mg_DispatchOn2TypesHelper(u32, Type2)\
+  } else if (Type1 == mg::dtype::int16) {\
+    mg_DispatchOn2TypesHelper(i16, Type2)\
+  } else if (Type1 == mg::dtype::uint16) {\
+    mg_DispatchOn2TypesHelper(u16, Type2)\
+  } else if (Type1 == mg::dtype::int8) {\
+    mg_DispatchOn2TypesHelper(i8, Type2)\
+  } else if (Type1 == mg::dtype::uint8) {\
+    mg_DispatchOn2TypesHelper(u8, Type2)\
+  } else {\
+    mg_Assert(false, "type not supported");\
+  }
+
 
 #undef mg_DispatchOnInt
 #define mg_DispatchOnInt(Type)\
@@ -45,6 +104,74 @@
 
 namespace mg {
 
+mg_Inline bool
+IsIntegral(dtype Type) {
+  switch (Type) {
+    case dtype::int8   :
+    case dtype::uint8  :
+    case dtype::int16  :
+    case dtype::uint16 :
+    case dtype::int32  :
+    case dtype::uint32 :
+    case dtype::int64  :
+    case dtype::uint64 : return true;
+    case dtype::float32:
+    case dtype::float64: return false;
+    default: mg_Assert(false, "type unsupported");
+  };
+  return 0;
+}
+
+mg_Inline bool
+IsSigned(dtype Type) {
+  switch (Type) {
+    case dtype::int8   :
+    case dtype::int16  :
+    case dtype::int32  :
+    case dtype::int64  : return true;
+    case dtype::uint8  :
+    case dtype::uint16 :
+    case dtype::uint32 :
+    case dtype::uint64 : return false;
+    default: mg_Assert(false, "type unsupported");
+  };
+  return 0;
+}
+
+mg_Inline bool
+IsUnsigned(dtype Type) {
+  switch (Type) {
+    case dtype::int8   :
+    case dtype::int16  :
+    case dtype::int32  :
+    case dtype::int64  : return false;
+    case dtype::uint8  :
+    case dtype::uint16 :
+    case dtype::uint32 :
+    case dtype::uint64 : return true;
+    default: mg_Assert(false, "type unsupported");
+  };
+  return 0;
+}
+
+mg_Inline bool
+IsFloatingPoint(dtype Type) {
+  switch (Type) {
+    case dtype::int8   :
+    case dtype::uint8  :
+    case dtype::int16  :
+    case dtype::uint16 :
+    case dtype::int32  :
+    case dtype::uint32 :
+    case dtype::int64  :
+    case dtype::uint64 : return false;
+    case dtype::float32:
+    case dtype::float64: return true;
+    default: mg_Assert(false, "type unsupported");
+  };
+  return 0;
+}
+
 mg_Inline int
 SizeOf(dtype Type) {
   switch (Type) {
@@ -67,7 +194,7 @@ mg_Inline int
 BitSizeOf(dtype Type) { return 8 * SizeOf(Type); }
 
 mg_T(t) bool
-MatchTypes(dtype Type) {
+ISameType(dtype Type) {
   switch (Type) {
     case dtype::int8   : return is_same_type<t,  i8>::Value;
     case dtype::uint8  : return is_same_type<t,  u8>::Value;
@@ -95,8 +222,26 @@ IntType(dtype Type) {
     case dtype::uint32 :
     case dtype::int64  :
     case dtype::uint64 : return Type;
-    case dtype::float32: return dtype(dtype::int32);
-    case dtype::float64: return dtype(dtype::int64);
+    case dtype::float32: return dtype::int32;
+    case dtype::float64: return dtype::int64;
+    default: mg_Assert(false, "type unsupported");
+  };
+  return dtype(dtype::__Invalid__);
+}
+
+mg_Inline dtype
+FloatType(dtype Type) {
+  switch (Type) {
+    case dtype::int8   :
+    case dtype::uint8  :
+    case dtype::int16  :
+    case dtype::uint16 :
+    case dtype::int32  :
+    case dtype::uint32 :
+    case dtype::float32: return dtype::float32;
+    case dtype::int64  :
+    case dtype::uint64 :
+    case dtype::float64: return dtype::float64;
     default: mg_Assert(false, "type unsupported");
   };
   return dtype(dtype::__Invalid__);
@@ -113,6 +258,22 @@ UnsignedType(dtype Type) {
     case dtype::uint32 : return dtype::uint32;
     case dtype::int64  :
     case dtype::uint64 : return dtype::uint64;
+    default: mg_Assert(false, "type unsupported");
+  };
+  return dtype(dtype::__Invalid__);
+}
+
+mg_Inline dtype
+SignedType(dtype Type) {
+  switch (Type) {
+    case dtype::int8   :
+    case dtype::uint8  : return dtype::int8;
+    case dtype::int16  :
+    case dtype::uint16 : return dtype::int16;
+    case dtype::int32  :
+    case dtype::uint32 : return dtype::int32;
+    case dtype::int64  :
+    case dtype::uint64 : return dtype::int64;
     default: mg_Assert(false, "type unsupported");
   };
   return dtype(dtype::__Invalid__);

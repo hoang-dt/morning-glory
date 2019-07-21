@@ -64,6 +64,28 @@ mg_T(t) struct is_pointer_helper : false_type {};
 mg_T(t) struct is_pointer_helper<t*> : true_type {};
 mg_T(t) struct is_pointer : is_pointer_helper<typename remove_cv<t>::type> {};
 mg_T(t) auto& Value(t&& T);
+mg_T(t) struct is_integral   : false_type {};
+mg_T() struct is_integral<i8>  : true_type  {};
+mg_T() struct is_integral<u8>  : true_type  {};
+mg_T() struct is_integral<i16> : true_type  {};
+mg_T() struct is_integral<u16> : true_type  {};
+mg_T() struct is_integral<i32> : true_type  {};
+mg_T() struct is_integral<u32> : true_type  {};
+mg_T() struct is_integral<i64> : true_type  {};
+mg_T() struct is_integral<u64> : true_type  {};
+mg_T(t) struct is_signed   : false_type {};
+mg_T() struct is_signed<i8>  : true_type  {};
+mg_T() struct is_signed<i16> : true_type  {};
+mg_T() struct is_signed<i32> : true_type  {};
+mg_T() struct is_signed<i64> : true_type  {};
+mg_T(t) struct is_unsigned : false_type {};
+mg_T() struct is_unsigned<u8>  : true_type {};
+mg_T() struct is_unsigned<u16> : true_type {};
+mg_T() struct is_unsigned<u32> : true_type {};
+mg_T() struct is_unsigned<u64> : true_type {};
+mg_T(t) struct is_floating_point   : false_type {};
+mg_T() struct is_floating_point<f32> : true_type  {};
+mg_T() struct is_floating_point<f64> : true_type  {};
 
 /* Something to replace std::array */
 #define mg_TA template <typename t, int N>

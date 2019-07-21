@@ -22,9 +22,83 @@
 //#include <roaring/roaring.hh>
 //#include <roaring/roaring.c>
 #include <chrono>
+#include <openjp3d/openjp3d.h>
+#include <openjp3d/openjpeg.h>
 
 using namespace mg;
 namespace chrono = std::chrono;
+
+void TestJp2k() {
+  /* read the data from disk */
+  volume Vol, QVol;
+  ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[128-128-128]-Float64.raw", v3i(128), dtype::float64, &Vol);
+  Quantize(25, Vol, &QVol);
+  FILE* Fp2 = fopen("quantized.raw", "wb");
+  fwrite(QVol.Buffer.Data, QVol.Buffer.Bytes, 1, Fp2);
+  fclose(Fp2);
+  opj_cinfo_t* Compressor = opj_create_compress(CODEC_J3D);
+  opj_cparameters_t Params;
+  opj_set_default_encoder_parameters(&Params);
+  Params.numresolution[2] = Params.numresolution[1] = Params.numresolution[0] = 2;
+  Params.cblock_init[0] =  Params.cblock_init[1] = Params.cblock_init[2] = 16;
+  Params.tile_size_on = true;
+  Params.cp_tdx = 128; Params.cp_tdy = 128; Params.cp_tdz = 128;
+  Params.prog_order = LRCP;
+  Params.encoding_format = ENCOD_3EB;
+  Params.transform_format = TRF_3D_DWT;
+  // TODO: precint
+  //Params.prct_init[3]
+  //parameters->res_spec = res_spec;
+  //parameters->csty |= 0x01;
+  // TODO: set subsampling to 1 or 0
+  if (Params.encoding_format == ENCOD_3EB)
+    Params.mode |= (1 << 6);
+
+  if (Params.tcp_numlayers == 0) {
+    Params.tcp_rates[0] = 0.0;
+    Params.tcp_numlayers++;
+    Params.cp_disto_alloc = 1;
+  }
+  opj_volume_cmptparm_t VolParams;
+  VolParams.dx = VolParams.dy = VolParams.dz = 1; // subsampling
+  VolParams.w = 128; VolParams.h = 128; VolParams.l = 128;
+  VolParams.x0 = VolParams.y0 = VolParams.z0 = 0;
+  VolParams.prec = VolParams.bpp = 25;
+  VolParams.sgnd = 1;
+  VolParams.dcoffset = 0;
+  VolParams.bigendian = 0;
+  opj_volume_t* Volume = opj_volume_create(1, &VolParams, CLRSPC_GRAY);
+  Volume->comps[0].data = (int*)QVol.Buffer.Data;
+  Volume->numcomps = 1;
+  Volume->comps[0].bpp = 25; // check this
+  Volume->x0 = Volume->y0 = Volume->z0 = 0;
+  Volume->x1 = VolParams.w;
+  Volume->y1 = VolParams.h;
+  Volume->z1 = VolParams.l;
+  opj_setup_encoder(Compressor, &Params, Volume);
+  opj_cio_t* Stream = opj_cio_open((opj_common_ptr)Compressor, nullptr, 0); // for writing
+  opj_encode(Compressor, Stream, Volume, nullptr);
+  /* decode */
+  auto CompressedBuf = Stream->buffer;
+  auto Length = cio_tell(Stream);
+  cio_seek(Stream, 0);
+  opj_dinfo_t* Decompressor = opj_create_decompress(CODEC_J3D);
+  opj_dparameters_t DParams;
+  opj_set_default_decoder_parameters(&DParams); // TODO
+  DParams.decod_format = J3D_CFMT;
+  opj_setup_decoder(Decompressor, &DParams);
+  opj_cio_t* DStream = opj_cio_open((opj_common_ptr)Decompressor, CompressedBuf, Length);
+  opj_volume_t* OutVol = opj_decode(Decompressor, Stream);
+  FILE* Fp = fopen("decompressed.raw", "wb");
+  fwrite(OutVol->comps[0].data, 128*128*128*sizeof(int), 1, Fp);
+  fclose(Fp);
+  opj_cio_close(Stream);
+  opj_volume_destroy(Volume);
+  opj_volume_destroy(OutVol);
+  opj_destroy_compress(Compressor);
+  opj_destroy_decompress(Decompressor);
+  fprintf(stderr, "end\n");
+}
 
 void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 Tolerance) {
   /* perform wavelet transform and allocate necessary buffers */
@@ -148,7 +222,6 @@ void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   Flush(&Bs);
   printf("%lld %lld\n", TotalCompressedSize, TotalUncompressedSize);
   printf("%lld %lld\n", TotalEMaxSize / 8, TotalEMaxCompressedSize);
-  std::cout << (TotalTime / 1e6) << " ms" << std::endl;
 }
 
 void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 Tolerance) {
@@ -270,8 +343,6 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   /* write the bit stream */
   Flush(&Bs);
   printf("%lld %lld\n", TotalUncompressedSize, TotalSize);
-  std::cout << (TotalTime / 1e6) << " ms" << std::endl;
-  std::cout << (TotalTime2 / 1e6) << " ms" << std::endl;
   //Err = WriteBuffer(OutputFile, buffer(Bs.Stream.Data, Size(Bs)));
   //mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
   //Err = WriteBuffer("part2.raw", buffer(Bs2.Stream.Data, Size(Bs2)));
@@ -279,28 +350,29 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
 }
 
 int main(int Argc, const char** Argv) {
+  TestJp2k();
   /* Read data */
-  cstr InputFile, OutputFile;
-  mg_AbortIf(!OptVal(Argc, Argv, "--input", &InputFile), "Provide --input");
-  mg_AbortIf(!OptVal(Argc, Argv, "--output", &OutputFile), "Provide --output");
-  metadata Meta;
-  error Err = ParseMeta(InputFile, &Meta);
-  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
-  mg_AbortIf(Prod<i64>(Meta.Dims) > traits<i32>::Max, "Data dimensions too big");
-  mg_AbortIf(Meta.Type != dtype::float32 && Meta.Type != dtype::float64,
-             "Data type not supported");
-  int NLevels;
-  mg_AbortIf(!OptVal(Argc, Argv, "--num_levels", &NLevels), "Provide --num_levels");
-  v3i TileDims3;
-  mg_AbortIf(!OptVal(Argc, Argv, "--tile_dims", &TileDims3), "Provide --tile_dims");
-  double Tolerance = 0;
-  mg_AbortIf(!OptVal(Argc, Argv, "--tolerance", &Tolerance), "Provide --tolerance");
-  volume Vol;
-  Err = ReadVolume(InputFile, Meta.Dims, Meta.Type, &Vol);
-  mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
-  volume VolCopy;
-  Clone(Vol, &VolCopy);
-  TestZfp(Vol, NLevels, Meta, TileDims3, Tolerance);
-  TestLz4(VolCopy, NLevels, Meta, TileDims3, Tolerance);
+  //cstr InputFile, OutputFile;
+  //mg_AbortIf(!OptVal(Argc, Argv, "--input", &InputFile), "Provide --input");
+  //mg_AbortIf(!OptVal(Argc, Argv, "--output", &OutputFile), "Provide --output");
+  //metadata Meta;
+  //error Err = ParseMeta(InputFile, &Meta);
+  //mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  //mg_AbortIf(Prod<i64>(Meta.Dims) > traits<i32>::Max, "Data dimensions too big");
+  //mg_AbortIf(Meta.Type != dtype::float32 && Meta.Type != dtype::float64,
+  //           "Data type not supported");
+  //int NLevels;
+  //mg_AbortIf(!OptVal(Argc, Argv, "--num_levels", &NLevels), "Provide --num_levels");
+  //v3i TileDims3;
+  //mg_AbortIf(!OptVal(Argc, Argv, "--tile_dims", &TileDims3), "Provide --tile_dims");
+  //double Tolerance = 0;
+  //mg_AbortIf(!OptVal(Argc, Argv, "--tolerance", &Tolerance), "Provide --tolerance");
+  //volume Vol;
+  //Err = ReadVolume(InputFile, Meta.Dims, Meta.Type, &Vol);
+  //mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
+  //volume VolCopy;
+  //Clone(Vol, &VolCopy);
+  //TestZfp(Vol, NLevels, Meta, TileDims3, Tolerance);
+  //TestLz4(VolCopy, NLevels, Meta, TileDims3, Tolerance);
 }
 

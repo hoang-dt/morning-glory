@@ -29,7 +29,7 @@ mg_Inline i64
 ElapsedTime(timer* Timer) {
   LARGE_INTEGER Li;
   QueryPerformanceCounter(&Li);
-  return (Li.QuadPart - Timer->CounterStart)/* / (PCFreq / 1e9)*/;
+  return (Li.QuadPart - Timer->CounterStart) * 1000000000 / Timer->PCFreq;
 }
 
 } // namespace mg

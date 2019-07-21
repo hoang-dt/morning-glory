@@ -4,10 +4,6 @@
 #include "mg_wavelet.h"
 #include "mg_volume.h"
 #include <math.h>
-#include <chrono>
-#include <iostream>
-
-namespace chrono = std::chrono;
 
 #define Array10x10\
  { 56, 40, 8, 24, 48, 48, 40, 16, 30, 32, 0,\
@@ -323,17 +319,11 @@ void TestWaveletBlock() {
                M, dtype::float64, &Vol);
     timer Timer;
     StartTimer(&Timer);
-    auto StartTime = chrono::high_resolution_clock::now();
     ForwardCdf53Tile(3, v3i(32), Vol, &OutVol);
-    auto EndTime = chrono::high_resolution_clock::now();
-    auto Diff = EndTime - StartTime;
-    auto Value = std::chrono::duration_cast<std::chrono::milliseconds>(Diff);
-    auto TotalTime3 = Value.count();
-    auto TotalTime = ResetTimer(&Timer) / 10000.0f;
+    auto TotalTime = Milliseconds(ResetTimer(&Timer));
     ForwardCdf53Old(&Vol, 3);
-    auto TotalTime2 = ElapsedTime(&Timer) / 10000.0f;
+    auto TotalTime2 = Milliseconds(ElapsedTime(&Timer));
     printf("Time1 %fms Time2 %fms\n", TotalTime, TotalTime2);
-    std::cout << "Time3 " << TotalTime3 << "\n";
   }
 }
 
