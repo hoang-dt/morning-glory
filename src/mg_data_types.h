@@ -12,7 +12,10 @@ Dispatch some code depending on Type. To use, define a Body macro which
 contains the code to run. Presumably the code makes use of Type. */
 #define mg_DispatchOnType(Type)
 #define mg_DispatchOnInt(Type)
-#define mg_DispatchOnFloat(Type)\
+#define mg_DispatchOnFloat(Type)
+#define mg_DispatchOn2Types(Type1, Type2)
+#define mg_DispatchOnFloat1(Type1, Type2) // Type1 is floating point
+#define mg_DispatchOnFloat2(Type1, Type2) // Type2 is floating point
 
 namespace mg {
 

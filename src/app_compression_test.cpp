@@ -1,5 +1,10 @@
 // Testing run-length encoding of wavelet coefficients
 
+// TODO: test 2D compression
+// TODO: add speck
+// TODO: try different transform (other than zfp)
+// TODO: add a version of ReadVolume in which we can force the type
+
 #include "mg_array.h"
 #include "mg_args.h"
 #include "mg_bitops.h"
@@ -28,25 +33,32 @@
 using namespace mg;
 namespace chrono = std::chrono;
 
+cstr DataFile_ = "D:/Datasets/3D/MARMOSET-NEURONS-[512-512-512]-Float32.raw";
+int Prec_ = 16;
+int NLevels_ = 3; // TODO: check if jpeg's nlevels is the same as our nlevels
+int CBlock_ = 32; // size of the code block
+v3i InputDims_(512, 512, 512);
+dtype InputType_(dtype::float32);
+
 void TestJp2k() {
   /* read the data from disk */
-  volume Vol, QVol;
-  ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[128-128-128]-Float64.raw", v3i(128), dtype::float64, &Vol);
-  Quantize(25, Vol, &QVol);
-  FILE* Fp2 = fopen("quantized.raw", "wb");
-  fwrite(QVol.Buffer.Data, QVol.Buffer.Bytes, 1, Fp2);
-  fclose(Fp2);
+  volume Vol;
+  ReadVolume(DataFile_, InputDims_, InputType_, &Vol);
+  volume QVol(Dims(Vol), dtype::int32);
+  v3i Dims3 = Dims(QVol);
+  Quantize(Prec_, Vol, &QVol);
+  //Clone(Vol ,&QVol);
   opj_cinfo_t* Compressor = opj_create_compress(CODEC_J3D);
   opj_cparameters_t Params;
   opj_set_default_encoder_parameters(&Params);
-  Params.numresolution[2] = Params.numresolution[1] = Params.numresolution[0] = 2;
-  Params.cblock_init[0] =  Params.cblock_init[1] = Params.cblock_init[2] = 16;
+  Params.numresolution[2] = Params.numresolution[1] = Params.numresolution[0] = NLevels_ + 1;
+  Params.cblock_init[0] =  Params.cblock_init[1] = Params.cblock_init[2] = CBlock_;
   Params.tile_size_on = true;
-  Params.cp_tdx = 128; Params.cp_tdy = 128; Params.cp_tdz = 128;
+  Params.cp_tdx = Dims3.X; Params.cp_tdy = Dims3.Y; Params.cp_tdz = Dims3.Z;
   Params.prog_order = LRCP;
   Params.encoding_format = ENCOD_3EB;
   Params.transform_format = TRF_3D_DWT;
-  // TODO: precint
+  // MAYBE: precint
   //Params.prct_init[3]
   //parameters->res_spec = res_spec;
   //parameters->csty |= 0x01;
@@ -61,16 +73,18 @@ void TestJp2k() {
   }
   opj_volume_cmptparm_t VolParams;
   VolParams.dx = VolParams.dy = VolParams.dz = 1; // subsampling
-  VolParams.w = 128; VolParams.h = 128; VolParams.l = 128;
+  VolParams.w = Dims3.X; VolParams.h = Dims3.Y; VolParams.l = Dims3.Z;
   VolParams.x0 = VolParams.y0 = VolParams.z0 = 0;
-  VolParams.prec = VolParams.bpp = 25;
+  VolParams.prec = VolParams.bpp = Prec_;
   VolParams.sgnd = 1;
   VolParams.dcoffset = 0;
   VolParams.bigendian = 0;
   opj_volume_t* Volume = opj_volume_create(1, &VolParams, CLRSPC_GRAY);
-  Volume->comps[0].data = (int*)QVol.Buffer.Data;
+  buffer CompBuf((byte*)Volume->comps[0].data, QVol.Buffer.Bytes);
+  MemCopy(QVol.Buffer, &CompBuf);
+  //Volume->comps[0].data = (int*)QVol.Buffer.Data;
   Volume->numcomps = 1;
-  Volume->comps[0].bpp = 25; // check this
+  Volume->comps[0].bpp = Prec_;
   Volume->x0 = Volume->y0 = Volume->z0 = 0;
   Volume->x1 = VolParams.w;
   Volume->y1 = VolParams.h;
@@ -78,26 +92,168 @@ void TestJp2k() {
   opj_setup_encoder(Compressor, &Params, Volume);
   opj_cio_t* Stream = opj_cio_open((opj_common_ptr)Compressor, nullptr, 0); // for writing
   opj_encode(Compressor, Stream, Volume, nullptr);
+  opj_volume_destroy(Volume);
   /* decode */
   auto CompressedBuf = Stream->buffer;
   auto Length = cio_tell(Stream);
-  cio_seek(Stream, 0);
+  //cio_seek(Stream, 0);
   opj_dinfo_t* Decompressor = opj_create_decompress(CODEC_J3D);
   opj_dparameters_t DParams;
   opj_set_default_decoder_parameters(&DParams); // TODO
   DParams.decod_format = J3D_CFMT;
   opj_setup_decoder(Decompressor, &DParams);
   opj_cio_t* DStream = opj_cio_open((opj_common_ptr)Decompressor, CompressedBuf, Length);
-  opj_volume_t* OutVol = opj_decode(Decompressor, Stream);
-  FILE* Fp = fopen("decompressed.raw", "wb");
-  fwrite(OutVol->comps[0].data, 128*128*128*sizeof(int), 1, Fp);
-  fclose(Fp);
+  opj_volume_t* OutVol = opj_decode(Decompressor, DStream);
+  //FILE* Fp = fopen("decompressed.raw", "wb");
+  //fwrite(OutVol->comps[0].data, Prod(Dims3) * sizeof(int), 1, Fp);
+  //fclose(Fp);
+  //OutVol->comps[0]->data;
+  auto Psnr = PSNR(QVol, volume(OutVol->comps[0].data, Dims(QVol)));
+  printf("psnr = %f\n", Psnr);
+  DeallocBuf(&QVol.Buffer);
   opj_cio_close(Stream);
-  opj_volume_destroy(Volume);
+  opj_cio_close(DStream);
   opj_volume_destroy(OutVol);
   opj_destroy_compress(Compressor);
   opj_destroy_decompress(Decompressor);
-  fprintf(stderr, "end\n");
+}
+
+void TestZfp2() {
+  /* read the data from disk */
+  v3i TileDims3(CBlock_);
+  volume Vol;
+  ReadVolume(DataFile_, InputDims_, InputType_, &Vol);
+  volume QVol(Dims(Vol), dtype::int32);
+  v3i Dims3 = Dims(QVol);
+  Quantize(Prec_, Vol, &QVol);
+  //Clone(Vol, &QVol);
+  ForwardCdf53Old(&QVol, NLevels_);
+  array<extent> Sbands; BuildSubbands(Dims(QVol), NLevels_, &Sbands);
+  buffer BufQ; AllocBuf(&BufQ, SizeOf(QVol.Type) * Prod(TileDims3));
+  volume TileVolQ(BufQ, TileDims3, QVol.Type); // quantized tile data
+  buffer BufN; AllocBuf(&BufN, SizeOf(QVol.Type) * Prod(TileDims3));
+  volume TileVolN(BufN, TileDims3, IntType(UnsignedType(TileVolQ.Type))); // negabinary
+  buffer BufO; AllocBuf(&BufO, SizeOf(TileVolN.Type) * Prod(TileDims3));
+  volume TileVolO(BufO, TileDims3, TileVolN.Type); // decompression output
+  buffer BsBuf; AllocBuf(&BsBuf, Vol.Buffer.Bytes);
+  bitstream Bs; InitWrite(&Bs, BsBuf);
+  timer Timer;
+  i64 TotalCompressionTime = 0;
+  i64 TotalDecompressionTime = 0;
+  i64 TotalCompressedSize = 0;
+  /* -------- encode the data --------- */
+  StartTimer(&Timer);
+  InitWrite(&Bs, Bs.Stream);
+  v3i BlockDims3(4);
+  v3i NBlocks3 = (TileDims3 + BlockDims3 - 1) / BlockDims3;
+  array<i8> Ns; Init(&Ns, Prod(NBlocks3), i8(0));
+  //FILE* Fp = fopen("encode.raw", "wb");
+  //FILE* Fp2 = fopen("encode.txt", "w");
+  for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
+    v3i SbFrom3 = From(Sbands[Sb]);
+    v3i SbDims3 = Dims(Sbands[Sb]);
+    v3i NTiles3 = (SbDims3 + TileDims3 - 1) / TileDims3;
+    v3i T; // tile counter
+    mg_BeginFor3(T, v3i::Zero, NTiles3, v3i::One) { // through tiles
+      Fill(Begin<u32>(TileVolO), End<u32>(TileVolO), 0);
+      Fill(Begin<u32>(TileVolN), End<u32>(TileVolN), 0);
+      Fill(Begin<i8>(Ns), End<i8>(Ns), 0);
+      v3i TileFrom3 = SbFrom3 + TileDims3 * T;
+      v3i RealDims3 = Min(SbFrom3 + SbDims3 - TileFrom3, TileDims3);
+      v3i P3;
+      // TODO: there is a bug if the tile is less than 32^3
+      mg_Assert(RealDims3 == TileDims3);
+      mg_BeginFor3(P3, v3i::Zero, NBlocks3, v3i::One) { // through blocks
+        int S = Row(NBlocks3, P3) * Prod(BlockDims3);
+        v3i D3 = P3 * BlockDims3 + TileFrom3;
+        v3i B3;
+        mg_BeginFor3(B3, v3i::Zero, BlockDims3, v3i::One) {
+          TileVolQ.At<i32>(S + Row(BlockDims3, B3)) = QVol.At<i32>(D3 + B3);
+        } mg_EndFor3
+        //fwrite((i32*)TileVolQ.Buffer.Data + S, Prod(BlockDims3) * sizeof(i32), 1, Fp);
+        //for (int I = 0; I < 64; ++I)
+        //  fprintf(Fp2, "%d\n", *((i32*)TileVolQ.Buffer.Data + S + I));
+        ForwardZfp((i32*)TileVolQ.Buffer.Data + S);
+        for (int I = 0; I < 4 * 4 * 4; ++I) {
+          i32 Val = *((i32*)TileVolQ.Buffer.Data + S + I);
+          if (!(Val >= -(1 << 18) && Val < (1 << 18)))
+            printf("!!!!!!! overflow !!!!!!!!\n");
+        }
+        ForwardShuffle((i32*)TileVolQ.Buffer.Data + S, (u32*)TileVolN.Buffer.Data + S);
+      } mg_EndFor3 // end sample loop
+      int NBitplanes = 20; //Prec + 1;
+      int Bp = NBitplanes - 1;
+      while (Bp >= 0) { // through bit planes
+        for (int B = 0; B < Prod(NBlocks3); ++B) {
+          u32* Beg = (u32*)TileVolN.Buffer.Data + B * Prod(BlockDims3);
+          Encode32(Beg, Bp, 2e9, Ns[B], &Bs); // TODO: take a look at the S parameter
+        }
+        --Bp;
+      } // end bit plane loop
+    } mg_EndFor3 // end tile loop
+  } // end subband loop
+  TotalCompressionTime += ElapsedTime(&Timer);
+  Flush(&Bs);
+  TotalCompressedSize += Size(Bs);
+  //fclose(Fp);
+  //fclose(Fp2);
+
+  /* ---------- decode ---------- */
+  //Fp = fopen("decode.raw", "wb");
+  //Fp2 = fopen("decode.txt", "w");
+  volume QVolBackup; Clone(QVol, &QVolBackup);
+  InverseCdf53Old(&QVolBackup, NLevels_);
+  Fill(Begin<i32>(QVol), End<i32>(QVol), 0);
+  InitRead(&Bs, Bs.Stream);
+  StartTimer(&Timer);
+  array<i8> NOs; Init(&NOs, Prod(NBlocks3), i8(0));
+  for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
+    v3i SbFrom3 = From(Sbands[Sb]);
+    v3i SbDims3 = Dims(Sbands[Sb]);
+    v3i NTiles3 = (SbDims3 + TileDims3 - 1) / TileDims3;
+    v3i T; // tile counter
+    mg_BeginFor3(T, v3i::Zero, NTiles3, v3i::One) { // through tiles
+      Fill(Begin<u32>(TileVolO), End<u32>(TileVolO), 0);
+      Fill(Begin<i8>(NOs), End<i8>(NOs), 0);
+      v3i TileFrom3 = SbFrom3 + TileDims3 * T;
+      v3i RealDims3 = Min(SbFrom3 + SbDims3 - TileFrom3, TileDims3);
+      /* decompress here */
+      int NBitplanes = 20;
+      int Bp = NBitplanes - 1;
+      while (Bp >= 0) {
+        for (int B = 0; B < Prod(NBlocks3); ++B) {
+          u32* Beg = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
+          Decode32(Beg, Bp, 2e9, NOs[B], &Bs);
+        }
+        --Bp;
+      }
+      v3i P3;
+      mg_BeginFor3(P3, v3i::Zero, NBlocks3, v3i::One) { // through blocks
+        int S = Row(NBlocks3, P3) * Prod(BlockDims3);
+        v3i D3 = P3 * BlockDims3 + TileFrom3;
+        InverseShuffle((u32*)TileVolO.Buffer.Data + S, (i32*)TileVolQ.Buffer.Data + S);
+        InverseZfp((i32*)TileVolQ.Buffer.Data + S);
+        //fwrite((i32*)TileVolQ.Buffer.Data + S, Prod(BlockDims3) * sizeof(i32), 1, Fp);
+        //for (int I = 0; I < 64; ++I)
+        //  fprintf(Fp2, "%d\n", *((i32*)TileVolQ.Buffer.Data + S + I));
+        v3i B3;
+        mg_BeginFor3(B3, v3i::Zero, BlockDims3, v3i::One) {
+          QVol.At<i32>(D3 + B3) = TileVolQ.At<i32>(S + Row(BlockDims3, B3));
+        } mg_EndFor3
+      } mg_EndFor3
+    } mg_EndFor3
+  }
+  auto DecompressedSize = Size(Bs);
+  printf("decompressed size = %lld\n", DecompressedSize);
+  TotalDecompressionTime += ElapsedTime(&Timer);
+  InverseCdf53Old(&QVol, NLevels_);
+  //WriteBuffer("out.raw", QVol.Buffer);
+  auto Psnr = PSNR(QVolBackup, QVol);
+  //fclose(Fp);
+  //fclose(Fp2);
+  printf("psnr = %f\n", Psnr);
+  /* write the bit stream */
+  printf("zfp size %lld, time: %f %f\n", TotalCompressedSize, Seconds(TotalCompressionTime), Seconds(TotalDecompressionTime));
 }
 
 void TestZfp(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 Tolerance) {
@@ -350,7 +506,13 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
 }
 
 int main(int Argc, const char** Argv) {
-  TestJp2k();
+  auto& A = Perm2<8>;
+  for (int I = 0; I < Size(A); ++I) {
+    int X = A[I] % 8, Y = A[I] / 8;
+    printf("%d %d\n", X, Y);
+  }
+  //TestJp2k();
+  //TestZfp2();
   /* Read data */
   //cstr InputFile, OutputFile;
   //mg_AbortIf(!OptVal(Argc, Argv, "--input", &InputFile), "Provide --input");

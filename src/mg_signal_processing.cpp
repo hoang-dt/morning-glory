@@ -178,6 +178,7 @@ mg_T2(t, u) int
 Quantize(int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   mg_Assert(is_floating_point<t>::Value);
   mg_Assert(is_integral<u>::Value);
+  mg_Assert(mg_BitSizeOf(t) >= Bits);
   mg_Assert(mg_BitSizeOf(u) >= Bits);
   if (!(*DBuf))
     AllocTypedBuf(DBuf, SBuf.Size);
@@ -196,24 +197,24 @@ Quantize(int Bits, const t1& SGrid, const volume& SVol, const t2& DGrid, volume*
   mg_Assert(Dims(SGrid) == Dims(DGrid));
   mg_Assert(IsFloatingPoint(SVol.Type));
   mg_Assert(IsIntegral(DVol->Type));
+  mg_Assert(BitSizeOf(SVol.Type) >= Bits);
   mg_Assert(BitSizeOf(DVol->Type) >= Bits);
-#define Body(type)\
-  using itype = typename traits<type>::integral_t;\
-  auto SIt = Begin<type>(SGrid, SVol), SEnd = End<type>(SGrid, SVol);\
-  auto DIt = Begin<itype>(DGrid, *DVol);\
+#define Body(type1, type2)\
+  auto SIt = Begin<type1>(SGrid, SVol), SEnd = End<type1>(SGrid, SVol);\
+  auto DIt = Begin<type2>(DGrid, *DVol);\
   /* find the max absolute value */\
-  type MaxAbs = 0;\
+  type1 MaxAbs = 0;\
   for (; SIt != SEnd; ++SIt)\
-    MaxAbs = Max(MaxAbs, (type)fabs(*SIt));\
+    MaxAbs = Max(MaxAbs, (type1)fabs(*SIt));\
   int EMax = Exponent(MaxAbs);\
   /* quantize */\
   f64 Scale = ldexp(1, Bits - 1 - EMax);\
-  SIt = Begin<type>(SGrid, SVol);\
+  SIt = Begin<type1>(SGrid, SVol);\
   for (; SIt != SEnd; ++SIt, ++DIt)\
-    *DIt = itype(Scale * *SIt);\
+    *DIt = type2(Scale * *SIt);\
   return EMax;
 
-  mg_DispatchOnFloat(SVol.Type)
+  mg_DispatchOnFloat1(SVol.Type, DVol->Type)
   return 0;
 #undef Body
 }
@@ -230,7 +231,9 @@ Dequantize(int EMax, int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   //mg_Assert((is_same_type<typename traits<u>::integral_t, t>::Value));
 
   mg_Assert(is_integral<t>::Value);
+  mg_Assert(is_floating_point<u>::Value);
   mg_Assert(mg_BitSizeOf(t) >= Bits);
+  mg_Assert(mg_BitSizeOf(u) >= Bits);
   if (!(*DBuf))
     AllocTypedBuf(DBuf, SBuf.Size);
   mg_Assert(SBuf.Size == DBuf->Size);
@@ -248,16 +251,16 @@ Dequantize(int EMax, int Bits, const t1& SGrid, const volume& SVol, const t2& DG
   mg_Assert(Dims(SGrid) == Dims(DGrid));
   mg_Assert(BitSizeOf(SVol.Type) >= Bits);
   mg_Assert(BitSizeOf(DVol->Type) >= Bits);
+  mg_Assert(IsIntegral(SVol.Type));
   mg_Assert(IsFloatingPoint(DVol->Type));
-#define Body(type)\
-  using itype = typename traits<type>::integral_t;\
-  auto SIt = Begin<itype>(SGrid, SVol), SEnd = End<itype>(SGrid, SVol);\
-  auto DIt = Begin<type>(DGrid, *DVol);\
+#define Body(type1, type2)\
+  auto SIt = Begin<type1>(SGrid, SVol), SEnd = End<type1>(SGrid, SVol);\
+  auto DIt = Begin<type2>(DGrid, *DVol);\
   f64 Scale = 1.0 / ldexp(1, Bits - 1 - EMax);\
   for (; SIt != SEnd; ++SIt, ++DIt)\
     *DIt = (Scale * *SIt);\
 
-  mg_DispatchOnFloat(DVol->Type)
+  mg_DispatchOnFloat2(SVol.Type, DVol->Type)
 #undef Body
 }
 

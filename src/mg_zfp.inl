@@ -1,6 +1,8 @@
 #pragma once
 
+#include "mg_algorithm.h"
 #include "mg_assert.h"
+#include "mg_common.h"
 
 namespace mg {
 
@@ -64,6 +66,17 @@ ForwardZfp(t* P) {
 }
 
 mg_T(t) void
+ForwardZfp2D(t* P, int S) {
+  mg_Assert(P);
+  /* transform along X */
+  for (int Y = 0; Y < S; ++Y)
+    FLift(P + S * Y, 1);
+  /* transform along Y */
+  for (int X = 0; X < S; ++X)
+    FLift(P + 1 * X, S);
+}
+
+mg_T(t) void
 InverseZfp(t* P) {
   mg_Assert(P);
   /* transform along Z */
@@ -79,6 +92,73 @@ InverseZfp(t* P) {
     for (int Y = 0; Y < 4; ++Y)
       ILift(P + 4 * Y + 16 * Z, 1);
 }
+
+mg_T(t) void
+InverseZfp2D(t* P, int S) {
+  mg_Assert(P);
+  /* transform along y */
+  for (int X = 0; X < S; ++X)
+    ILift(P + 1 * X, S);
+  /* transform along X */
+  for (int Y = 0; Y < S; ++Y)
+    ILift(P + S * Y, 1);
+}
+
+/*
+Use the following array to reorder transformed coefficients in a zfp block.
+The ordering is first by i + j, then by i^2 + j^2. */
+#define mg_Index2D_4(i, j) ((i) + 4 * (j))
+constexpr i8 
+Perm2_4[16] = {
+  mg_Index2D_4(0, 0), /*  0 : 0 */
+
+  mg_Index2D_4(1, 0), /*  1 : 1 */
+  mg_Index2D_4(0, 1), /*  1 : 1 */
+
+  mg_Index2D_4(1, 1), /*  2 : 2 */
+  mg_Index2D_4(2, 0), /*  4 : 2 */
+  mg_Index2D_4(0, 2), /*  4 : 2 */
+
+  mg_Index2D_4(2, 1), /*  5 : 3 */
+  mg_Index2D_4(1, 2), /*  5 : 3 */
+  mg_Index2D_4(3, 0), /*  9 : 3 */
+  mg_Index2D_4(0, 3), /*  9 : 3 */
+
+  mg_Index2D_4(2, 2), /*  8 : 4 */
+  mg_Index2D_4(3, 1), /* 10 : 4 */
+  mg_Index2D_4(1, 3), /* 10 : 4 */
+
+  mg_Index2D_4(3, 2), /* 13 : 5 */
+  mg_Index2D_4(2, 3), /* 13 : 5 */
+  
+  mg_Index2D_4(3, 3)  /* 18 : 6 */
+};
+#undef mg_Index2D_4
+
+template <int S>
+inline stack_array<int, S * S> Perm2 = []() {
+  static stack_array<int, S * S> Arr;
+  int I = 0;
+  for (int Y = 0; Y < S; ++Y) {
+    for (int X = 0; X < S; ++X) {
+      Arr[I++] = Y * S + X;
+    }
+  }
+  for (I = 0; I < Size(Arr); ++I) {
+    for (int J = I + 1; J < Size(Arr); ++J) {
+      int XI = Arr[I] % S, YI = Arr[I] / S;
+      int XJ = Arr[J] % S, YJ = Arr[J] / S;
+      if (XI + YI > XJ + YJ) {
+        Swap(&Arr[I], &Arr[J]);
+      } else if ((XI + YI == XJ + YJ) && (XI * XI + YI * YI > XJ * XJ + YJ * YJ)) {
+        Swap(&Arr[I], &Arr[J]);
+      }
+    }
+  }
+  return Arr;
+}(); 
+
+#undef mg_Index2D
 
 /*
 Use the following array to reorder transformed coefficients in a zfp block.
@@ -176,6 +256,13 @@ ForwardShuffle(t* IBlock, u* UBlock) {
   auto Mask = traits<u>::NBinaryMask;
   for (int I = 0; I < 64; ++I)
     UBlock[I] = (u)((IBlock[Perm3[I]] + Mask) ^ Mask);
+}
+
+mg_T2(t, u) void
+ForwardShuffle2D(t* IBlock, u* UBlock) {
+  auto Mask = traits<u>::NBinaryMask;
+  for (int I = 0; I < 16; ++I)
+    UBlock[I] = (u)((IBlock[Perm2_4[I]] + Mask) ^ Mask);
 }
 
 mg_T2(t, u) void

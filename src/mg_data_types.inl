@@ -28,8 +28,8 @@
     mg_Assert(false, "type not supported");\
   }
 
-#undef mg_DispatchOn2Types
-#define mg_DispatchOn2TypesHelper(Type1, Type2)\
+/* Type1 is fixed, switch based on Type2 */
+#define mg_DispatchOn2TypesHelper1(Type1, Type2)\
   if (Type2 == mg::dtype::float64) {\
     Body(Type1, f64)\
   } else if (Type2 == mg::dtype::float32) {\
@@ -53,31 +53,78 @@
   } else {\
     mg_Assert(false, "type not supported");\
   }
-#define mg_DispatchOn2Types(Type1, Type2)\
+
+/* Type2 is fixed, switch based on Type1 */
+#define mg_DispatchOn2TypesHelper2(Type1, Type2)\
   if (Type1 == mg::dtype::float64) {\
-    mg_DispatchOn2TypesHelper(f64, Type2)\
+    Body(f64, Type2)\
   } else if (Type1 == mg::dtype::float32) {\
-    mg_DispatchOn2TypesHelper(f32, Type2)\
+    Body(f32, Type2)\
   } else if (Type1 == mg::dtype::int64) {\
-    mg_DispatchOn2TypesHelper(i64, Type2)\
+    Body(i64, Type2)\
   } else if (Type1 == mg::dtype::uint64) {\
-    mg_DispatchOn2TypesHelper(u64, Type2)\
+    Body(u64, Type2)\
   } else if (Type1 == mg::dtype::int32) {\
-    mg_DispatchOn2TypesHelper(i32, Type2)\
+    Body(i32, Type2)\
   } else if (Type1 == mg::dtype::uint32) {\
-    mg_DispatchOn2TypesHelper(u32, Type2)\
+    Body(u32, Type2)\
   } else if (Type1 == mg::dtype::int16) {\
-    mg_DispatchOn2TypesHelper(i16, Type2)\
+    Body(i16, Type2)\
   } else if (Type1 == mg::dtype::uint16) {\
-    mg_DispatchOn2TypesHelper(u16, Type2)\
+    Body(u16, Type2)\
   } else if (Type1 == mg::dtype::int8) {\
-    mg_DispatchOn2TypesHelper(i8, Type2)\
+    Body(i8, Type2)\
   } else if (Type1 == mg::dtype::uint8) {\
-    mg_DispatchOn2TypesHelper(u8, Type2)\
+    Body(u8, Type2)\
   } else {\
     mg_Assert(false, "type not supported");\
   }
 
+#undef mg_DispatchOn2Types
+#define mg_DispatchOn2Types(Type1, Type2)\
+  if (Type1 == mg::dtype::float64) {\
+    mg_DispatchOn2TypesHelper1(f64, Type2)\
+  } else if (Type1 == mg::dtype::float32) {\
+    mg_DispatchOn2TypesHelper1(f32, Type2)\
+  } else if (Type1 == mg::dtype::int64) {\
+    mg_DispatchOn2TypesHelper1(i64, Type2)\
+  } else if (Type1 == mg::dtype::uint64) {\
+    mg_DispatchOn2TypesHelper1(u64, Type2)\
+  } else if (Type1 == mg::dtype::int32) {\
+    mg_DispatchOn2TypesHelper1(i32, Type2)\
+  } else if (Type1 == mg::dtype::uint32) {\
+    mg_DispatchOn2TypesHelper1(u32, Type2)\
+  } else if (Type1 == mg::dtype::int16) {\
+    mg_DispatchOn2TypesHelper1(i16, Type2)\
+  } else if (Type1 == mg::dtype::uint16) {\
+    mg_DispatchOn2TypesHelper1(u16, Type2)\
+  } else if (Type1 == mg::dtype::int8) {\
+    mg_DispatchOn2TypesHelper1(i8, Type2)\
+  } else if (Type1 == mg::dtype::uint8) {\
+    mg_DispatchOn2TypesHelper1(u8, Type2)\
+  } else {\
+    mg_Assert(false, "type not supported");\
+  }
+
+#undef mg_DispatchOnFloat1
+#define mg_DispatchOnFloat1(Type1, Type2)\
+  if (Type1 == mg::dtype::float64) {\
+    mg_DispatchOn2TypesHelper1(f64, Type2)\
+  } else if (Type1 == mg::dtype::float32) {\
+    mg_DispatchOn2TypesHelper1(f32, Type2)\
+  } else {\
+    mg_Assert(false, "type not supported");\
+  }
+
+#undef mg_DispatchOnFloat2
+#define mg_DispatchOnFloat2(Type1, Type2)\
+  if (Type2 == mg::dtype::float64) {\
+    mg_DispatchOn2TypesHelper2(Type1, f64)\
+  } else if (Type1 == mg::dtype::float32) {\
+    mg_DispatchOn2TypesHelper2(Type1, f32)\
+  } else {\
+    mg_Assert(false, "type not supported");\
+  }
 
 #undef mg_DispatchOnInt
 #define mg_DispatchOnInt(Type)\

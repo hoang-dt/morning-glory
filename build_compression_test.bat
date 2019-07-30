@@ -3,7 +3,7 @@
 :: Parameters
 set "LLVMPath=C:\Program Files\LLVM"
 set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
-set "VSVersion=14.21.27702"
+set "VSVersion=14.22.27905"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
 set "OUTPUT=app_compression_test.exe"
