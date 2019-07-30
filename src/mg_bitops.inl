@@ -31,12 +31,12 @@ FlipBit(t Val, int I) {
 // TODO: replace bsr with the faster intrinsic
 
 #if defined(__clang__) || defined(__GNUC__)
-mg_Inline i8
+mg_Inline constexpr i8
 Msb(u32 V) {
   if (V == 0) return -1;
   return i8(mg_BitSizeOf(V) - 1 - __builtin_clz(V));
 }
-mg_Inline i8
+mg_Inline constexpr i8
 Msb(u64 V) {
   if (V == 0) return -1;
   return i8(mg_BitSizeOf(V) - 1 -__builtin_clzll(V));
@@ -45,14 +45,14 @@ Msb(u64 V) {
 #include <intrin.h>
 #pragma intrinsic(_BitScanReverse)
 #pragma intrinsic(_BitScanReverse64)
-mg_Inline i8
+mg_Inline constexpr i8
 Msb(u32 V) {
   if (V == 0) return -1;
   unsigned long Index = 0;
   _BitScanReverse(&Index, V);
   return (i8)Index;
 }
-mg_Inline i8
+mg_Inline constexpr i8
 Msb(u64 V) {
   if (V == 0) return -1;
   unsigned long Index = 0;

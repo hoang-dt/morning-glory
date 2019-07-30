@@ -15,7 +15,7 @@ MaxElem(i Beg, i End) {
   return MaxElem;
 }
 
-mg_T2(i, f) i
+mg_TT(i, f) i
 MaxElem(i Beg, i End, f& Comp) {
   auto MaxElem = Beg;
   for (i Pos = Beg; Pos != End; ++Pos) {
@@ -38,7 +38,7 @@ MinMaxElem(i Beg, i End) {
   return MinMax<i>{MinElem, MaxElem};
 }
 
-mg_T2(i, f) MinMax<i>
+mg_TT(i, f) MinMax<i>
 MinMaxElem(i Beg, i End, const f& Comp) {
   auto MinElem = Beg;
   auto MaxElem = Beg;
@@ -51,7 +51,7 @@ MinMaxElem(i Beg, i End, const f& Comp) {
   return MinMax<i>{ MinElem, MaxElem };
 }
 
-mg_T2(i, t) i
+mg_TT(i, t) i
 Find(i Beg, i End, const t& Val) {
   for (i Pos = Beg; Pos != End; ++Pos) {
     if (*Pos == Val)
@@ -60,7 +60,7 @@ Find(i Beg, i End, const t& Val) {
   return End;
 }
 
-mg_T2(i, t) i
+mg_TT(i, t) i
 FindLast(i RevBeg, i RevEnd, const t& Val) {
   for (i Pos = RevBeg; Pos != RevEnd; --Pos) {
     if (*Pos == Val)
@@ -69,12 +69,12 @@ FindLast(i RevBeg, i RevEnd, const t& Val) {
   return RevEnd;
 }
 
-mg_T2i(t1, t2) bool
+mg_TTi(t1, t2) bool
 Contains(const t1& Collection, const t2& Elem) {
   return Find(Begin(Collection), End(Collection), Elem) != End(Collection);
 }
 
-mg_T2(i, f) i
+mg_TT(i, f) i
 FindIf(i Beg, i End, const f& Pred) {
   for (i Pos = Beg; Pos != End; ++Pos) {
     if (Pred(*Pos))
@@ -90,7 +90,7 @@ Swap(t* A, t* mg_Restrict B) {
   *B = T;
 }
 
-mg_T2(i, t) void
+mg_TT(i, t) void
 Fill(i Beg, i End, const t& Val) {
   for (i It = Beg; It != End; ++It)
     *It = Val;

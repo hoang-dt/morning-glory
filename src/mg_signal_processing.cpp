@@ -8,14 +8,14 @@
 
 namespace mg {
 
-mg_T2(t1, t2) f64
+mg_TT(t1, t2) f64
 SqError(const buffer_t<t1>& FBuf, const buffer_t<t2>& GBuf) {
   mg_Assert(FBuf.Size == GBuf.Size);
   extent Ext(v3i(FBuf.Size, 1, 1));
   return SqError(Ext, volume(FBuf), Ext, volume(GBuf));
 }
 
-mg_T2(t1, t2) f64
+mg_TT(t1, t2) f64
 SqError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol) {
   mg_Assert(Dims(FGrid) <= Dims(FVol));
   mg_Assert(Dims(GGrid) <= Dims(GVol));
@@ -40,14 +40,14 @@ SqError(const volume& FVol, const volume& GVol) {
   return SqError(extent(FVol), FVol, extent(GVol), GVol);
 }
 
-mg_T2(t1, t2) f64
+mg_TT(t1, t2) f64
 RMSError(const buffer_t<t1>& FBuf, const buffer_t<t2>& GBuf) {
   mg_Assert(FBuf.Size == GBuf.Size);
   extent Ext(v3i(SBuf.Size, 1, 1));
   return RMSError(Ext, volume(FBuf), Ext, volume(GBuf));
 }
 
-mg_T2(t1, t2) f64
+mg_TT(t1, t2) f64
 RMSError(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol) {
   return sqrt(SqError(FGrid, FVol, GGrid, GVol) / Size(FGrid));
 }
@@ -57,14 +57,14 @@ RMSError(const volume& FVol, const volume& GVol) {
   return RMSError(extent(FVol), FVol, extent(GVol), GVol);
 }
 
-mg_T2(t1, t2) f64
+mg_TT(t1, t2) f64
 PSNR(const buffer_t<t1>& FBuf, const buffer_t<t2>& GBuf) {
   mg_Assert(FBuf.Size == GBuf.Size);
   extent Ext(v3i(SBuf.Size, 1, 1));
   return PSNR(Ext, volume(FBuf), Ext, volume(GBuf));
 }
 
-mg_T2(t1, t2) f64
+mg_TT(t1, t2) f64
 PSNR(const t1& FGrid, const volume& FVol, const t2& GGrid, const volume& GVol) {
   mg_Assert(Dims(FGrid) <= Dims(FVol));
   mg_Assert(Dims(GGrid) <= Dims(GVol));
@@ -94,7 +94,7 @@ PSNR(const volume& FVol, const volume& GVol) {
   return PSNR(extent(FVol), FVol, extent(GVol), GVol);
 }
 
-mg_T2(t, u) void
+mg_TT(t, u) void
 FwdNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   mg_Assert(is_signed<t>::Value);
   mg_Assert(is_same_type<typename traits<t>::unsigned_t, u>::Value);
@@ -106,7 +106,7 @@ FwdNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   return FwdNegaBinary(Ext, volume(SBuf), Ext, &DVol);
 }
 
-mg_T2(t1, t2) void
+mg_TT(t1, t2) void
 FwdNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   if (!DVol->Buffer)
     *DVol = volume(Dims(SVol), UnsignedType(SVol.Type));
@@ -134,7 +134,7 @@ FwdNegaBinary(const volume& SVol, volume* DVol) {
   return FwdNegaBinary(extent(SVol), SVol, extent(*DVol), DVol);
 }
 
-mg_T2(t, u) void
+mg_TT(t, u) void
 InvNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   mg_Assert(is_signed<u>::Value);
   mg_Assert(is_same_type<typename traits<u>::unsigned_t, t>::Value);
@@ -146,7 +146,7 @@ InvNegaBinary(const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   return InvNegaBinary(Ext, volume(SBuf), Ext, &DVol);
 }
 
-mg_T2(t1, t2) void
+mg_TT(t1, t2) void
 InvNegaBinary(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) <= Dims(SVol));
   if (!DVol->Buffer)
@@ -174,7 +174,7 @@ InvNegaBinary(const volume& SVol, volume* DVol) {
   return InvNegaBinary(extent(SVol), SVol, extent(*DVol), DVol);
 }
 
-mg_T2(t, u) int
+mg_TT(t, u) int
 Quantize(int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   mg_Assert(is_floating_point<t>::Value);
   mg_Assert(is_integral<u>::Value);
@@ -188,7 +188,7 @@ Quantize(int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   return Quantize(Bits, Ext, volume(SBuf), Ext, &DVol);
 }
 
-mg_T2(t1, t2) int
+mg_TT(t1, t2) int
 Quantize(int Bits, const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) <= Dims(SVol));
   if (!DVol->Buffer)
@@ -226,7 +226,7 @@ Quantize(int Bits, const volume& SVol, volume* DVol) {
   return Quantize(Bits, extent(SVol), SVol, extent(*DVol), DVol);
 }
 
-mg_T2(t, u) void
+mg_TT(t, u) void
 Dequantize(int EMax, int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   //mg_Assert((is_same_type<typename traits<u>::integral_t, t>::Value));
 
@@ -242,7 +242,7 @@ Dequantize(int EMax, int Bits, const buffer_t<t>& SBuf, buffer_t<u>* DBuf) {
   return Dequantize(EMax, Bits, Ext, volume(SBuf), Ext, &DVol);
 }
 
-mg_T2(t1, t2) void
+mg_TT(t1, t2) void
 Dequantize(int EMax, int Bits, const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) <= Dims(SVol));
   if (!DVol->Buffer)
@@ -271,7 +271,7 @@ Dequantize(int EMax, int Bits, const volume& SVol, volume* DVol) {
   return Dequantize(EMax, Bits, extent(SVol), SVol, extent(*DVol), DVol);
 }
 
-mg_T2(t1, t2) void
+mg_TT(t1, t2) void
 ConvertType(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(DVol->Type != dtype::__Invalid__);
   mg_Assert(Dims(SGrid) <= Dims(SVol));

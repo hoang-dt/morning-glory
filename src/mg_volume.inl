@@ -289,7 +289,7 @@ Copy(const t& SGrid, const volume& SVol, volume* DVol) {
 #undef Body
 }
 
-mg_T2(t1, t2) void
+mg_TT(t1, t2) void
 Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
 #define Body(type)\
   mg_Assert(Dims(SGrid) == Dims(DGrid));\
@@ -306,7 +306,7 @@ Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
 #undef Body
 }
 
-mg_T2(t1, t2) void
+mg_TT(t1, t2) void
 Copy2(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) == Dims(DGrid));\
   mg_Assert(Dims(SGrid) <= Dims(SVol));\
@@ -319,7 +319,7 @@ Copy2(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
     *DIt = *SIt;
 }
 
-mg_T2(t1, t2) void
+mg_TT(t1, t2) void
 Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
 #define Body(type)\
   mg_Assert(Dims(SGrid) == Dims(DGrid));\
@@ -336,7 +336,7 @@ Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
 #undef Body
 }
 
-mg_T2(t1, t2) void
+mg_TT(t1, t2) void
 Add2(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) == Dims(DGrid));\
   mg_Assert(Dims(SGrid) <= Dims(SVol));\

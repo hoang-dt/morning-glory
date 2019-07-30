@@ -186,7 +186,7 @@ void TestZfp2() {
       while (Bp >= 0) { // through bit planes
         for (int B = 0; B < Prod(NBlocks3); ++B) {
           u32* Beg = (u32*)TileVolN.Buffer.Data + B * Prod(BlockDims3);
-          Encode32(Beg, Bp, 2e9, Ns[B], &Bs); // TODO: take a look at the S parameter
+          Encode<u32>(Beg, Bp, 2e9, Ns[B], &Bs);
         }
         --Bp;
       } // end bit plane loop
@@ -223,7 +223,7 @@ void TestZfp2() {
       while (Bp >= 0) {
         for (int B = 0; B < Prod(NBlocks3); ++B) {
           u32* Beg = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
-          Decode32(Beg, Bp, 2e9, NOs[B], &Bs);
+          Decode<u32>(Beg, Bp, 2e9, NOs[B], &Bs);
         }
         --Bp;
       }

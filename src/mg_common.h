@@ -58,7 +58,7 @@ mg_T(t) struct remove_reference { typedef t type; };
 mg_T(t) struct remove_reference<t&> { typedef t type; };
 mg_T(t) struct remove_reference<t&&> { typedef t type; };
 mg_T(t) struct remove_cv_ref { typedef typename remove_cv<typename remove_reference<t>::type>::type type; };
-mg_T2(t1, t2) struct is_same_type : false_type {};
+mg_TT(t1, t2) struct is_same_type : false_type {};
 mg_T(t) struct is_same_type<t, t> : true_type {};
 mg_T(t) struct is_pointer_helper : false_type {};
 mg_T(t) struct is_pointer_helper<t*> : true_type {};
@@ -93,6 +93,7 @@ mg_T() struct is_floating_point<f64> : true_type  {};
 mg_TA
 struct stack_array {
   static_assert(N > 0);
+  //constexpr stack_array() = default;
   t Arr[N];
   t& operator[](int Idx) const;
 };

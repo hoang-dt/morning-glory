@@ -34,9 +34,13 @@
 
 /* Short for template <typename ...> which sometimes can get too verbose */
 #define mg_T(...) template <__VA_OPT__(typename) __VA_ARGS__>
-#define mg_T2(t, u) template <typename t, typename u>
+#define mg_I(N) template <int N>
+#define mg_TI(t, N) template <typename t, int N>
+#define mg_TTI(t, u, N) template <typename t, typename u, int N>
+#define mg_TII(t, N, M) template <typename t, int N, int M>
+#define mg_TT(t, u) template <typename t, typename u>
 #define mg_Ti(t) mg_T(t) mg_Inline
-#define mg_T2i(t, u) mg_T2(t, u) mg_Inline
+#define mg_TTi(t, u) mg_TT(t, u) mg_Inline
 
 /* Print binary */
 #define mg_BinPattern8 "%c%c%c%c%c%c%c%c"

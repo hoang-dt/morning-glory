@@ -15,8 +15,8 @@ mg_T(t) t    FlipBit (t Val, int I);
 Return the bit plane of the most significant one-bit. Counting starts from the
 least significant bit plane.
 Examples: Msb(0) = -1, Msb(2) = 1, Msb(5) = 2, Msb(8) = 3 */
-i8 Msb(u32 V);
-i8 Msb(u64 V);
+constexpr i8 Msb(u32 V);
+constexpr i8 Msb(u64 V);
 /* Count the number of leading zero bits */
 i8 LzCnt(u32 V);
 i8 LzCnt(u64 V);

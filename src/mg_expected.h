@@ -7,7 +7,7 @@
 namespace mg {
 
 /* Store either a value or an error */
-mg_T2(t, u = err_code)
+mg_TT(t, u = err_code)
 struct expected {
   union {
     t Val;
@@ -26,8 +26,8 @@ struct expected {
   explicit operator bool() const;
 }; // struct expected
 
-mg_T2(t, u) t& Value(expected<t, u>& E);
-mg_T2(t, u) error<u>& Error(expected<t, u>& E);
+mg_TT(t, u) t& Value(expected<t, u>& E);
+mg_TT(t, u) error<u>& Error(expected<t, u>& E);
 
 } // namespace mg
 

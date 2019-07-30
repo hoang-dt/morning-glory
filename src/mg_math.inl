@@ -4,6 +4,7 @@
 #include "mg_algorithm.h"
 #include "mg_assert.h"
 #include "mg_bitops.h"
+#include "mg_common.h"
 
 namespace mg {
 
@@ -28,6 +29,18 @@ template <int N> int
   return Table;
 }
 
+template <typename t, int N> inline
+stack_array<t, mg_BitSizeOf(t) / Msb((u32)N)> PowTable = []() {
+  stack_array<t, mg_BitSizeOf(t) / Msb((u32)N)> Table; // NOTE: the last element may be overflown
+  t Base = N;
+  t Pow = 1;
+  for (int I = 0; I < Size(Table); ++I) {
+    Table[I] = Pow;
+    Pow *= Base;
+  }
+  return Table;
+}();
+
 mg_Ti(t) int
 Exponent(t Val) {
   if (Val > 0) {
@@ -39,7 +52,7 @@ Exponent(t Val) {
   return -traits<t>::ExpBias;
 }
 
-mg_T2i(t = int, u) t
+mg_TTi(t = int, u) t
 Prod(const v3<u>& Vec) { return t(Vec.X) * t(Vec.Y) * t(Vec.Z); }
 
 mg_Ti(t) v3<t>

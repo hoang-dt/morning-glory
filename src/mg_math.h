@@ -18,7 +18,7 @@ v3i  IsOdd (const v3i& P);
 
 mg_T(t) int Exponent(t Val);
 
-mg_T2(t, u = t) t Prod(const v3<u>& Vec);
+mg_TT(t, u = t) t Prod(const v3<u>& Vec);
 
 mg_T(t) v3<t> operator+(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) v3<t> operator-(const v3<t>& Lhs, const v3<t>& Rhs);

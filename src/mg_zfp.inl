@@ -3,6 +3,7 @@
 #include "mg_algorithm.h"
 #include "mg_assert.h"
 #include "mg_common.h"
+#include "mg_math.h"
 
 namespace mg {
 
@@ -65,8 +66,8 @@ ForwardZfp(t* P) {
       FLift(P + 1 * X + 4 * Y, 16);
 }
 
-mg_T(t) void
-ForwardZfp2D(t* P, int S) {
+mg_TI(t, S) void
+ForwardZfp2D(t* P) {
   mg_Assert(P);
   /* transform along X */
   for (int Y = 0; Y < S; ++Y)
@@ -93,8 +94,8 @@ InverseZfp(t* P) {
       ILift(P + 4 * Y + 16 * Z, 1);
 }
 
-mg_T(t) void
-InverseZfp2D(t* P, int S) {
+mg_TI(t, S) void
+InverseZfp2D(t* P) {
   mg_Assert(P);
   /* transform along y */
   for (int X = 0; X < S; ++X)
@@ -104,39 +105,8 @@ InverseZfp2D(t* P, int S) {
     ILift(P + S * Y, 1);
 }
 
-/*
-Use the following array to reorder transformed coefficients in a zfp block.
-The ordering is first by i + j, then by i^2 + j^2. */
-#define mg_Index2D_4(i, j) ((i) + 4 * (j))
-constexpr i8 
-Perm2_4[16] = {
-  mg_Index2D_4(0, 0), /*  0 : 0 */
-
-  mg_Index2D_4(1, 0), /*  1 : 1 */
-  mg_Index2D_4(0, 1), /*  1 : 1 */
-
-  mg_Index2D_4(1, 1), /*  2 : 2 */
-  mg_Index2D_4(2, 0), /*  4 : 2 */
-  mg_Index2D_4(0, 2), /*  4 : 2 */
-
-  mg_Index2D_4(2, 1), /*  5 : 3 */
-  mg_Index2D_4(1, 2), /*  5 : 3 */
-  mg_Index2D_4(3, 0), /*  9 : 3 */
-  mg_Index2D_4(0, 3), /*  9 : 3 */
-
-  mg_Index2D_4(2, 2), /*  8 : 4 */
-  mg_Index2D_4(3, 1), /* 10 : 4 */
-  mg_Index2D_4(1, 3), /* 10 : 4 */
-
-  mg_Index2D_4(3, 2), /* 13 : 5 */
-  mg_Index2D_4(2, 3), /* 13 : 5 */
-  
-  mg_Index2D_4(3, 3)  /* 18 : 6 */
-};
-#undef mg_Index2D_4
-
-template <int S>
-inline stack_array<int, S * S> Perm2 = []() {
+mg_I(S) inline 
+stack_array<int, S * S> Perm2 = []() {
   static stack_array<int, S * S> Arr;
   int I = 0;
   for (int Y = 0; Y < S; ++Y) {
@@ -157,8 +127,6 @@ inline stack_array<int, S * S> Perm2 = []() {
   }
   return Arr;
 }(); 
-
-#undef mg_Index2D
 
 /*
 Use the following array to reorder transformed coefficients in a zfp block.
@@ -251,25 +219,32 @@ Perm3[64] = {
 };
 #undef mg_Index
 
-mg_T2(t, u) void
+mg_TT(t, u) void
 ForwardShuffle(t* IBlock, u* UBlock) {
   auto Mask = traits<u>::NBinaryMask;
   for (int I = 0; I < 64; ++I)
     UBlock[I] = (u)((IBlock[Perm3[I]] + Mask) ^ Mask);
 }
 
-mg_T2(t, u) void
+template <typename t, typename u, int S> void
 ForwardShuffle2D(t* IBlock, u* UBlock) {
   auto Mask = traits<u>::NBinaryMask;
-  for (int I = 0; I < 16; ++I)
-    UBlock[I] = (u)((IBlock[Perm2_4[I]] + Mask) ^ Mask);
+  for (int I = 0; I < S * S; ++I)
+    UBlock[I] = (u)((IBlock[Perm2<S>[I]] + Mask) ^ Mask);
 }
 
-mg_T2(t, u) void
+mg_TT(t, u) void
 InverseShuffle(u* UBlock, t* IBlock) {
   auto Mask = traits<u>::NBinaryMask;
   for (int I = 0; I < 64; ++I)
     IBlock[Perm3[I]] = (t)((UBlock[I] ^ Mask) - Mask);
+}
+
+template <typename t, typename u, int S> void
+InverseShuffle2D(u* UBlock, t* IBlock) {
+  auto Mask = traits<u>::NBinaryMask;
+  for (int I = 0; I < S * S; ++I)
+    IBlock[Perm2<S>[I]] = (t)((UBlock[I] ^ Mask) - Mask);
 }
 
 mg_T(t) void
@@ -289,6 +264,68 @@ PadBlock(t* P, int N, int S) {
   default:
     break;
   }
+}
+
+// D is the dimension, K is the size of the block
+mg_TII(t, D, K) void
+Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
+  static_assert(is_unsigned<t>::Value);
+  mg_Assert((PowTable<int, K>[D] <= 64)); // e.g. 4x4x4, 4x4, 8x8
+  u64 X = 0;
+  for (int I = 0; I < PowTable<int, K>[D]; ++I)
+    X += u64((Block[I] >> B) & 1u) << I;
+  i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
+  if (P > 0) {
+    WriteLong(Bs, X, P);
+    X >>= P; // P == 64 is fine since in that case we don't need X any more
+  }
+  // TODO: we may be able to speed this up by getting rid of the shift of X
+  // or the call bit BitSize()
+  for (; BitSize(*Bs) < S && N < PowTable<int, K>[D];) {
+    if (Write(Bs, !!X)) { // group is significant
+      for (; BitSize(*Bs) < S && N + 1 < PowTable<int, K>[D];) {
+        if (Write(Bs, X & 1u)) { // found a significant coeff, break and retest
+          break;
+        } else { // have not found a significant coeff, continue until we find one
+          X >>= 1;
+          ++N;
+        }
+      }
+      if (BitSize(*Bs) >= S) 
+        break;
+      X >>= 1;
+      ++N;
+    } else {
+      break;
+    }
+  }
+}
+
+mg_TII(t, D, K) void
+Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
+  static_assert(is_unsigned<t>::Value);
+  mg_Assert((PowTable<int, K>[D] <= 64)); // e.g. 4x4x4, 4x4, 8x8
+  i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
+  u64 X = P > 0 ? ReadLong(Bs, P) : 0;
+  for (; BitSize(*Bs) < S && N < PowTable<int, K>[D];) {
+    if (Read(Bs)) {
+      for (; BitSize(*Bs) < S && N + 1 < PowTable<int, K>[D];) {
+        if (Read(Bs)) {
+          break;
+        } else {
+          ++N;
+        }
+      }
+      if (BitSize(*Bs) >= S)
+        break;
+      X += 1ull << (N++);
+    } else {
+      break;
+    }
+  }
+  /* deposit bit plane from x */
+  for (int I = 0; X; ++I, X >>= 1)
+    Block[I] += (t)(X & 1u) << B;
 }
 
 } // namespace mg
