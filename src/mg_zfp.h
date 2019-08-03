@@ -26,8 +26,9 @@ mg_TTI(t, u, S) void ForwardShuffle2D(t* IBlock, u* UBlock);
 mg_TTI(t, u, S) void InverseShuffle2D(u* UBlock, t* IBlock);
 
 /* Pad partial block of width N < 4 and stride S */
-mg_T(t) void PadBlock(t* P, int N, int S);
+mg_T(t) void PadBlock1D(t* P, int N, int S);
 mg_T(t) void PadBlock2D(t* P, int N, int S);
+mg_T(t) void PadBlock(t* P, int Nx, int Ny, int Nz);
 
 struct bitstream;
 /* Encode/decode a single bit plane B of a zfp block */

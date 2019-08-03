@@ -105,9 +105,10 @@ InverseZfp2D(t* P) {
     ILift(P + S * Y, 1);
 }
 
-mg_I(S) inline 
-stack_array<int, S * S> Perm2 = []() {
-  static stack_array<int, S * S> Arr;
+mg_I(S)
+struct perm2 {
+inline static const stack_array<int, S * S> Table = []() {
+  stack_array<int, S * S> Arr;
   int I = 0;
   for (int Y = 0; Y < S; ++Y) {
     for (int X = 0; X < S; ++X) {
@@ -127,6 +128,7 @@ stack_array<int, S * S> Perm2 = []() {
   }
   return Arr;
 }(); 
+};
 
 /*
 Use the following array to reorder transformed coefficients in a zfp block.
@@ -226,11 +228,11 @@ ForwardShuffle(t* IBlock, u* UBlock) {
     UBlock[I] = (u)((IBlock[Perm3[I]] + Mask) ^ Mask);
 }
 
-template <typename t, typename u, int S> void
+mg_TTI(t, u, S) void
 ForwardShuffle2D(t* IBlock, u* UBlock) {
   auto Mask = traits<u>::NBinaryMask;
   for (int I = 0; I < S * S; ++I)
-    UBlock[I] = (u)((IBlock[Perm2<S>[I]] + Mask) ^ Mask);
+    UBlock[I] = (u)((IBlock[perm2<S>::Table[I]] + Mask) ^ Mask);
 }
 
 mg_TT(t, u) void
@@ -240,15 +242,16 @@ InverseShuffle(u* UBlock, t* IBlock) {
     IBlock[Perm3[I]] = (t)((UBlock[I] ^ Mask) - Mask);
 }
 
-template <typename t, typename u, int S> void
+mg_TTI(t, u, S) void
 InverseShuffle2D(u* UBlock, t* IBlock) {
   auto Mask = traits<u>::NBinaryMask;
   for (int I = 0; I < S * S; ++I)
-    IBlock[Perm2<S>[I]] = (t)((UBlock[I] ^ Mask) - Mask);
+    IBlock[perm2<S>::Table[I]] = (t)((UBlock[I] ^ Mask) - Mask);
 }
 
+// TODO: this function is only correct for block size 4
 mg_T(t) void
-PadBlock(t* P, int N, int S) {
+PadBlock1D(t* P, int N, int S) {
   mg_Assert(P);
   mg_Assert(0 <= N && N <= 4);
   mg_Assert(S > 0);
@@ -266,13 +269,38 @@ PadBlock(t* P, int N, int S) {
   }
 }
 
+template <typename t> void
+PadBlock(t* P, int Nx, int Ny, int Nz) {
+  for (int Z = 0; Z < 4; ++Z)
+    for (int Y = 0; Y < 4; ++Y)
+      PadBlock1D(P + Z * 16 + Y * 4, Nx, 1);
+
+  for (int Z = 0; Z < 4; ++Z)
+    for (int X = 0; X < 4; ++X)
+      PadBlock1D(P + Z * 16 + X * 1, Ny, 4);
+
+  for (int Y = 0; Y < 4; ++Y)
+    for (int X = 0; X < 4; ++X)
+      PadBlock1D(P + Y * 4 + X * 1, Nz, 16);
+}
+
+template <typename t> void
+PadBlock2D(t* P, int Nx, int Ny) {
+  for (int Y = 0; Y < 4; ++Y)
+    PadBlock1D(P + Y * 4, Nx, 1);
+
+  for (int X = 0; X < 4; ++X)
+    PadBlock1D(P + X * 1, Ny, 4);
+}
+
 // D is the dimension, K is the size of the block
 mg_TII(t, D, K) void
 Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   static_assert(is_unsigned<t>::Value);
-  mg_Assert((PowTable<int, K>[D] <= 64)); // e.g. 4x4x4, 4x4, 8x8
+  int NVals = pow<int, K>::Table[D];
+  mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   u64 X = 0;
-  for (int I = 0; I < PowTable<int, K>[D]; ++I)
+  for (int I = 0; I < NVals; ++I)
     X += u64((Block[I] >> B) & 1u) << I;
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   if (P > 0) {
@@ -281,9 +309,9 @@ Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   }
   // TODO: we may be able to speed this up by getting rid of the shift of X
   // or the call bit BitSize()
-  for (; BitSize(*Bs) < S && N < PowTable<int, K>[D];) {
+  for (; BitSize(*Bs) < S && N < NVals;) {
     if (Write(Bs, !!X)) { // group is significant
-      for (; BitSize(*Bs) < S && N + 1 < PowTable<int, K>[D];) {
+      for (; BitSize(*Bs) < S && N + 1 < NVals;) {
         if (Write(Bs, X & 1u)) { // found a significant coeff, break and retest
           break;
         } else { // have not found a significant coeff, continue until we find one
@@ -304,12 +332,13 @@ Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
 mg_TII(t, D, K) void
 Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   static_assert(is_unsigned<t>::Value);
-  mg_Assert((PowTable<int, K>[D] <= 64)); // e.g. 4x4x4, 4x4, 8x8
+  int NVals = pow<int, K>::Table[D];
+  mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   u64 X = P > 0 ? ReadLong(Bs, P) : 0;
-  for (; BitSize(*Bs) < S && N < PowTable<int, K>[D];) {
+  for (; BitSize(*Bs) < S && N < NVals;) {
     if (Read(Bs)) {
-      for (; BitSize(*Bs) < S && N + 1 < PowTable<int, K>[D];) {
+      for (; BitSize(*Bs) < S && N + 1 < NVals;) {
         if (Read(Bs)) {
           break;
         } else {

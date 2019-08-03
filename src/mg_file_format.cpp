@@ -81,9 +81,10 @@ void CopyBlockForward(file_format& Ff, tile_data* Tl, v3i Block, int K) {
     i64 J = K + Row(ZDims, Voxel);
     Tl->Floats[J] = Data[I];
   } mg_EndFor3
-  PadBlock(Tl->Floats.Data, RealBlockDims.X, 1);
-  PadBlock(Tl->Floats.Data, RealBlockDims.Y, 4);
-  PadBlock(Tl->Floats.Data, RealBlockDims.Z, 16);
+  // TODO: the following 3 lines are not enough (see the OpenViSUS code)
+  //PadBlock(Tl->Floats.Data, RealBlockDims.X, 1);
+  //PadBlock(Tl->Floats.Data, RealBlockDims.Y, 4);
+  //PadBlock(Tl->Floats.Data, RealBlockDims.Z, 16);
 }
 
 // TODO: refactor to separate the copying from the decoding

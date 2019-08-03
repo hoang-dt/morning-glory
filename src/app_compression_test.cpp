@@ -27,7 +27,7 @@
 //#include <roaring/roaring.hh>
 //#include <roaring/roaring.c>
 #include <chrono>
-#include <openjp3d/openjp3d.h>
+//#include <openjp3d/openjp3d.h>
 #include <openjp3d/openjpeg.h>
 
 using namespace mg;
@@ -40,7 +40,85 @@ int CBlock_ = 32; // size of the code block
 v3i InputDims_(512, 512, 512);
 dtype InputType_(dtype::float32);
 
-void TestJp2k() {
+//void TestJp2k() {
+//  /* read the data from disk */
+//  volume Vol;
+//  ReadVolume(DataFile_, InputDims_, InputType_, &Vol);
+//  volume QVol(Dims(Vol), dtype::int32);
+//  v3i Dims3 = Dims(QVol);
+//  Quantize(Prec_, Vol, &QVol);
+//  //Clone(Vol ,&QVol);
+//  opj_cinfo_t* Compressor = opj_create_compress(CODEC_J3D);
+//  opj_cparameters_t Params;
+//  opj_set_default_encoder_parameters(&Params);
+//  Params.numresolution[2] = Params.numresolution[1] = Params.numresolution[0] = NLevels_ + 1;
+//  Params.cblock_init[0] =  Params.cblock_init[1] = Params.cblock_init[2] = CBlock_;
+//  Params.tile_size_on = true;
+//  Params.cp_tdx = Dims3.X; Params.cp_tdy = Dims3.Y; Params.cp_tdz = Dims3.Z;
+//  Params.prog_order = LRCP;
+//  Params.encoding_format = ENCOD_3EB;
+//  Params.transform_format = TRF_3D_DWT;
+//  // MAYBE: precint
+//  //Params.prct_init[3]
+//  //parameters->res_spec = res_spec;
+//  //parameters->csty |= 0x01;
+//  // TODO: set subsampling to 1 or 0
+//  if (Params.encoding_format == ENCOD_3EB)
+//    Params.mode |= (1 << 6);
+//
+//  if (Params.tcp_numlayers == 0) {
+//    Params.tcp_rates[0] = 0.0;
+//    Params.tcp_numlayers++;
+//    Params.cp_disto_alloc = 1;
+//  }
+//  opj_volume_cmptparm_t VolParams;
+//  VolParams.dx = VolParams.dy = VolParams.dz = 1; // subsampling
+//  VolParams.w = Dims3.X; VolParams.h = Dims3.Y; VolParams.l = Dims3.Z;
+//  VolParams.x0 = VolParams.y0 = VolParams.z0 = 0;
+//  VolParams.prec = VolParams.bpp = Prec_;
+//  VolParams.sgnd = 1;
+//  VolParams.dcoffset = 0;
+//  VolParams.bigendian = 0;
+//  opj_volume_t* Volume = opj_volume_create(1, &VolParams, CLRSPC_GRAY);
+//  buffer CompBuf((byte*)Volume->comps[0].data, QVol.Buffer.Bytes);
+//  MemCopy(QVol.Buffer, &CompBuf);
+//  //Volume->comps[0].data = (int*)QVol.Buffer.Data;
+//  Volume->numcomps = 1;
+//  Volume->comps[0].bpp = Prec_;
+//  Volume->x0 = Volume->y0 = Volume->z0 = 0;
+//  Volume->x1 = VolParams.w;
+//  Volume->y1 = VolParams.h;
+//  Volume->z1 = VolParams.l;
+//  opj_setup_encoder(Compressor, &Params, Volume);
+//  opj_cio_t* Stream = opj_cio_open((opj_common_ptr)Compressor, nullptr, 0); // for writing
+//  opj_encode(Compressor, Stream, Volume, nullptr);
+//  opj_volume_destroy(Volume);
+//  /* decode */
+//  auto CompressedBuf = Stream->buffer;
+//  auto Length = cio_tell(Stream);
+//  //cio_seek(Stream, 0);
+//  opj_dinfo_t* Decompressor = opj_create_decompress(CODEC_J3D);
+//  opj_dparameters_t DParams;
+//  opj_set_default_decoder_parameters(&DParams); // TODO
+//  DParams.decod_format = J3D_CFMT;
+//  opj_setup_decoder(Decompressor, &DParams);
+//  opj_cio_t* DStream = opj_cio_open((opj_common_ptr)Decompressor, CompressedBuf, Length);
+//  opj_volume_t* OutVol = opj_decode(Decompressor, DStream);
+//  //FILE* Fp = fopen("decompressed.raw", "wb");
+//  //fwrite(OutVol->comps[0].data, Prod(Dims3) * sizeof(int), 1, Fp);
+//  //fclose(Fp);
+//  //OutVol->comps[0]->data;
+//  auto Psnr = PSNR(QVol, volume(OutVol->comps[0].data, Dims(QVol)));
+//  printf("psnr = %f\n", Psnr);
+//  DeallocBuf(&QVol.Buffer);
+//  opj_cio_close(Stream);
+//  opj_cio_close(DStream);
+//  opj_volume_destroy(OutVol);
+//  opj_destroy_compress(Compressor);
+//  opj_destroy_decompress(Decompressor);
+//}
+//
+void TestJp2k2D() {
   /* read the data from disk */
   volume Vol;
   ReadVolume(DataFile_, InputDims_, InputType_, &Vol);
@@ -48,74 +126,76 @@ void TestJp2k() {
   v3i Dims3 = Dims(QVol);
   Quantize(Prec_, Vol, &QVol);
   //Clone(Vol ,&QVol);
-  opj_cinfo_t* Compressor = opj_create_compress(CODEC_J3D);
+  opj_codec_t* Compressor = opj_create_compress(OPJ_CODEC_J2K);
   opj_cparameters_t Params;
   opj_set_default_encoder_parameters(&Params);
-  Params.numresolution[2] = Params.numresolution[1] = Params.numresolution[0] = NLevels_ + 1;
-  Params.cblock_init[0] =  Params.cblock_init[1] = Params.cblock_init[2] = CBlock_;
-  Params.tile_size_on = true;
-  Params.cp_tdx = Dims3.X; Params.cp_tdy = Dims3.Y; Params.cp_tdz = Dims3.Z;
-  Params.prog_order = LRCP;
-  Params.encoding_format = ENCOD_3EB;
-  Params.transform_format = TRF_3D_DWT;
+  Params.tcp_mct = 0;
+  Params.cod_format = 0; // J2K
+  Params.numresolution = NLevels_ + 1;
+  Params.cblockw_init =  Params.cblockh_init = CBlock_;
+  Params.tile_size_on = false;
+  //Params.cp_tdx = Dims3.X; Params.cp_tdy = Dims3.Y;
+  Params.prog_order = OPJ_LRCP;
+  Params.irreversible = 0; // CDF5/3
   // MAYBE: precint
   //Params.prct_init[3]
   //parameters->res_spec = res_spec;
   //parameters->csty |= 0x01;
-  // TODO: set subsampling to 1 or 0
-  if (Params.encoding_format == ENCOD_3EB)
-    Params.mode |= (1 << 6);
 
-  if (Params.tcp_numlayers == 0) {
+  if (Params.tcp_numlayers == 0) { // lossless compression
     Params.tcp_rates[0] = 0.0;
     Params.tcp_numlayers++;
     Params.cp_disto_alloc = 1;
   }
-  opj_volume_cmptparm_t VolParams;
-  VolParams.dx = VolParams.dy = VolParams.dz = 1; // subsampling
-  VolParams.w = Dims3.X; VolParams.h = Dims3.Y; VolParams.l = Dims3.Z;
-  VolParams.x0 = VolParams.y0 = VolParams.z0 = 0;
-  VolParams.prec = VolParams.bpp = Prec_;
-  VolParams.sgnd = 1;
-  VolParams.dcoffset = 0;
-  VolParams.bigendian = 0;
-  opj_volume_t* Volume = opj_volume_create(1, &VolParams, CLRSPC_GRAY);
-  buffer CompBuf((byte*)Volume->comps[0].data, QVol.Buffer.Bytes);
+  /* set up the input "image" */
+  auto CParams = (opj_image_cmptparm_t*)calloc(1, sizeof(opj_image_cmptparm_t));
+  CParams[0].prec = Prec_;
+  CParams[0].bpp = Prec_;
+  CParams[0].sgnd = 1;
+  CParams[0].dx = 1;
+  CParams[0].dy = 1;
+  CParams[0].w = Dims3.X;
+  CParams[0].h = Dims3.Y;
+  auto Image = opj_image_create(1, &CParams[0], OPJ_CLRSPC_GRAY);
+  buffer CompBuf((byte*)Image->comps[0].data, QVol.Buffer.Bytes);
   MemCopy(QVol.Buffer, &CompBuf);
-  //Volume->comps[0].data = (int*)QVol.Buffer.Data;
-  Volume->numcomps = 1;
-  Volume->comps[0].bpp = Prec_;
-  Volume->x0 = Volume->y0 = Volume->z0 = 0;
-  Volume->x1 = VolParams.w;
-  Volume->y1 = VolParams.h;
-  Volume->z1 = VolParams.l;
-  opj_setup_encoder(Compressor, &Params, Volume);
-  opj_cio_t* Stream = opj_cio_open((opj_common_ptr)Compressor, nullptr, 0); // for writing
-  opj_encode(Compressor, Stream, Volume, nullptr);
-  opj_volume_destroy(Volume);
+  Image->numcomps = 1;
+  Image->x0 = Image->y0 = 0;
+  Image->x1 = CParams[0].w;
+  Image->y1 = CParams[0].h;
+
+  opj_setup_encoder(Compressor, &Params, Image);
+  auto Stream = opj_stream_create_default_file_stream("jp2k-out.raw", OPJ_FALSE);
+  opj_start_compress(Compressor, Image, Stream);
+  opj_encode(Compressor, Stream);
+  //opj_encode(Compressor, Stream, Volume, nullptr);
+  opj_end_compress(Compressor, Stream);
+  opj_image_destroy(Image);
+  opj_destroy_codec(Compressor);
+  opj_stream_destroy(Stream);
+
   /* decode */
-  auto CompressedBuf = Stream->buffer;
-  auto Length = cio_tell(Stream);
-  //cio_seek(Stream, 0);
-  opj_dinfo_t* Decompressor = opj_create_decompress(CODEC_J3D);
-  opj_dparameters_t DParams;
-  opj_set_default_decoder_parameters(&DParams); // TODO
-  DParams.decod_format = J3D_CFMT;
-  opj_setup_decoder(Decompressor, &DParams);
-  opj_cio_t* DStream = opj_cio_open((opj_common_ptr)Decompressor, CompressedBuf, Length);
-  opj_volume_t* OutVol = opj_decode(Decompressor, DStream);
-  //FILE* Fp = fopen("decompressed.raw", "wb");
-  //fwrite(OutVol->comps[0].data, Prod(Dims3) * sizeof(int), 1, Fp);
-  //fclose(Fp);
-  //OutVol->comps[0]->data;
-  auto Psnr = PSNR(QVol, volume(OutVol->comps[0].data, Dims(QVol)));
-  printf("psnr = %f\n", Psnr);
-  DeallocBuf(&QVol.Buffer);
-  opj_cio_close(Stream);
-  opj_cio_close(DStream);
-  opj_volume_destroy(OutVol);
-  opj_destroy_compress(Compressor);
-  opj_destroy_decompress(Decompressor);
+  //auto CompressedBuf = Stream->buffer;
+  //auto Length = cio_tell(Stream);
+  ////cio_seek(Stream, 0);
+  //opj_dinfo_t* Decompressor = opj_create_decompress(CODEC_J3D);
+  //opj_dparameters_t DParams;
+  //opj_set_default_decoder_parameters(&DParams); // TODO
+  //DParams.decod_format = J3D_CFMT;
+  //opj_setup_decoder(Decompressor, &DParams);
+  //opj_cio_t* DStream = opj_cio_open((opj_common_ptr)Decompressor, CompressedBuf, Length);
+  //opj_volume_t* OutVol = opj_decode(Decompressor, DStream);
+  ////FILE* Fp = fopen("decompressed.raw", "wb");
+  ////fwrite(OutVol->comps[0].data, Prod(Dims3) * sizeof(int), 1, Fp);
+  ////fclose(Fp);
+  ////OutVol->comps[0]->data;
+  //auto Psnr = PSNR(QVol, volume(OutVol->comps[0].data, Dims(QVol)));
+  //printf("psnr = %f\n", Psnr);
+  //DeallocBuf(&QVol.Buffer);
+  //opj_cio_close(Stream);
+  //opj_cio_close(DStream);
+  //opj_volume_destroy(OutVol);
+  //opj_destroy_decompress(Decompressor);
 }
 
 void TestZfp2() {
@@ -506,13 +586,34 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
 }
 
 int main(int Argc, const char** Argv) {
-  auto& A = Perm2<8>;
-  for (int I = 0; I < Size(A); ++I) {
-    int X = A[I] % 8, Y = A[I] / 8;
-    printf("%d %d\n", X, Y);
-  }
-  //TestJp2k();
-  //TestZfp2();
+  //auto& A = perm2<4>::Table;
+  //for (int I = 0; I < Size(A); ++I) {
+  //  int Y = A[I] / 4;
+  //  int X = A[I] % 4;
+  //  printf("%d %d\n", X, Y);
+  //}
+  //int A[4];
+  //for (int x = 0; x < 16; ++x) {
+  //  for (int y = 0; y < 16; ++y) {
+  //    for (int z = 0; z < 16; ++z) {
+  //      for (int w = 0; w < 16; ++w) {
+  //        A[0] = x; A[1] = y; A[2] = z; A[3] = w;
+  //        FLift(A, 1);
+  //        int xx = A[0], yy = A[1], zz = A[2], ww = A[3];
+  //        int M = Max(Max(xx, yy), Max(zz, ww));
+  //        int N = Min(Min(xx, yy), Min(zz, ww));
+  //        if (M - N >= 16) {
+  //          printf("M = %d N = %d\n", M, N);
+  //          printf("%d %d %d %d\n", x, y, z, w);
+  //          printf("%d %d %d %d\n", xx, yy, zz, ww);
+  //        }
+  //      }
+  //    }
+  //  }
+  //}
+
+  TestJp2k2D();
+  TestZfp2();
   /* Read data */
   //cstr InputFile, OutputFile;
   //mg_AbortIf(!OptVal(Argc, Argv, "--input", &InputFile), "Provide --input");

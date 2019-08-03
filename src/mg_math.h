@@ -11,8 +11,8 @@ constexpr f64 Pi = 3.14159265358979323846;
 template <int N>
 int (&Power(int Base))[N];
 
-bool IsEven(int X);
-bool IsOdd (int X);
+bool IsEven(i64 X);
+bool IsOdd (i64 X);
 v3i  IsEven(const v3i& P);
 v3i  IsOdd (const v3i& P);
 
@@ -38,21 +38,14 @@ mg_T(t) bool  operator>=(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) v3<t> Min(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) v3<t> Max(const v3<t>& Lhs, const v3<t>& Rhs);
 
-i8 Log2Floor(int Val);
-i8 Log8Floor(int Val);
+i8 Log2Floor(i64 Val);
+i8 Log8Floor(i64 Val);
 
-int Pow(int Base, int Exp);
-int NextPow2(int Val);
+i64 Pow(i64 Base, int Exp);
+i64 NextPow2(i64 Val);
 
 int GeometricSum(int Base, int N);
 
 } // namespace mg
 
 #include "mg_math.inl"
-
-namespace mg {
-
-static auto& Pow10 = Power<9>(10);
-static auto& Pow8  = Power<10>(8);
-
-} // namespace mg

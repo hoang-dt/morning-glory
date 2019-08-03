@@ -9,9 +9,9 @@
 namespace mg {
 
 mg_Inline bool
-IsEven(int X) { return (X & 1) == 0; }
+IsEven(i64 X) { return (X & 1) == 0; }
 mg_Inline bool
-IsOdd(int X) { return (X & 1) != 0; }
+IsOdd(i64 X) { return (X & 1) != 0; }
 mg_Inline v3i
 IsEven(const v3i& P) { return v3i(IsEven(P.X), IsEven(P.Y), IsEven(P.Z)); }
 mg_Inline v3i
@@ -20,26 +20,31 @@ IsOdd(const v3i& P) { return v3i(IsOdd(P.X), IsOdd(P.Y), IsOdd(P.Z)); }
 mg_Inline bool
 IsPow2(int X) { mg_Assert(X > 0); return X && !(X & (X - 1)); }
 
-template <int N> int
-(&Power(int Base))[N] {
-  static int Table[N];
-  Table[0] = 1;
-  for (int I = 1; I < N; ++I)
-    Table[I] = Table[I - 1] * Base;
-  return Table;
+mg_Inline constexpr int
+LogFloor(i64 Base, i64 Val) {
+  int Log = 0;
+  i64 S = Base;
+  while (S <= Val) {
+    ++Log;
+    S *= Base;
+  }
+  return Log;
 }
 
-template <typename t, int N> inline
-stack_array<t, mg_BitSizeOf(t) / Msb((u32)N)> PowTable = []() {
-  stack_array<t, mg_BitSizeOf(t) / Msb((u32)N)> Table; // NOTE: the last element may be overflown
-  t Base = N;
-  t Pow = 1;
-  for (int I = 0; I < Size(Table); ++I) {
-    Table[I] = Pow;
-    Pow *= Base;
-  }
-  return Table;
-}();
+mg_TI(t, N)
+struct pow {
+  static inline const stack_array<t, LogFloor(N, traits<t>::Max)> Table = []() {
+    stack_array<t, LogFloor(N, traits<t>::Max)> Result;
+    t Base = N;
+    t Pow = 1;
+    for (int I = 0; I < Size(Result); ++I) {
+      Result[I] = Pow;
+      Pow *= Base;
+    }
+    return Result;
+  }();
+  t operator[](int I) const { return Table[I]; }
+};
 
 mg_Ti(t) int
 Exponent(t Val) {
@@ -122,13 +127,13 @@ Max(const v3<t>& Lhs, const v3<t>& Rhs) {
 }
 
 mg_Inline i8
-Log2Floor(int Val) {
+Log2Floor(i64 Val) {
   mg_Assert(Val > 0);
-  return Msb((u32)Val);
+  return Msb((u64)Val);
 }
 
 mg_Inline i8
-Log8Floor(int Val) {
+Log8Floor(i64 Val) {
   mg_Assert(Val > 0);
   return Log2Floor(Val) / 3;
 }
@@ -140,12 +145,21 @@ GeometricSum(int Base, int N) {
 }
 
 // TODO: when n is already a power of two plus one, do not increase n
-mg_Inline int
-NextPow2(int Val) {
+mg_Inline i64
+NextPow2(i64 Val) {
   mg_Assert(Val >= 0);
   if (Val == 0)
     return 1;
-  return 1 << (Msb((u32)(Val - 1)) + 1);
+  return 1 << (Msb((u64)(Val - 1)) + 1);
+}
+
+mg_Inline i64
+Pow(i64 Base, int Exp) {
+  mg_Assert(Exp >= 0);
+  i64 Result = 1;
+  for (int I = 0; I < Exp; ++I)
+    Result *= Base;
+  return Result;
 }
 
 } // namespace mg

@@ -79,7 +79,7 @@ ToInt(const stref& Str, int* Result) {
   for (int I = Start; I < Str.Size; ++I) {
     int V = StrR[StrR.Size - I - 1] - '0';
     if (V >= 0 && V < 10)
-      *Result += Mult * (V * Pow10[I]);
+      *Result += Mult * (V * pow<int, 10>()[I]);
     else
       return false;
   }
