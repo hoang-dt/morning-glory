@@ -100,6 +100,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		src\mg_zfp.cpp = src\mg_zfp.cpp
 		src\mg_zfp.h = src\mg_zfp.h
 		src\mg_zfp.inl = src\mg_zfp.inl
+		src\openjp3d\openjp3d.h = src\openjp3d\openjp3d.h
+		src\openjp3d\openjpeg.h = src\openjp3d\openjpeg.h
+		src\openjp3d\opj_config.h = src\openjp3d\opj_config.h
+		src\openjp3d\opj_stdint.h = src\openjp3d\opj_stdint.h
 	EndProjectSection
 EndProject
 Project("{911E67C6-3D85-4FCE-B560-20A9C3E3FF48}") = "app_compression_test", "bin\app_compression_test.exe", "{EC2458BB-0F07-46EE-9741-DCE55BB594F6}"

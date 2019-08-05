@@ -62,7 +62,7 @@ clang++.exe "../src/app_compression_test.cpp" -o "app_compression_test.o" -c %IN
 ::lld-link.exe %LINK_FILES% -out:"%OUTPUT%" %LDFLAGS% %LDLIBS%
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
 ::lld-link.exe "app_compression_test.o" -libpath:"e:\Workspace\file-format-new\src\openjp3d" /DEBUG -out:"%OUTPUT%" %COMMON_LDFLAGS% %LDFLAGS% %COMMON_LIB_PATHS% %COMMON_LIBS% %LDLIBS% openjp3d.lib openjp2.lib
-link.exe "app_compression_test.o" -libpath:"e:\Workspace\file-format-new\src\openjp3d" /DEBUG -out:"%OUTPUT%" openjp3d.lib openjp2.lib %COMMON_LDFLAGS% %LDFLAGS% %COMMON_LIB_PATHS% %COMMON_LIBS% %LDLIBS%
+link.exe "app_compression_test.o" -libpath:"e:\Workspace\file-format-new\src\openjp3d" /DEBUG -out:"%OUTPUT%" openjp2.lib %COMMON_LDFLAGS% %LDFLAGS% %COMMON_LIB_PATHS% %COMMON_LIBS% %LDLIBS%
 del "build.o"
 cd ..
 

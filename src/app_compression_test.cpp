@@ -33,12 +33,12 @@
 using namespace mg;
 namespace chrono = std::chrono;
 
-cstr DataFile_ = "D:/Datasets/3D/MARMOSET-NEURONS-[512-512-512]-Float32.raw";
+cstr DataFile_ = "D:/Datasets/2D/Slices/MIRANDA-DENSITY-[384-384]-Float64.raw";
 int Prec_ = 16;
 int NLevels_ = 3; // TODO: check if jpeg's nlevels is the same as our nlevels
 int CBlock_ = 32; // size of the code block
-v3i InputDims_(512, 512, 512);
-dtype InputType_(dtype::float32);
+v3i InputDims_(384, 384, 1);
+dtype InputType_(dtype::float64);
 
 //void TestJp2k() {
 //  /* read the data from disk */
@@ -118,6 +118,28 @@ dtype InputType_(dtype::float32);
 //  opj_destroy_decompress(Decompressor);
 //}
 //
+static void error_callback(const char* msg, void* client_data)
+{
+  (void)client_data;
+  fprintf(stdout, "[ERROR] %s", msg);
+}
+/**
+sample warning debug callback expecting no client object
+*/
+static void warning_callback(const char* msg, void* client_data)
+{
+  (void)client_data;
+  fprintf(stdout, "[WARNING] %s", msg);
+}
+/**
+sample debug callback expecting no client object
+*/
+static void info_callback(const char* msg, void* client_data)
+{
+  (void)client_data;
+  fprintf(stdout, "[INFO] %s", msg);
+}
+
 void TestJp2k2D() {
   /* read the data from disk */
   volume Vol;
@@ -125,8 +147,11 @@ void TestJp2k2D() {
   volume QVol(Dims(Vol), dtype::int32);
   v3i Dims3 = Dims(QVol);
   Quantize(Prec_, Vol, &QVol);
-  //Clone(Vol ,&QVol);
   opj_codec_t* Compressor = opj_create_compress(OPJ_CODEC_J2K);
+  opj_set_info_handler(Compressor, info_callback, 00);
+  opj_set_warning_handler(Compressor, warning_callback, 00);
+  opj_set_error_handler(Compressor, error_callback, 00);
+
   opj_cparameters_t Params;
   opj_set_default_encoder_parameters(&Params);
   Params.tcp_mct = 0;
@@ -134,13 +159,9 @@ void TestJp2k2D() {
   Params.numresolution = NLevels_ + 1;
   Params.cblockw_init =  Params.cblockh_init = CBlock_;
   Params.tile_size_on = false;
-  //Params.cp_tdx = Dims3.X; Params.cp_tdy = Dims3.Y;
+  Params.cp_tdx = Dims3.X; Params.cp_tdy = Dims3.Y;
   Params.prog_order = OPJ_LRCP;
   Params.irreversible = 0; // CDF5/3
-  // MAYBE: precint
-  //Params.prct_init[3]
-  //parameters->res_spec = res_spec;
-  //parameters->csty |= 0x01;
 
   if (Params.tcp_numlayers == 0) { // lossless compression
     Params.tcp_rates[0] = 0.0;
@@ -166,15 +187,63 @@ void TestJp2k2D() {
 
   opj_setup_encoder(Compressor, &Params, Image);
   auto Stream = opj_stream_create_default_file_stream("jp2k-out.raw", OPJ_FALSE);
-  opj_start_compress(Compressor, Image, Stream);
+  bool Success = opj_start_compress(Compressor, Image, Stream);
   opj_encode(Compressor, Stream);
-  //opj_encode(Compressor, Stream, Volume, nullptr);
   opj_end_compress(Compressor, Stream);
   opj_image_destroy(Image);
   opj_destroy_codec(Compressor);
-  opj_stream_destroy(Stream);
+  opj_stream_destroy(Stream);  
 
   /* decode */
+  opj_dparameters_t DParams;
+  memset(&DParams, 0, sizeof(opj_dparameters_t));
+  DParams.decod_format = 0; // J2K_CFMT;
+  DParams.cod_format = 18; // RAWL_DFMT 18 /* LSB / Little Endian */
+  // force precision
+  //DParams.prec = image->comps[compno].prec;
+  //DParams.precision = 
+  //DParams.nb_precision = 1;
+  //parameters->core.cp_reduce
+  //parameters->core.cp_layer
+  // decode roi
+  //parameters->DA_x0, & parameters->DA_y0,
+  //parameters->DA_x1, & parameters->DA_y1
+  // decode tile
+  //parameters->nb_tile_to_decode
+  u32 CompsIndices = 0;
+  opj_set_default_decoder_parameters(&DParams);
+  auto DStream = opj_stream_create_default_file_stream("jp2k-out.raw", 1);
+  auto Decompressor = opj_create_decompress(OPJ_CODEC_J2K);
+  opj_set_info_handler(Decompressor, info_callback, 00);
+  opj_set_warning_handler(Decompressor, warning_callback, 00);
+  opj_set_error_handler(Decompressor, error_callback, 00);
+  opj_setup_decoder(Decompressor, &DParams);
+  opj_codec_set_threads(Decompressor, 1);
+  opj_image_t* DImage = nullptr;
+  opj_read_header(DStream, Decompressor, &DImage);
+  opj_set_decoded_components(Decompressor, 1, &CompsIndices, OPJ_FALSE);
+  opj_decode(Decompressor, DStream, DImage);
+  opj_end_decompress(Decompressor, DStream);
+
+  /* verify using psnr */
+  volume OutVol; Clone(QVol, &OutVol);
+  buffer DecompBuf((byte*)DImage->comps[0].data, QVol.Buffer.Bytes);
+  FILE* Fp = fopen("decompressed.raw", "wb");
+  fwrite(DImage->comps[0].data, QVol.Buffer.Bytes, 1, Fp);
+  MemCopy(DecompBuf, &OutVol.Buffer);
+  auto Ps = PSNR(QVol, OutVol);
+  printf("psnr = %f\n", Ps);
+
+  opj_image_destroy(DImage);
+  opj_stream_destroy(DStream);
+  opj_destroy_codec(Decompressor);
+  // free
+  //if (parameters->precision) {
+  //  free(parameters->precision);
+  //  parameters->precision = NULL;
+  //}
+
+  
   //auto CompressedBuf = Stream->buffer;
   //auto Length = cio_tell(Stream);
   ////cio_seek(Stream, 0);
@@ -613,7 +682,7 @@ int main(int Argc, const char** Argv) {
   //}
 
   TestJp2k2D();
-  TestZfp2();
+  //TestZfp2();
   /* Read data */
   //cstr InputFile, OutputFile;
   //mg_AbortIf(!OptVal(Argc, Argv, "--input", &InputFile), "Provide --input");
