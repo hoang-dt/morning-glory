@@ -2,8 +2,10 @@
 
 #include "mg_algorithm.h"
 #include "mg_assert.h"
+#include "mg_bitops.h"
 #include "mg_common.h"
 #include "mg_math.h"
+#include <iostream>
 
 namespace mg {
 
@@ -293,6 +295,7 @@ PadBlock2D(t* P, int Nx, int Ny) {
     PadBlock1D(P + X * 1, Ny, 4);
 }
 
+
 // D is the dimension, K is the size of the block
 mg_TII(t, D, K) void
 Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
@@ -329,8 +332,12 @@ Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   }
 }
 
+int MyCounter = 0;
 mg_TII(t, D, K) void
 Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
+  if (MyCounter == 8664) {
+    int Stop = 0;
+  }
   static_assert(is_unsigned<t>::Value);
   int NVals = pow<int, K>::Table[D];
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
@@ -352,6 +359,104 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
       break;
     }
   }
+  std::cout << "N = " << int(N) << std::endl;
+  /* deposit bit plane from x */
+  for (int I = 0; X; ++I, X >>= 1)
+    Block[I] += (t)(X & 1u) << B;
+  ++MyCounter;
+}
+
+
+mg_TII(t, D, K) void
+Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
+  if (MyCounter == 8664) {
+    int Stop = 0;
+  }
+  static_assert(is_unsigned<t>::Value);
+  int NVals = pow<int, K>::Table[D];
+  mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
+  i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
+  u64 X = P > 0 ? ReadLong(Bs, P) : 0;
+  bool ExpectGroupTestBit = true;
+  while (N < NVals) {
+    // NOTE: if there is one bit left in the bit plane, and the last group test
+    // bit is 1, this last bit is inferred as 1 and not written
+    Refill(Bs);
+    int MaxBits = 64 - Bs->BitPos;
+    u64 Next = Peek(Bs, MaxBits); // only the last MaxBits of Next are meaningful
+    int Out[65] = { -1, 0 }; // TODO: aligned allocation?
+    int M = DecodeBitmap(Next, Out + 1); // TODO: do we need to fill Out with 0s?
+    if (ExpectGroupTestBit && (M == 0 || Out[1] > 0)) { 
+      // there are no 1 bits, or the first bit is not 1 (the group is insignificant)
+      Consume(Bs, 1);
+      break;
+    }
+    /* INVARIANT: there is at least one 1-bit and if we are expecting a group test
+    bit, it is 1 and is at the first position */
+    if (ExpectGroupTestBit && M == 1) { // only see one group test bit (case 6)
+      mg_Assert(Out[1] == 0);
+      if (N + 1 == NVals) { // the group test bit is for the last significant coefficient
+        Consume(Bs, 1);
+        N = NVals;
+        break;
+      }
+      // else, the group test bit is the only 1 bit
+      Consume(Bs, MaxBits); // consume everything
+      N += MaxBits - 1;
+      mg_Assert(N < NVals);
+      ExpectGroupTestBit = false;
+      continue;
+    }
+    /* INVARIANT: there is at least one value 1-bit */
+    int L = 0; // number of value bits to consume
+    /* process the value bits */
+    int I = ExpectGroupTestBit + 1; // start from either 1 (value) or 2 (group test)
+    while (I - 1 < M) { // we loop through every other 1-bit
+      L += Out[I] - Out[I - 1]; // assuming Out[0] is -1
+      if (L + N > NVals) { // we went pass the last group test bit (1)
+        // TODO: double check the case where N + L == NVals and the last group test bit is 1 (for the last coefficient)
+        // this cannot happen unless the last group test 1-bit is the last significant coefficient
+        L -= Out[I] - Out[I - 1];
+        mg_Assert(I >= 2);
+        I -= 2; // go back to the last value bit (NOTE: I could go back to 0)
+        break;
+      }
+      X += 1ull << (L - 1 + N);
+      if ((I == M) || (Out[I + 1] > Out[I] + 1)) // there is no next 1-bit, or we found a 0 group test bit, the rest of the bit plane is insignificant
+        break;
+      I += 2;
+    }
+    // INVARIANT: Out[I] is the position of a value 1-bit (could be the last)
+    // 0 <= Out[I] < MaxBits
+    mg_Assert((I == 0) || (0 <= Out[I] && Out[I] < MaxBits));
+    N += L;
+    if (Out[I] + 1 < MaxBits) { // there is one (group test) bit following this
+      bool NextBit = BitSet(Next, Out[I] + 1);
+      if (!NextBit || (L + N == NVals - 1)) { // group test bit is 0 or there is only one insignificant coefficient left
+        Consume(Bs, Out[I] + 2);
+        N += NextBit;
+        break;
+      } else { // group test bit is 1 and there are more than one insignificant coefficient left
+        mg_Assert(Out[I + 1] == Out[I] + 1);
+        ExpectGroupTestBit = false;
+        Consume(Bs, MaxBits); // consume the rest of the bit plane since there are no more 1-bits
+        N += MaxBits - Out[I + 1] - 1;
+        mg_Assert(N < NVals);
+        continue;
+      }
+    } else { // there is no bit following it
+      ExpectGroupTestBit = true;
+      Consume(Bs, Out[I] + 1);
+      continue;
+    }
+  }
+  if (MyCounter == 8663) {
+    int P = Peek(Bs, 20);
+    int Stop = 0;
+  }
+  std::cout << "N = " << int(N) << std::endl;
+  ++MyCounter;
+
   /* deposit bit plane from x */
   for (int I = 0; X; ++I, X >>= 1)
     Block[I] += (t)(X & 1u) << B;
