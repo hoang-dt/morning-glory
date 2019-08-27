@@ -335,7 +335,7 @@ Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
 int MyCounter = 0;
 mg_TII(t, D, K) void
 Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
-  if (MyCounter == 8664) {
+  if (MyCounter == 8679) {
     int Stop = 0;
   }
   static_assert(is_unsigned<t>::Value);
@@ -343,6 +343,7 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   u64 X = P > 0 ? ReadLong(Bs, P) : 0;
+  std::cout << "X = " << X << std::endl;
   for (; BitSize(*Bs) < S && N < NVals;) {
     if (Read(Bs)) {
       for (; BitSize(*Bs) < S && N + 1 < NVals;) {
@@ -359,7 +360,7 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
       break;
     }
   }
-  std::cout << "N = " << int(N) << std::endl;
+  //std::cout << "N = " << int(N) << std::endl;
   /* deposit bit plane from x */
   for (int I = 0; X; ++I, X >>= 1)
     Block[I] += (t)(X & 1u) << B;
@@ -369,7 +370,7 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
 
 mg_TII(t, D, K) void
 Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
-  if (MyCounter == 8664) {
+  if (MyCounter == 8679) {
     int Stop = 0;
   }
   static_assert(is_unsigned<t>::Value);
@@ -377,6 +378,7 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   u64 X = P > 0 ? ReadLong(Bs, P) : 0;
+  std::cout << "X = " << X << std::endl;
   bool ExpectGroupTestBit = true;
   while (N < NVals) {
     // NOTE: if there is one bit left in the bit plane, and the last group test
@@ -386,6 +388,7 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
     u64 Next = Peek(Bs, MaxBits); // only the last MaxBits of Next are meaningful
     int Out[65] = { -1, 0 }; // TODO: aligned allocation?
     int M = DecodeBitmap(Next, Out + 1); // TODO: do we need to fill Out with 0s?
+    Out[M + 1] = MaxBits; // sentinel
     if (ExpectGroupTestBit && (M == 0 || Out[1] > 0)) { 
       // there are no 1 bits, or the first bit is not 1 (the group is insignificant)
       Consume(Bs, 1);
@@ -413,7 +416,7 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
     int I = ExpectGroupTestBit + 1; // start from either 1 (value) or 2 (group test)
     while (I - 1 < M) { // we loop through every other 1-bit
       L += Out[I] - Out[I - 1]; // assuming Out[0] is -1
-      if (L + N > NVals) { // we went pass the last group test bit (1)
+      if (L + N >= NVals) { // we went pass the last group test bit (1)
         // TODO: double check the case where N + L == NVals and the last group test bit is 1 (for the last coefficient)
         // this cannot happen unless the last group test 1-bit is the last significant coefficient
         L -= Out[I] - Out[I - 1];
@@ -432,17 +435,23 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
     N += L;
     if (Out[I] + 1 < MaxBits) { // there is one (group test) bit following this
       bool NextBit = BitSet(Next, Out[I] + 1);
-      if (!NextBit || (L + N == NVals - 1)) { // group test bit is 0 or there is only one insignificant coefficient left
+      if (!NextBit || (N + 1 == NVals)) {
         Consume(Bs, Out[I] + 2);
         N += NextBit;
         break;
-      } else { // group test bit is 1 and there are more than one insignificant coefficient left
+      } else { // group test bit is 1
         mg_Assert(Out[I + 1] == Out[I] + 1);
-        ExpectGroupTestBit = false;
-        Consume(Bs, MaxBits); // consume the rest of the bit plane since there are no more 1-bits
-        N += MaxBits - Out[I + 1] - 1;
-        mg_Assert(N < NVals);
-        continue;
+        N += MaxBits - Out[I + 1];
+        if (N >= NVals) {
+          N -= MaxBits - Out[I + 1];
+          Consume(Bs, Out[I + 1] + (NVals - N));
+          N = NVals;
+          break;
+        } else {
+          Consume(Bs, MaxBits);
+          ExpectGroupTestBit = false;
+          continue;
+        }
       }
     } else { // there is no bit following it
       ExpectGroupTestBit = true;
@@ -450,11 +459,7 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
       continue;
     }
   }
-  if (MyCounter == 8663) {
-    int P = Peek(Bs, 20);
-    int Stop = 0;
-  }
-  std::cout << "N = " << int(N) << std::endl;
+  //std::cout << "N = " << int(N) << std::endl;
   ++MyCounter;
 
   /* deposit bit plane from x */
