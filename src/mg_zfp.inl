@@ -335,15 +335,12 @@ Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
 int MyCounter = 0;
 mg_TII(t, D, K) void
 Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
-  if (MyCounter == 8679) {
-    int Stop = 0;
-  }
   static_assert(is_unsigned<t>::Value);
   int NVals = pow<int, K>::Table[D];
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   u64 X = P > 0 ? ReadLong(Bs, P) : 0;
-  std::cout << "X = " << X << std::endl;
+  std::cout << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
   for (; BitSize(*Bs) < S && N < NVals;) {
     if (Read(Bs)) {
       for (; BitSize(*Bs) < S && N + 1 < NVals;) {
@@ -360,7 +357,7 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
       break;
     }
   }
-  //std::cout << "N = " << int(N) << std::endl;
+  std::cout << "N = " << int(N) << std::endl;
   /* deposit bit plane from x */
   for (int I = 0; X; ++I, X >>= 1)
     Block[I] += (t)(X & 1u) << B;
@@ -370,15 +367,14 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
 
 mg_TII(t, D, K) void
 Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
-  if (MyCounter == 8679) {
+  if (MyCounter == 872387)
     int Stop = 0;
-  }
   static_assert(is_unsigned<t>::Value);
   int NVals = pow<int, K>::Table[D];
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   u64 X = P > 0 ? ReadLong(Bs, P) : 0;
-  std::cout << "X = " << X << std::endl;
+  //std::cout << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
   bool ExpectGroupTestBit = true;
   while (N < NVals) {
     // NOTE: if there is one bit left in the bit plane, and the last group test
@@ -394,69 +390,65 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
       Consume(Bs, 1);
       break;
     }
-    /* INVARIANT: there is at least one 1-bit and if we are expecting a group test
-    bit, it is 1 and is at the first position */
-    if (ExpectGroupTestBit && M == 1) { // only see one group test bit (case 6)
-      mg_Assert(Out[1] == 0);
-      if (N + 1 == NVals) { // the group test bit is for the last significant coefficient
-        Consume(Bs, 1);
-        N = NVals;
-        break;
-      }
-      // else, the group test bit is the only 1 bit
-      Consume(Bs, MaxBits); // consume everything
-      N += MaxBits - 1;
-      mg_Assert(N < NVals);
-      ExpectGroupTestBit = false;
-      continue;
-    }
     /* INVARIANT: there is at least one value 1-bit */
     int L = 0; // number of value bits to consume
     /* process the value bits */
     int I = ExpectGroupTestBit + 1; // start from either 1 (value) or 2 (group test)
-    while (I - 1 < M) { // we loop through every other 1-bit
+    while (I <= M) { // we loop through every other 1-bit
       L += Out[I] - Out[I - 1]; // assuming Out[0] is -1
       if (L + N >= NVals) { // we went pass the last group test bit (1)
-        // TODO: double check the case where N + L == NVals and the last group test bit is 1 (for the last coefficient)
-        // this cannot happen unless the last group test 1-bit is the last significant coefficient
         L -= Out[I] - Out[I - 1];
-        mg_Assert(I >= 2);
-        I -= 2; // go back to the last value bit (NOTE: I could go back to 0)
+        I -= 2;
         break;
       }
-      X += 1ull << (L - 1 + N);
+      X += 1ull << (L - 1 + N); // TODO: we missed updating X sometimes: eg the last 1 bit in the bit plane
+      // TODO: with the sentinel at Out[65] we can get rid of one test
       if ((I == M) || (Out[I + 1] > Out[I] + 1)) // there is no next 1-bit, or we found a 0 group test bit, the rest of the bit plane is insignificant
         break;
       I += 2;
     }
     // INVARIANT: Out[I] is the position of a value 1-bit (could be the last)
     // 0 <= Out[I] < MaxBits
+    if (I > M) {
+      I -= 2;
+    }
+    mg_Assert(I <= M);
     mg_Assert((I == 0) || (0 <= Out[I] && Out[I] < MaxBits));
     N += L;
-    if (Out[I] + 1 < MaxBits) { // there is one (group test) bit following this
-      bool NextBit = BitSet(Next, Out[I] + 1);
-      if (!NextBit || (N + 1 == NVals)) {
-        Consume(Bs, Out[I] + 2);
-        N += NextBit;
-        break;
-      } else { // group test bit is 1
-        mg_Assert(Out[I + 1] == Out[I] + 1);
-        N += MaxBits - Out[I + 1];
-        if (N >= NVals) {
-          N -= MaxBits - Out[I + 1];
-          Consume(Bs, Out[I + 1] + (NVals - N));
-          N = NVals;
-          break;
-        } else {
-          Consume(Bs, MaxBits);
-          ExpectGroupTestBit = false;
-          continue;
-        }
+    if (I == -1) { // always check next bit
+      if (ExpectGroupTestBit) { // check the next bit
+        goto JUMP1;
+      } else { // just consume bits ahead
+        goto JUMP2;
       }
-    } else { // there is no bit following it
-      ExpectGroupTestBit = true;
-      Consume(Bs, Out[I] + 1);
-      continue;
+    } else { // I > -1
+      if (Out[I] + 1 < MaxBits) { // there is one (group test) bit following this
+JUMP1:
+        bool NextBit = BitSet(Next, Out[I] + 1);
+        if (!NextBit || (N + 1 == NVals)) {
+          Consume(Bs, Out[I] + 2);
+          N += NextBit;
+          break;
+        } else { // group test bit is 1
+          mg_Assert(Out[I + 1] == Out[I] + 1);
+JUMP2:
+          N += MaxBits - Out[I + 1] - 1;
+          if (N >= NVals) {
+            N -= MaxBits - Out[I + 1] - 1;
+            Consume(Bs, Out[I + 1] + (NVals - N));
+            N = NVals;
+            break;
+          } else {
+            Consume(Bs, MaxBits);
+            ExpectGroupTestBit = false;
+            continue;
+          }
+        }
+      } else { // no bit following this
+        ExpectGroupTestBit = true;
+        Consume(Bs, Out[I] + 1);
+        continue;
+      }
     }
   }
   //std::cout << "N = " << int(N) << std::endl;

@@ -33,11 +33,11 @@
 using namespace mg;
 namespace chrono = std::chrono;
 
-cstr DataFile_ = "D:/Datasets/3D/Small/MIRANDA-DENSITY-[64-64-64]-Float64.raw";
-int Prec_ = 20;
+cstr DataFile_ = "D:/Datasets/3D/Small/MIRANDA-DENSITY-[128-128-128]-Float64.raw";
+int Prec_ = 25;
 int NLevels_ = 1; // TODO: check if jpeg's nlevels is the same as our nlevels
 int CBlock_ = 32; // size of the code block
-v3i InputDims_(64, 64, 64);
+v3i InputDims_(128, 128, 128);
 dtype InputType_(dtype::float64);
 
 //void TestJp2k() {
@@ -229,7 +229,6 @@ void TestZfpNewDecoder() {
   InverseCdf53Old(&QVolBackup, NLevels_);
   Fill(Begin<i32>(QVol), End<i32>(QVol), 0);
   InitRead(&Bs, Bs.Stream);
-  StartTimer(&Timer);
   array<i8> NOs; Init(&NOs, Prod(NBlocks3), i8(0));
   for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
     v3i SbFrom3 = From(Sbands[Sb]);
@@ -252,7 +251,9 @@ void TestZfpNewDecoder() {
           if (BX >= RealNBlocks3.X || BY >= RealNBlocks3.Y || BZ >= RealNBlocks3.Z)
             continue;
           u32* Beg = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
+          StartTimer(&Timer);
           Decode2<u32>(Beg, Bp, 2e9, NOs[B], &Bs);
+          TotalDecompressionTime += ElapsedTime(&Timer);
           //if (Bp == NBitplanes - 1)
         }
         --Bp;
@@ -276,7 +277,6 @@ void TestZfpNewDecoder() {
   }
   auto DecompressedSize = Size(Bs);
   printf("decompressed size = %lld\n", DecompressedSize);
-  TotalDecompressionTime += ElapsedTime(&Timer);
   InverseCdf53Old(&QVol, NLevels_);
   //WriteBuffer("out.raw", QVol.Buffer);
   auto Psnr = PSNR(QVolBackup, QVol);
