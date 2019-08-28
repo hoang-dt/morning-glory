@@ -340,7 +340,7 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   u64 X = P > 0 ? ReadLong(Bs, P) : 0;
-  std::cout << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
+  //std::cout << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
   for (; BitSize(*Bs) < S && N < NVals;) {
     if (Read(Bs)) {
       for (; BitSize(*Bs) < S && N + 1 < NVals;) {
@@ -357,7 +357,7 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
       break;
     }
   }
-  std::cout << "N = " << int(N) << std::endl;
+  //std::cout << "N = " << int(N) << std::endl;
   /* deposit bit plane from x */
   for (int I = 0; X; ++I, X >>= 1)
     Block[I] += (t)(X & 1u) << B;
@@ -367,8 +367,6 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
 
 mg_TII(t, D, K) void
 Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
-  if (MyCounter == 872387)
-    int Stop = 0;
   static_assert(is_unsigned<t>::Value);
   int NVals = pow<int, K>::Table[D];
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
@@ -382,9 +380,9 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
     Refill(Bs);
     int MaxBits = 64 - Bs->BitPos;
     u64 Next = Peek(Bs, MaxBits); // only the last MaxBits of Next are meaningful
-    int Out[65] = { -1, 0 }; // TODO: aligned allocation?
-    int M = DecodeBitmap(Next, Out + 1); // TODO: do we need to fill Out with 0s?
-    Out[M + 1] = MaxBits; // sentinel
+    int Out[65]  ALIGNED(16) = { -1, 0 };
+    int M = DecodeBitmap(Next, Out + 1);
+    Out[M + 1] = MaxBits + 1; // sentinel
     if (ExpectGroupTestBit && (M == 0 || Out[1] > 0)) { 
       // there are no 1 bits, or the first bit is not 1 (the group is insignificant)
       Consume(Bs, 1);
@@ -401,44 +399,44 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
         I -= 2;
         break;
       }
-      X += 1ull << (L - 1 + N); // TODO: we missed updating X sometimes: eg the last 1 bit in the bit plane
-      // TODO: with the sentinel at Out[65] we can get rid of one test
-      if ((I == M) || (Out[I + 1] > Out[I] + 1)) // there is no next 1-bit, or we found a 0 group test bit, the rest of the bit plane is insignificant
+      X += 1ull << (L - 1 + N);
+      if (Out[I + 1] > Out[I] + 1) // there is no next 1-bit, or we found a 0 group test bit, the rest of the bit plane is insignificant
         break;
       I += 2;
     }
     // INVARIANT: Out[I] is the position of a value 1-bit (could be the last)
     // 0 <= Out[I] < MaxBits
-    if (I > M) {
+    if (I > M) 
       I -= 2;
-    }
     mg_Assert(I <= M);
     mg_Assert((I == 0) || (0 <= Out[I] && Out[I] < MaxBits));
     N += L;
     if (I == -1) { // always check next bit
-      if (ExpectGroupTestBit) { // check the next bit
+      if (ExpectGroupTestBit)  // check the next bit
         goto JUMP1;
-      } else { // just consume bits ahead
+      else  // just consume bits ahead
         goto JUMP2;
-      }
     } else { // I > -1
       if (Out[I] + 1 < MaxBits) { // there is one (group test) bit following this
 JUMP1:
         bool NextBit = BitSet(Next, Out[I] + 1);
         if (!NextBit || (N + 1 == NVals)) {
           Consume(Bs, Out[I] + 2);
+          X += (1ull & NextBit) << N;
           N += NextBit;
           break;
         } else { // group test bit is 1
           mg_Assert(Out[I + 1] == Out[I] + 1);
 JUMP2:
-          N += MaxBits - Out[I + 1] - 1;
-          if (N >= NVals) {
-            N -= MaxBits - Out[I + 1] - 1;
-            Consume(Bs, Out[I + 1] + (NVals - N));
+          int A = MaxBits - Out[I + 1] - 1;
+          int B = NVals - N;
+          if (A >= B) { // consume bits until N == NVals
+            Consume(Bs, Out[I + 1] + B);
+            X += 1ull << (NVals - 1);
             N = NVals;
             break;
-          } else {
+          } else { // consume the rest of the bit plane
+            N += A;
             Consume(Bs, MaxBits);
             ExpectGroupTestBit = false;
             continue;

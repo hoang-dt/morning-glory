@@ -33,11 +33,11 @@
 using namespace mg;
 namespace chrono = std::chrono;
 
-cstr DataFile_ = "D:/Datasets/3D/Small/MIRANDA-DENSITY-[128-128-128]-Float64.raw";
-int Prec_ = 25;
-int NLevels_ = 1; // TODO: check if jpeg's nlevels is the same as our nlevels
+cstr DataFile_ = "D:/Datasets/3D/Miranda/MIRANDA-VELOCITYZ-[384-384-256]-Float64.raw";
+int Prec_ = 24;
+int NLevels_ = 0; // TODO: check if jpeg's nlevels is the same as our nlevels
 int CBlock_ = 32; // size of the code block
-v3i InputDims_(128, 128, 128);
+v3i InputDims_(384, 384, 256);
 dtype InputType_(dtype::float64);
 
 //void TestJp2k() {
@@ -252,7 +252,7 @@ void TestZfpNewDecoder() {
             continue;
           u32* Beg = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
           StartTimer(&Timer);
-          Decode2<u32>(Beg, Bp, 2e9, NOs[B], &Bs);
+          Decode<u32>(Beg, Bp, 2e9, NOs[B], &Bs);
           TotalDecompressionTime += ElapsedTime(&Timer);
           //if (Bp == NBitplanes - 1)
         }
@@ -924,9 +924,6 @@ int main(int Argc, const char** Argv) {
   //TestJp2k();
   //TestZfp2D();
   //u64 Val = 1729382256910270464ull;
-  u64 Val = 1;
-  int Out[64];
-  int M = DecodeBitmap(Val, Out);
   TestZfpNewDecoder();
   /* Read data */
   //cstr InputFile, OutputFile;

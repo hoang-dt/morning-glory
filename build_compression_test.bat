@@ -20,7 +20,7 @@ set COMMON_CFLAGS= -Xclang -flto-visibility-public-std -std=gnu++2a ^
   -fdiagnostics-absolute-paths -fopenmp -fopenmp-simd -fms-extensions^
   -Wall -Wextra -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wfatal-errors ^
   -Wno-nested-anon-types -Wno-gnu-anonymous-struct -Wno-missing-braces -Wno-vla-extension^
-  -g -gcodeview -gno-column-info
+  -g -gcodeview -gno-column-info -mavx2
 if %1==Release (set CFLAGS= -O2 -DNDEBUG -ftree-vectorize -march=native)
 if %1==FastDebug (set CFLAGS= -Og -DNDEBUG -ftree-vectorize -march=native)
 if %1==Debug (set CFLAGS= -O0 -D_DEBUG -march=native)
