@@ -3,9 +3,14 @@
 #include "mg_common.h"
 #include "mg_volume.h"
 
-// TODO: make these functions take in volume instead of raw pointers
-
 namespace mg {
+
+struct wavelet_block {
+  v3i Levels;
+  grid Grid;
+  volume Volume;
+  bool IsPacked = false; // if the Volume stores data just for this block
+};
 
 /* Normal lifting which uses mirroring at the boundary */
 mg_T(t) void FLiftCdf53OldX(t* F, const v3i& N, const v3i& L);
@@ -15,7 +20,11 @@ mg_T(t) void ILiftCdf53OldX(t* F, const v3i& N, const v3i& L);
 mg_T(t) void ILiftCdf53OldY(t* F, const v3i& N, const v3i& L);
 mg_T(t) void ILiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
 
-/* New set of lifting functions */
+/* New set of lifting functions. We assume the volume where we want to transform
+to happen (M) is contained within a bigger volume (Vol). When Dims(Grid) is even,
+extrapolation will happen, in a way that the last (odd) wavelet coefficient is 0.
+We assume the storage at index M.(x/y/z) is available to store the extrapolated 
+values if necessary. */
 enum lift_option { Normal, PartialUpdateLast, NoUpdateLast };
 mg_T(t) void FLiftCdf53X(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
 mg_T(t) void FLiftCdf53Y(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);

@@ -17,13 +17,9 @@ mg_T(t) void \
 FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
   v3i P = From(Grid), D = Dims(Grid), S = Strd(Grid), N = Dims(*Vol);\
   if (D.x == 1) return;\
-  if (M.x > N.x) {\
-    printf("%d %d\n", M.x, N.x);\
-  }\
   mg_Assert(M.x <= N.x);\
   mg_Assert(IsPow2(S.X) && IsPow2(S.Y) && IsPow2(S.Z));\
   mg_Assert(D.x >= 2); /* TODO: what if D.x == 2? */\
-  mg_Assert(IsEven(P.x));\
   mg_Assert(P.x + S.x * (D.x - 2) < M.x);\
   buffer_t<t> F(Vol->Buffer);\
   int x1 = Min(P.x + S.x * (D.x - 1), M.x); /* last position */\
@@ -33,8 +29,10 @@ FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
     int zz = Min(z, M.z);\
     for (int y = P.y; y < P.y + S.y * D.y; y += S.y) {\
       int yy = Min(y, M.y);\
-      /* extrapolate */\
-      bool Ext = IsEven(D.x);\
+      /* extrapolate if either: */\
+        /* - the first sample is even and the number of samples is even, or */\
+        /* - the first sample is odd  and the number of samples is odd */\
+      bool Ext = IsEven(P.x / S.x + D.x);\
       if (Ext) {\
         t A = F[mg_Row##x(x2, yy, zz, N)]; /* 2nd last (even) */\
         t B = F[mg_Row##x(x1, yy, zz, N)]; /* last (odd) */\
@@ -70,6 +68,7 @@ FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
   }\
 }
 
+// TODO: this function does not make use of PartialUpdateLast
 #define mg_ILiftCdf53(z, y, x)\
 mg_T(t) void \
 ILiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
@@ -94,7 +93,10 @@ ILiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
         F[mg_Row##x(x - S.x, yy, zz, N)] -= Val / 4;\
         F[mg_Row##x(x + S.x, yy, zz, N)] -= Val / 4;\
       }\
-      bool Ext = IsEven(D.x);\
+      /* extrapolate if either: */\
+        /* - the first sample is even and the number of samples is even, or */\
+        /* - the first sample is odd  and the number of samples is odd */\
+      bool Ext = IsEven(P.x / S.x + D.x);\
       if (!Ext) { /* no extrapolation, inverse update at the last odd position */\
         t Val = F[mg_Row##x(x2, yy, zz, N)];\
         F[mg_Row##x(x3, yy, zz, N)] -= Val / 4;\

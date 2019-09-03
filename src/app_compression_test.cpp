@@ -33,7 +33,7 @@
 using namespace mg;
 namespace chrono = std::chrono;
 
-cstr DataFile_ = "D:/Datasets/3D/Miranda/MIRANDA-VELOCITYZ-[384-384-256]-Float64.raw";
+cstr DataFile_ = "D:/Datasets/3D/Miranda/MIRANDA-DENSITY-[384-384-256]-Float64.raw";
 int Prec_ = 24;
 int NLevels_ = 0; // TODO: check if jpeg's nlevels is the same as our nlevels
 int CBlock_ = 32; // size of the code block
@@ -155,7 +155,9 @@ void TestZfpNewDecoder() {
   volume TileVolQ(BufQ, TileDims3, QVol.Type); // quantized tile data
   buffer BufN; AllocBuf(&BufN, SizeOf(QVol.Type) * Prod(TileDims3));
   volume TileVolN(BufN, TileDims3, IntType(UnsignedType(TileVolQ.Type))); // negabinary
-  buffer BufO; AllocBuf(&BufO, SizeOf(TileVolN.Type) * Prod(TileDims3));
+  buffer BufO; /*AllocBuf(&BufO, SizeOf(TileVolN.Type) * Prod(TileDims3));*/
+  BufO.Data = (byte*)_mm_malloc(SizeOf(TileVolN.Type) * Prod(TileDims3), 32);
+  BufO.Bytes = SizeOf(TileVolN.Type) * Prod(TileDims3); 
   volume TileVolO(BufO, TileDims3, TileVolN.Type); // decompression output
   buffer BsBuf; AllocBuf(&BsBuf, Vol.Buffer.Bytes);
   bitstream Bs; InitWrite(&Bs, BsBuf);
@@ -252,7 +254,7 @@ void TestZfpNewDecoder() {
             continue;
           u32* Beg = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
           StartTimer(&Timer);
-          Decode<u32>(Beg, Bp, 2e9, NOs[B], &Bs);
+          Decode2<u32>(Beg, Bp, 2e9, NOs[B], &Bs);
           TotalDecompressionTime += ElapsedTime(&Timer);
           //if (Bp == NBitplanes - 1)
         }
@@ -920,7 +922,20 @@ void TestLz4(volume& Vol, int NLevels, metadata Meta, const v3i& TileDims3, f64 
   //mg_AbortIf(ErrorExists(Err), "%s", ToString(Err));
 }
 
+__m256i get_mask3(const uint32_t input) {
+  __m256i mask = _mm256_set_epi32(0xffffff7f, 0xffffffbf, 0xffffffdf, 0xffffffef, 0xfffffff7, 0xfffffffb, 0xfffffffd, 0xfffffffe);
+  __m256i val = _mm256_set1_epi32(input);
+  //const __m256i bit_mask(_mm256_set1_epi64x(0x7fbfdfeff7fbfdfe));
+  val = _mm256_or_si256(val, mask);
+  val = _mm256_cmpeq_epi32(val, _mm256_set1_epi64x(-1));
+  int table[8] ALIGNED(32) = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  val = _mm256_maskload_epi32(table, val);
+  _mm256_store_si256((__m256i*)table, val);
+  return val;
+}
+
 int main(int Argc, const char** Argv) {
+  //get_mask3(0x0A0B0C0D);
   //TestJp2k();
   //TestZfp2D();
   //u64 Val = 1729382256910270464ull;

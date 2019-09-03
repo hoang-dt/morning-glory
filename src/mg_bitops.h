@@ -17,9 +17,13 @@ least significant bit plane.
 Examples: Msb(0) = -1, Msb(2) = 1, Msb(5) = 2, Msb(8) = 3 */
 constexpr i8 Msb(u32 V);
 constexpr i8 Msb(u64 V);
+constexpr i8 Lsb(u32 V, i8 Default = -1);
+constexpr i8 Lsb(u64 V, i8 Default = -1);
 /* Count the number of leading zero bits */
-i8 LzCnt(u32 V);
-i8 LzCnt(u64 V);
+i8 LzCnt(u32 V, i8 Default = -1);
+i8 LzCnt(u64 V, i8 Default = -1);
+i8 TzCnt(u32 V, i8 Default = -1);
+i8 TzCnt(u64 V, i8 Default = -1);
 
 /* Morton encoding/decoding */
 u32 DecodeMorton3X(u32 Code);

@@ -340,18 +340,18 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   u64 X = P > 0 ? ReadLong(Bs, P) : 0;
-  //std::cout << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
-  for (; BitSize(*Bs) < S && N < NVals;) {
+  //std::cout << "Counter " << MyCounter << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
+  for (; /*BitSize(*Bs) < S &&*/ N < NVals;) {
     if (Read(Bs)) {
-      for (; BitSize(*Bs) < S && N + 1 < NVals;) {
+      for (; /*BitSize(*Bs) < S &&*/ N + 1 < NVals;) {
         if (Read(Bs)) {
           break;
         } else {
           ++N;
         }
       }
-      if (BitSize(*Bs) >= S)
-        break;
+      /*if (BitSize(*Bs) >= S)
+        break;*/
       X += 1ull << (N++);
     } else {
       break;
@@ -359,8 +359,19 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   }
   //std::cout << "N = " << int(N) << std::endl;
   /* deposit bit plane from x */
-  for (int I = 0; X; ++I, X >>= 1)
-    Block[I] += (t)(X & 1u) << B;
+  //for (int I = 0; X; ++I, X >>= 1)
+  //  Block[I] += (t)(X & 1u) << B;
+  __m256i Add = _mm256_set1_epi32(t(1) << B); // TODO: should be epi64 with t == u64
+  __m256i Mask = _mm256_set_epi32(0xffffff7f, 0xffffffbf, 0xffffffdf, 0xffffffef, 0xfffffff7, 0xfffffffb, 0xfffffffd, 0xfffffffe);
+  while (X) {
+    __m256i Val = _mm256_set1_epi32(X);
+    Val = _mm256_or_si256(Val, Mask);
+    Val = _mm256_cmpeq_epi32(Val, _mm256_set1_epi64x(-1));
+    //int table[8] ALIGNED(32) = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    _mm256_maskstore_epi32((int*)Block, Val, _mm256_add_epi32(_mm256_maskload_epi32((int*)Block, Val), Add));
+    X >>= 8;
+    Block += 8;
+  }
   ++MyCounter;
 }
 
@@ -372,89 +383,79 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
   i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
   u64 X = P > 0 ? ReadLong(Bs, P) : 0;
-  //std::cout << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
+  //std::cout << "Counter " << MyCounter << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
   bool ExpectGroupTestBit = true;
   while (N < NVals) {
-    // NOTE: if there is one bit left in the bit plane, and the last group test
-    // bit is 1, this last bit is inferred as 1 and not written
     Refill(Bs);
     int MaxBits = 64 - Bs->BitPos;
-    u64 Next = Peek(Bs, MaxBits); // only the last MaxBits of Next are meaningful
-    int Out[65]  ALIGNED(16) = { -1, 0 };
-    int M = DecodeBitmap(Next, Out + 1);
-    Out[M + 1] = MaxBits + 1; // sentinel
-    if (ExpectGroupTestBit && (M == 0 || Out[1] > 0)) { 
-      // there are no 1 bits, or the first bit is not 1 (the group is insignificant)
-      Consume(Bs, 1);
-      break;
-    }
-    /* INVARIANT: there is at least one value 1-bit */
-    int L = 0; // number of value bits to consume
-    /* process the value bits */
-    int I = ExpectGroupTestBit + 1; // start from either 1 (value) or 2 (group test)
-    while (I <= M) { // we loop through every other 1-bit
-      L += Out[I] - Out[I - 1]; // assuming Out[0] is -1
-      if (L + N >= NVals) { // we went pass the last group test bit (1)
-        L -= Out[I] - Out[I - 1];
-        I -= 2;
+    u64 Next = Peek(Bs, MaxBits);
+    i8 BitCurr = -1 + !ExpectGroupTestBit; i8 BitPrev = BitCurr;
+    if (ExpectGroupTestBit) {
+      BitCurr = Lsb(Next, -1);
+      if (BitCurr != 0) { 
+        // there are no 1 bits, or the first bit is not 1 (the group is insignificant)
+        Consume(Bs, 1);
         break;
       }
-      X += 1ull << (L - 1 + N);
-      if (Out[I + 1] > Out[I] + 1) // there is no next 1-bit, or we found a 0 group test bit, the rest of the bit plane is insignificant
-        break;
-      I += 2;
-    }
-    // INVARIANT: Out[I] is the position of a value 1-bit (could be the last)
-    // 0 <= Out[I] < MaxBits
-    if (I > M) 
-      I -= 2;
-    mg_Assert(I <= M);
-    mg_Assert((I == 0) || (0 <= Out[I] && Out[I] < MaxBits));
-    N += L;
-    if (I == -1) { // always check next bit
-      if (ExpectGroupTestBit)  // check the next bit
-        goto JUMP1;
-      else  // just consume bits ahead
+      /* group test bit is 1, at position 0. now move on to the next value 1-bit */
+      mg_Assert(BitCurr == 0);
+      //if ((BitCurr = TzCnt(Next = UnsetBit(Next, 0), MaxBits)) != MaxBits) // could be MaxBits
+      BitCurr = Lsb(Next = UnsetBit(Next, 0), MaxBits);
+      BitPrev = 0;
+      if (BitCurr - BitPrev >= NVals - N)
         goto JUMP2;
-    } else { // I > -1
-      if (Out[I] + 1 < MaxBits) { // there is one (group test) bit following this
-JUMP1:
-        bool NextBit = BitSet(Next, Out[I] + 1);
-        if (!NextBit || (N + 1 == NVals)) {
-          Consume(Bs, Out[I] + 2);
-          X += (1ull & NextBit) << N;
-          N += NextBit;
-          break;
-        } else { // group test bit is 1
-          mg_Assert(Out[I + 1] == Out[I] + 1);
+    } else {
+      goto JUMP;
+    }
+    /* BitCurr == position of the next value 1-bit (could be -1) */
+    while (true) { // we loop through every other 1-bit
+      N += BitCurr - BitPrev;
+      if (BitCurr < MaxBits || N == NVals) {
+        X += 1ull << (N - 1);
+        //Block[N - 1] += 1ull << (N - 1);
+      }
+      if (BitCurr + 1 >= MaxBits) { // there is no bit left
+        ExpectGroupTestBit = BitCurr < MaxBits;
+        Consume(Bs, MaxBits);
+        goto OUTER;
+      } else if (!BitSet(Next, BitCurr + 1)) { // next group test bit is 0
+        Consume(Bs, BitCurr + 2);
+        goto DONE;
+      } else { // next group test bit is 1
+        Next &= ~(3ull << (BitCurr + 1)) >> 1; // unset BitCurr and BitCurr + 1
+        BitPrev = BitCurr + 1;
+JUMP:
+        BitCurr = Lsb(Next, MaxBits);
+        if (BitCurr - BitPrev >= NVals - N) {
 JUMP2:
-          int A = MaxBits - Out[I + 1] - 1;
-          int B = NVals - N;
-          if (A >= B) { // consume bits until N == NVals
-            Consume(Bs, Out[I + 1] + B);
-            X += 1ull << (NVals - 1);
-            N = NVals;
-            break;
-          } else { // consume the rest of the bit plane
-            N += A;
-            Consume(Bs, MaxBits);
-            ExpectGroupTestBit = false;
-            continue;
-          }
+          Consume(Bs, (NVals - N) + BitPrev);
+          N = NVals;
+          X += 1ull << (NVals - 1);
+          //Block[NVals - 1] += 1ull << (NVals - 1);
+          goto DONE;
         }
-      } else { // no bit following this
-        ExpectGroupTestBit = true;
-        Consume(Bs, Out[I] + 1);
-        continue;
       }
     }
+OUTER:;
   }
+DONE:
   //std::cout << "N = " << int(N) << std::endl;
   ++MyCounter;
 
   /* deposit bit plane from x */
-  for (int I = 0; X; ++I, X >>= 1)
-    Block[I] += (t)(X & 1u) << B;
+  //for (int I = 0; X; ++I, X >>= 1)
+  //  Block[I] += (t)(X & 1u) << B;
+  __m256i Add = _mm256_set1_epi32(t(1) << B); // TODO: should be epi64 with t == u64
+  __m256i Mask = _mm256_set_epi32(0xffffff7f, 0xffffffbf, 0xffffffdf, 0xffffffef, 0xfffffff7, 0xfffffffb, 0xfffffffd, 0xfffffffe);
+  while (X) {
+    __m256i Val = _mm256_set1_epi32(X);
+    Val = _mm256_or_si256(Val, Mask);
+    Val = _mm256_cmpeq_epi32(Val, _mm256_set1_epi64x(-1));
+    //int table[8] ALIGNED(32) = { 1, 2, 3, 4, 5, 6, 7, 8 };
+    _mm256_maskstore_epi32((int*)Block, Val, _mm256_add_epi32(_mm256_maskload_epi32((int*)Block, Val), Add));
+    X >>= 8;
+    Block += 8;
+  }
 }
 
 } // namespace mg

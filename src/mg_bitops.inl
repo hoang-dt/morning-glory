@@ -35,52 +35,78 @@ FlipBit(t Val, int I) {
 #if defined(__clang__) || defined(__GNUC__)
 mg_Inline constexpr i8
 Msb(u32 V) {
-  if (V == 0) return -1;
-  return i8(mg_BitSizeOf(V) - 1 - __builtin_clz(V));
+  return (V == 0) ? -1 : i8(mg_BitSizeOf(V) - 1 - __builtin_clz(V));
 }
 mg_Inline constexpr i8
 Msb(u64 V) {
-  if (V == 0) return -1;
-  return i8(mg_BitSizeOf(V) - 1 -__builtin_clzll(V));
+  return (V == 0) ? -1 : i8(mg_BitSizeOf(V) - 1 -__builtin_clzll(V));
+}
+mg_Inline constexpr i8
+Lsb(u32 V, i8 Default) {
+  return (V == 0) ? Default : i8(__builtin_ctz(V));
+}
+mg_Inline constexpr i8
+Lsb(u64 V, i8 Default) {
+  return (V == 0) ? Default : i8(__builtin_ctzll(V));
 }
 #elif defined(_MSC_VER)
 #include <intrin.h>
 #pragma intrinsic(_BitScanReverse)
 #pragma intrinsic(_BitScanReverse64)
 mg_Inline constexpr i8
-Msb(u32 V) {
-  if (V == 0) return -1;
+Msb(u32 V, i8 Default) {
   unsigned long Index = 0;
-  _BitScanReverse(&Index, V);
-  return (i8)Index;
+  unsigned char Ret = _BitScanReverse(&Index, V);
+  return Ret ? (i8)Index : Default;
 }
 mg_Inline constexpr i8
-Msb(u64 V) {
-  if (V == 0) return -1;
+Msb(u64 V, i8 Default) {
   unsigned long Index = 0;
-  _BitScanReverse64(&Index, V);
-  return (i8)Index;
+  unsigned char _BitScanReverse64(&Index, V);
+  return Ret ? (i8)Index : Default;
+}
+#pragma intrinsic(_BitScanForward)
+#pragma intrinsic(_BitScanForward64)
+mg_Inline constexpr i8
+Lsb(u32 V) {
+  unsigned long Index = 0;
+  unsigned char Ret = _BitScanForward(&Index, V);
+  return Ret ? (i8)Index : -1;
+}
+mg_Inline constexpr i8
+Lsb(u64 V) {
+  unsigned long Index = 0;
+  unsigned char Ret = _BitScanForward64(&Index, V);
+  return Ret ? (i8)Index : -1;
 }
 #endif
 
 // TODO: the following clashes with stlab which brings in MSVC's intrin.h
-//#if defined(__BMI2__)
-//#if defined(__clang__) || defined(__GNUC__)
-//#include <intrin.h>
-//#include <mmintrin.h>
-//#include <x86intrin.h>
-//mg_Inline i8
-//LzCnt(u32 V) { return (i8)_lzcnt_u32(V); }
-//mg_Inline i8
-//LzCnt(u64 V) { return (i8)_lzcnt_u64(V); }
-//#elif defined(_MSC_VER)
-//#include <intrin.h>
-//mg_Inline i8
-//LzCnt(u32 V) { return (i8)__lzcnt(V); }
-//mg_Inline i8
-//LzCnt(u64 V) { return (i8)__lzcnt64(V); }
-//#endif
-//#endif
+#if defined(__BMI2__)
+#if defined(__clang__) || defined(__GNUC__)
+#include <intrin.h>
+#include <mmintrin.h>
+#include <x86intrin.h>
+mg_Inline i8
+LzCnt(u32 V, i8 Default) { return V ? (i8)_lzcnt_u32(V) : Default; }
+mg_Inline i8
+LzCnt(u64 V, i8 Default) { return V ? (i8)_lzcnt_u64(V) : Default; }
+mg_Inline i8
+TzCnt(u32 V, i8 Default) { return V ? (i8)_tzcnt_u32(V) : Default; }
+mg_Inline i8
+TzCnt(u64 V, i8 Default) { return V ? (i8)_tzcnt_u64(V) : Default; }
+#elif defined(_MSC_VER)
+#include <intrin.h>
+mg_Inline i8
+LzCnt(u32 V, i8 Default) { return V ? (i8)__lzcnt(V) : Default; }
+mg_Inline i8
+LzCnt(u64 V, i8 Default) { return V ? (i8)__lzcnt64(V) : Default; }
+mg_Inline i8
+TzCnt(u32 V, i8 Default) { return V ? (i8)__tzcnt(V) : Default; }
+mg_Inline i8
+TzCnt(u64 V, i8 Default) { return V ? (i8)__tzcnt64(V) : Default; }
+#endif
+#endif
 
 /* Reverse the operation that inserts two 0 bits after every bit of x */
 mg_Inline u32
@@ -149,7 +175,7 @@ LowBits64(u64 V) { return V & 0xFFFFFFFF; }
 mg_Inline u32
 HighBits64(u64 V) { return V >> 32; }
 
-mg_Inline int 
+inline int 
 DecodeBitmap(u64 Val, int* Out) {
   int* OutBackup = Out;
   __m256i BaseVec = _mm256_set1_epi32(-1);
