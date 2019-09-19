@@ -46,6 +46,8 @@ bool Decode(u64* Block, int B, i64 S, i8& N, i8& M, bitstream* Bs);
 mg_TII(t, D = 3, K = 4) void Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs);
 mg_TII(t, D = 3, K = 4) void Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs);
 mg_TII(t, D = 3, K = 4) void Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs);
+mg_TII(t, D = 3, K = 4) void Decode3(t* Block, int B, i64 S, i8& N, bitstream* Bs);
+mg_TII(t, D = 3, K = 4) void Decode4(t* Block, int B, i64 S, i8& N, bitstream* Bs);
 
 } // namespace mg
 

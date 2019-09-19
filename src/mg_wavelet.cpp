@@ -660,7 +660,15 @@ ForwardCdf53Ext(const extent& Ext, volume* Vol) {
 }
 
 /* Deposit BlockWavs to BlockVals */
-void InverseCdf53Block(const wavelet_block& BlockWavs, wavelet_block* BlockVals) {
+void InverseCdf53Block1D(
+  const array<grid>& Subbands, int Sb, const extent& WavBlocks, 
+  const grid& ) {
+  /* find the support by iterating through the levels */
+  v3i ValFrom3 = From(BlockVals->Grid), ValDims3 = Dims(BlockVals->Grid), ValStrd3 = Strd(BlockVals->Grid);
+  v3i WavFrom3 = From(BlockWavs.Grid), WavDims3 = Dims(BlockWavs.Grid), WavStrd3 = Strd(BlockWavs.Grid);
+
+  while (ValStrd3.X) {
+  }
 }
 
 // TODO: this won't work for a general (sub)volume
@@ -723,7 +731,7 @@ BuildSubbands(const v3i& N, int NLevels, array<extent>* Subbands) {
 
 /* This version assumes the coefficients were not moved */
 void
-BuildSubbandsInPlace(const v3i& N, int NLevels, array<grid>* Subbands) {
+BuildSubbands(const v3i& N, int NLevels, array<grid>* Subbands) {
   int NDims = NumDims(N);
   stack_array<u8, 8>& Order = SubbandOrders[NDims];
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
@@ -769,7 +777,7 @@ FormSubbands(int NLevels, const volume& SVol, volume* DVol) {
   array<extent> Subbands;
   array<grid> SubbandsInPlace;
   BuildSubbands(Dims3, NLevels, &Subbands);
-  BuildSubbandsInPlace(Dims3, NLevels, &SubbandsInPlace);
+  BuildSubbands(Dims3, NLevels, &SubbandsInPlace);
   for (int I = 0; I < Size(Subbands); ++I)
     Copy(SubbandsInPlace[I], SVol, Subbands[I], DVol);
 }
@@ -813,6 +821,12 @@ ExpandDomain(const v3i& N, int NLevels) {
     M = (M + Add + 1) / 2;
   }
   return N + Count;
+}
+
+grid WavBlockToGrid(const array<grid>& Subbands, int Sb, const extent& Ext) {
+  const grid& SbGrid = Subbands[Sb];
+  v3i From3 = From(SbGrid) + Strd(SbGrid) * From(Ext);
+  return grid(From3, Dims(Ext), Strd(SbGrid));
 }
 
 } // namespace mg

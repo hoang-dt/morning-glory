@@ -57,16 +57,20 @@ void InverseCdf53Ext(const extent& Ext, volume* Vol);
 
 mg_T(t) struct array;
 void BuildSubbands(const v3i& N, int NLevels, array<extent>* Subbands);
-void BuildSubbandsInPlace(const v3i& N, int NLevels, array<grid>* Subbands);
+void BuildSubbands(const v3i& N, int NLevels, array<grid>* Subbands);
 /* Copy samples from Src so that in Dst, samples are organized into subbands */
 void FormSubbands(int NLevels, const grid& SrcGrid, const volume& SrcVol,
                   const grid& DstGrid, volume* DstVol);
 /* Assume the wavelet transform is done in X, then Y, then Z */
-int LevelToSubband(const v3i& Level);
+int LevelToSubband(const v3i& Lvl3);
 v3i ExpandDomain(const v3i& N, int NLevels);
 
 v2i SubbandToLevel2(int S);
 v3i SubbandToLevel3(int S);
+
+/* Given a block of wavelet coefficients at some subband, return the grid that
+this block corresponds to in the original domain */
+grid WavBlockToGrid(const array<grid>& Subbands, int Sb, const extent& Ext);
 
 } // namespace mg
 

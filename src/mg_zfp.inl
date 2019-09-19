@@ -359,6 +359,48 @@ Decode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
   }
   //std::cout << "N = " << int(N) << std::endl;
   /* deposit bit plane from x */
+  for (int I = 0; X; ++I, X >>= 1)
+    Block[I] += (t)(X & 1u) << B;
+  //__m256i Add = _mm256_set1_epi32(t(1) << B); // TODO: should be epi64 with t == u64
+  //__m256i Mask = _mm256_set_epi32(0xffffff7f, 0xffffffbf, 0xffffffdf, 0xffffffef, 0xfffffff7, 0xfffffffb, 0xfffffffd, 0xfffffffe);
+  //while (X) {
+  //  __m256i Val = _mm256_set1_epi32(X);
+  //  Val = _mm256_or_si256(Val, Mask);
+  //  Val = _mm256_cmpeq_epi32(Val, _mm256_set1_epi64x(-1));
+  //  //int table[8] ALIGNED(32) = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  //  _mm256_maskstore_epi32((int*)Block, Val, _mm256_add_epi32(_mm256_maskload_epi32((int*)Block, Val), Add));
+  //  X >>= 8;
+  //  Block += 8;
+  //}
+  ++MyCounter;
+}
+
+mg_TII(t, D, K) void
+Decode4(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
+  static_assert(is_unsigned<t>::Value);
+  int NVals = pow<int, K>::Table[D];
+  mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
+  i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
+  u64 X = P > 0 ? ReadLong(Bs, P) : 0;
+  //std::cout << "Counter " << MyCounter << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
+  for (; /*BitSize(*Bs) < S &&*/ N < NVals;) {
+    if (Read(Bs)) {
+      for (; /*BitSize(*Bs) < S &&*/ N + 1 < NVals;) {
+        if (Read(Bs)) {
+          break;
+        } else {
+          ++N;
+        }
+      }
+      /*if (BitSize(*Bs) >= S)
+        break;*/
+      X += 1ull << (N++);
+    } else {
+      break;
+    }
+  }
+  //std::cout << "N = " << int(N) << std::endl;
+  /* deposit bit plane from x */
   //for (int I = 0; X; ++I, X >>= 1)
   //  Block[I] += (t)(X & 1u) << B;
   __m256i Add = _mm256_set1_epi32(t(1) << B); // TODO: should be epi64 with t == u64
@@ -456,6 +498,88 @@ DONE:
     X >>= 8;
     Block += 8;
   }
+}
+
+mg_TII(t, D, K) void
+Decode3(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
+  static_assert(is_unsigned<t>::Value);
+  int NVals = pow<int, K>::Table[D];
+  mg_Assert(NVals <= 64); // e.g. 4x4x4, 4x4, 8x8
+  i8 P = (i8)Min((i64)N, S - BitSize(*Bs));
+  u64 X = P > 0 ? ReadLong(Bs, P) : 0;
+  //std::cout << "Counter " << MyCounter << "P = " << int(P) << " X = " << X << " N = " << int(N) << std::endl;
+  bool ExpectGroupTestBit = true;
+  while (N < NVals) {
+    Refill(Bs);
+    int MaxBits = 64 - Bs->BitPos;
+    u64 Next = Peek(Bs, MaxBits);
+    i8 BitCurr = -1 + !ExpectGroupTestBit; i8 BitPrev = BitCurr;
+    if (ExpectGroupTestBit) {
+      BitCurr = Lsb(Next, -1);
+      if (BitCurr != 0) { 
+        // there are no 1 bits, or the first bit is not 1 (the group is insignificant)
+        Consume(Bs, 1);
+        break;
+      }
+      /* group test bit is 1, at position 0. now move on to the next value 1-bit */
+      mg_Assert(BitCurr == 0);
+      //if ((BitCurr = TzCnt(Next = UnsetBit(Next, 0), MaxBits)) != MaxBits) // could be MaxBits
+      BitCurr = Lsb(Next = UnsetBit(Next, 0), MaxBits);
+      BitPrev = 0;
+      if (BitCurr - BitPrev >= NVals - N)
+        goto JUMP2;
+    } else {
+      goto JUMP;
+    }
+    /* BitCurr == position of the next value 1-bit (could be -1) */
+    while (true) { // we loop through every other 1-bit
+      N += BitCurr - BitPrev;
+      if (BitCurr < MaxBits || N == NVals) {
+        X += 1ull << (N - 1);
+        //Block[N - 1] += 1ull << (N - 1);
+      }
+      if (BitCurr + 1 >= MaxBits) { // there is no bit left
+        ExpectGroupTestBit = BitCurr < MaxBits;
+        Consume(Bs, MaxBits);
+        goto OUTER;
+      } else if (!BitSet(Next, BitCurr + 1)) { // next group test bit is 0
+        Consume(Bs, BitCurr + 2);
+        goto DONE;
+      } else { // next group test bit is 1
+        Next &= ~(3ull << (BitCurr + 1)) >> 1; // unset BitCurr and BitCurr + 1
+        BitPrev = BitCurr + 1;
+JUMP:
+        BitCurr = Lsb(Next, MaxBits);
+        if (BitCurr - BitPrev >= NVals - N) {
+JUMP2:
+          Consume(Bs, (NVals - N) + BitPrev);
+          N = NVals;
+          X += 1ull << (NVals - 1);
+          //Block[NVals - 1] += 1ull << (NVals - 1);
+          goto DONE;
+        }
+      }
+    }
+OUTER:;
+  }
+DONE:
+  //std::cout << "N = " << int(N) << std::endl;
+  ++MyCounter;
+
+  /* deposit bit plane from x */
+  for (int I = 0; X; ++I, X >>= 1)
+    Block[I] += (t)(X & 1u) << B;
+  //__m256i Add = _mm256_set1_epi32(t(1) << B); // TODO: should be epi64 with t == u64
+  //__m256i Mask = _mm256_set_epi32(0xffffff7f, 0xffffffbf, 0xffffffdf, 0xffffffef, 0xfffffff7, 0xfffffffb, 0xfffffffd, 0xfffffffe);
+  //while (X) {
+  //  __m256i Val = _mm256_set1_epi32(X);
+  //  Val = _mm256_or_si256(Val, Mask);
+  //  Val = _mm256_cmpeq_epi32(Val, _mm256_set1_epi64x(-1));
+  //  //int table[8] ALIGNED(32) = { 1, 2, 3, 4, 5, 6, 7, 8 };
+  //  _mm256_maskstore_epi32((int*)Block, Val, _mm256_add_epi32(_mm256_maskload_epi32((int*)Block, Val), Add));
+  //  X >>= 8;
+  //  Block += 8;
+  //}
 }
 
 } // namespace mg

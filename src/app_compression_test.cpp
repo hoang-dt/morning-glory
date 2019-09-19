@@ -33,12 +33,17 @@
 using namespace mg;
 namespace chrono = std::chrono;
 
-cstr DataFile_ = "D:/Datasets/3D/Miranda/MIRANDA-DENSITY-[384-384-256]-Float64.raw";
-int Prec_ = 24;
+cstr DataFile_ = "D:/Datasets/3D/Miranda/MIRANDA-DIFFUSIVITY-[384-384-256]-Float64.raw";
+int Prec_ = 28;
 int NLevels_ = 0; // TODO: check if jpeg's nlevels is the same as our nlevels
 int CBlock_ = 32; // size of the code block
 v3i InputDims_(384, 384, 256);
-dtype InputType_(dtype::float64);
+dtype InputType_(dtype::float32);
+int NBitplanesDecode_[] = { 4, 8, 16, 32 };
+i64 TotalDecompressionTimeTzcntAvx2_[4] = {}; // tzcnt + avx2
+i64 TotalDecompressionTimeZfp_[4] = {}; 
+i64 TotalDecompressionTimeTzcnt_[4] = {}; // tzcnt
+i64 TotalDecompressionTimeAvx2_[4] = {}; // tzcnt
 
 //void TestJp2k() {
 //  /* read the data from disk */
@@ -140,6 +145,180 @@ static void info_callback(const char* msg, void* client_data)
   fprintf(stdout, "[INFO] %s", msg);
 }
 
+void TestZfpNewDecoderNew() {
+  /* read the data from disk */
+  v3i TileDims3(CBlock_);
+  volume Vol;
+  ReadVolume(DataFile_, InputDims_, InputType_, &Vol);
+  volume QVol(Dims(Vol), dtype::int32);
+  v3i Dims3 = Dims(QVol);
+  Quantize(Prec_, Vol, &QVol);
+  //Clone(Vol, &QVol);
+  ForwardCdf53Old(&QVol, NLevels_);
+  array<extent> Sbands; BuildSubbands(Dims(QVol), NLevels_, &Sbands);
+  buffer BufQ; AllocBuf(&BufQ, SizeOf(QVol.Type) * Prod(TileDims3));
+  volume TileVolQ(BufQ, TileDims3, QVol.Type); // quantized tile data
+  buffer BufN; AllocBuf(&BufN, SizeOf(QVol.Type) * Prod(TileDims3));
+  volume TileVolN(BufN, TileDims3, IntType(UnsignedType(TileVolQ.Type))); // negabinary
+  buffer BufO; /*AllocBuf(&BufO, SizeOf(TileVolN.Type) * Prod(TileDims3));*/
+  BufO.Data = (byte*)_mm_malloc(SizeOf(TileVolN.Type) * Prod(TileDims3), 32);
+  BufO.Bytes = SizeOf(TileVolN.Type) * Prod(TileDims3); 
+  volume TileVolO(BufO, TileDims3, TileVolN.Type); // decompression output
+  buffer BsBuf; AllocBuf(&BsBuf, Vol.Buffer.Bytes);
+  bitstream Bs; InitWrite(&Bs, BsBuf);
+  timer Timer;
+  /* -------- encode the data --------- */
+  StartTimer(&Timer);
+  v3i BlockDims3(4);
+  v3i NBlocks3 = (TileDims3 + BlockDims3 - 1) / BlockDims3;
+  array<i8> Ns; Init(&Ns, Prod(NBlocks3), i8(0));
+  array<i8> NOs; Init(&NOs, Prod(NBlocks3), i8(0));
+  for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
+    v3i SbFrom3 = From(Sbands[Sb]);
+    v3i SbDims3 = Dims(Sbands[Sb]);
+    v3i NTiles3 = (SbDims3 + TileDims3 - 1) / TileDims3;
+    v3i T; // tile counter
+    mg_BeginFor3(T, v3i::Zero, NTiles3, v3i::One) { // through tiles
+      Fill(Begin<u32>(TileVolN), End<u32>(TileVolN), 0);
+      Fill(Begin<u32>(TileVolO), End<u32>(TileVolO), 0);
+      Fill(Begin<i8>(Ns), End<i8>(Ns), 0);
+      Fill(Begin<i8>(NOs), End<i8>(NOs), 0);
+      v3i TileFrom3 = SbFrom3 + TileDims3 * T;
+      v3i RealDims3 = Min(SbFrom3 + SbDims3 - TileFrom3, TileDims3);
+      v3i RealNBlocks3 = (TileDims3 + BlockDims3 - 1) / BlockDims3;
+      v3i P3;
+      // TODO: there is a bug if the tile is less than 32^3
+      mg_Assert(RealDims3 == TileDims3);
+      mg_BeginFor3(P3, v3i::Zero, NBlocks3, v3i::One) { // through blocks
+        int S = Row(NBlocks3, P3) * Prod(BlockDims3);
+        v3i D3 = P3 * BlockDims3 + TileFrom3;
+        v3i B3;
+        mg_BeginFor3(B3, v3i::Zero, BlockDims3, v3i::One) {
+          TileVolQ.At<i32>(S + Row(BlockDims3, B3)) = QVol.At<i32>(D3 + B3);
+        } mg_EndFor3
+        ForwardZfp((i32*)TileVolQ.Buffer.Data + S);
+        ForwardShuffle((i32*)TileVolQ.Buffer.Data + S, (u32*)TileVolN.Buffer.Data + S);
+      } mg_EndFor3 // end sample loop
+      int NBitplanes = Prec_ + 1 + 3; //Prec + 1;
+      int Bp = NBitplanes - 1;
+      InitWrite(&Bs, Bs.Stream);
+      while (Bp >= 0) { // through bit planes
+        for (int B = 0; B < Prod(NBlocks3); ++B) {
+          int BX = B % NBlocks3.X;
+          int BZ = ((B - BX) / NBlocks3.X) / NBlocks3.Y, BY = ((B - BX) / NBlocks3.X) % NBlocks3.Y;
+          if (BX >= RealNBlocks3.X || BY >= RealNBlocks3.Y || BZ >= RealNBlocks3.Z)
+            continue;
+          u32* Beg = (u32*)TileVolN.Buffer.Data + B * Prod(BlockDims3);
+          Encode<u32>(Beg, Bp, 2e9, Ns[B], &Bs);
+        }
+        --Bp;
+      } // end bit plane loop
+      Flush(&Bs);
+      /* decode here */
+      for (int BB = 0; BB < 4; ++BB) {
+        i64 Times[17];
+        /* new coder 1 */
+        //for (int Z = 0; Z < 17; ++Z) {
+        //  i64 LocalDecompressionTime = 0;
+        //  InitRead(&Bs, Bs.Stream);
+        //  Bp = NBitplanes - 1;
+        //  for (int I = 0; I < NBitplanesDecode_[BB]; ++I) {
+        //    for (int B = 0; B < Prod(NBlocks3); ++B) {
+        //      int BX = B % NBlocks3.X;
+        //      int BZ = ((B - BX) / NBlocks3.X) / NBlocks3.Y, BY = ((B - BX) / NBlocks3.X) % NBlocks3.Y;
+        //      if (BX >= RealNBlocks3.X || BY >= RealNBlocks3.Y || BZ >= RealNBlocks3.Z)
+        //        continue;
+        //      u32* BegOut = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
+        //      StartTimer(&Timer);
+        //      Decode2<u32>(BegOut, Bp, 2e9, NOs[B], &Bs);
+        //      LocalDecompressionTime += ElapsedTime(&Timer);
+        //    }
+        //    --Bp;
+        //  }
+        //  Times[Z] = LocalDecompressionTime;
+        //}
+        //std::sort(Times, Times + 17);
+        //TotalDecompressionTimeTzcntAvx2_[BB] += Times[8];
+        /* new coder 2 */
+        //for (int Z = 0; Z < 17; ++Z) {
+        //  i64 LocalDecompressionTime = 0;
+        //  InitRead(&Bs, Bs.Stream);
+        //  Bp = NBitplanes - 1;
+        //  for (int I = 0; I < NBitplanesDecode_[BB]; ++I) {
+        //    for (int B = 0; B < Prod(NBlocks3); ++B) {
+        //      int BX = B % NBlocks3.X;
+        //      int BZ = ((B - BX) / NBlocks3.X) / NBlocks3.Y, BY = ((B - BX) / NBlocks3.X) % NBlocks3.Y;
+        //      if (BX >= RealNBlocks3.X || BY >= RealNBlocks3.Y || BZ >= RealNBlocks3.Z)
+        //        continue;
+        //      u32* BegOut = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
+        //      StartTimer(&Timer);
+        //      Decode3<u32>(BegOut, Bp, 2e9, NOs[B], &Bs);
+        //      LocalDecompressionTime += ElapsedTime(&Timer);
+        //    }
+        //    --Bp;
+        //  }
+        //  Times[Z] = LocalDecompressionTime;
+        //}
+        //std::sort(Times, Times + 17);
+        //TotalDecompressionTimeTzcnt_[BB] += Times[8];
+        /* new coder 4 */
+        for (int Z = 0; Z < 17; ++Z) {
+          i64 LocalDecompressionTime = 0;
+          InitRead(&Bs, Bs.Stream);
+          Bp = NBitplanes - 1;
+          for (int I = 0; I < NBitplanesDecode_[BB]; ++I) {
+            for (int B = 0; B < Prod(NBlocks3); ++B) {
+              int BX = B % NBlocks3.X;
+              int BZ = ((B - BX) / NBlocks3.X) / NBlocks3.Y, BY = ((B - BX) / NBlocks3.X) % NBlocks3.Y;
+              if (BX >= RealNBlocks3.X || BY >= RealNBlocks3.Y || BZ >= RealNBlocks3.Z)
+                continue;
+              u32* BegOut = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
+              StartTimer(&Timer);
+              Decode4<u32>(BegOut, Bp, 2e9, NOs[B], &Bs);
+              LocalDecompressionTime += ElapsedTime(&Timer);
+            }
+            --Bp;
+          }
+          Times[Z] = LocalDecompressionTime;
+        }
+        std::sort(Times, Times + 17);
+        TotalDecompressionTimeAvx2_[BB] += Times[8];
+        /* zfp coder */
+        for (int Z = 0; Z < 17; ++Z) {
+          i64 LocalDecompressionTime = 0;
+          InitRead(&Bs, Bs.Stream);
+          Bp = NBitplanes - 1;
+          for (int I = 0; I < NBitplanesDecode_[BB]; ++I) {
+            for (int B = 0; B < Prod(NBlocks3); ++B) {
+              int BX = B % NBlocks3.X;
+              int BZ = ((B - BX) / NBlocks3.X) / NBlocks3.Y, BY = ((B - BX) / NBlocks3.X) % NBlocks3.Y;
+              if (BX >= RealNBlocks3.X || BY >= RealNBlocks3.Y || BZ >= RealNBlocks3.Z)
+                continue;
+              u32* BegOut = (u32*)TileVolO.Buffer.Data + B * Prod(BlockDims3);
+              StartTimer(&Timer);
+              Decode<u32>(BegOut, Bp, 2e9, NOs[B], &Bs);
+              LocalDecompressionTime += ElapsedTime(&Timer);
+            }
+            --Bp;
+          }
+          Times[Z] = LocalDecompressionTime;
+        }
+        std::sort(Times, Times + 17);
+        TotalDecompressionTimeZfp_[BB] += Times[8];
+      }
+    } mg_EndFor3 // end tile loop
+  } // end subband loop
+  Flush(&Bs);
+  /* write the bit stream */
+  printf("avx2 time        : %f %f %f %f\n", Seconds(TotalDecompressionTimeAvx2_[0]), Seconds(TotalDecompressionTimeAvx2_[1]),
+                                             Seconds(TotalDecompressionTimeAvx2_[2]), Seconds(TotalDecompressionTimeAvx2_[3]));
+  printf("tzcnt time       : %f %f %f %f\n", Seconds(TotalDecompressionTimeTzcnt_[0]), Seconds(TotalDecompressionTimeTzcnt_[1]),
+                                             Seconds(TotalDecompressionTimeTzcnt_[2]), Seconds(TotalDecompressionTimeTzcnt_[3]));
+  printf("tzcnt + avx2 time: %f %f %f %f\n", Seconds(TotalDecompressionTimeTzcntAvx2_[0]), Seconds(TotalDecompressionTimeTzcntAvx2_[1]),
+                                             Seconds(TotalDecompressionTimeTzcntAvx2_[2]), Seconds(TotalDecompressionTimeTzcntAvx2_[3]));
+  printf("zfp time         : %f %f %f %f\n", Seconds(TotalDecompressionTimeZfp_[0]), Seconds(TotalDecompressionTimeZfp_[1]),
+                                             Seconds(TotalDecompressionTimeZfp_[2]), Seconds(TotalDecompressionTimeZfp_[3]));
+}
 void TestZfpNewDecoder() {
   /* read the data from disk */
   v3i TileDims3(CBlock_);
@@ -171,8 +350,6 @@ void TestZfpNewDecoder() {
   v3i BlockDims3(4);
   v3i NBlocks3 = (TileDims3 + BlockDims3 - 1) / BlockDims3;
   array<i8> Ns; Init(&Ns, Prod(NBlocks3), i8(0));
-  //FILE* Fp = fopen("encode.raw", "wb");
-  //FILE* Fp2 = fopen("encode.txt", "w");
   for (int Sb = 0; Sb < Size(Sbands); ++Sb) { // through subbands
     v3i SbFrom3 = From(Sbands[Sb]);
     v3i SbDims3 = Dims(Sbands[Sb]);
@@ -195,9 +372,6 @@ void TestZfpNewDecoder() {
         mg_BeginFor3(B3, v3i::Zero, BlockDims3, v3i::One) {
           TileVolQ.At<i32>(S + Row(BlockDims3, B3)) = QVol.At<i32>(D3 + B3);
         } mg_EndFor3
-        //fwrite((i32*)TileVolQ.Buffer.Data + S, Prod(BlockDims3) * sizeof(i32), 1, Fp);
-        //for (int I = 0; I < 64; ++I)
-        //  fprintf(Fp2, "%d\n", *((i32*)TileVolQ.Buffer.Data + S + I));
         ForwardZfp((i32*)TileVolQ.Buffer.Data + S);
         ForwardShuffle((i32*)TileVolQ.Buffer.Data + S, (u32*)TileVolN.Buffer.Data + S);
       } mg_EndFor3 // end sample loop
@@ -211,8 +385,6 @@ void TestZfpNewDecoder() {
             continue;
           u32* Beg = (u32*)TileVolN.Buffer.Data + B * Prod(BlockDims3);
           Encode<u32>(Beg, Bp, 2e9, Ns[B], &Bs);
-          //if (Bp == NBitplanes - 1)
-          //  printf("encode size = %lld\n", BitSize(Bs));
         }
         --Bp;
       } // end bit plane loop
@@ -221,12 +393,8 @@ void TestZfpNewDecoder() {
   TotalCompressionTime += ElapsedTime(&Timer);
   Flush(&Bs);
   TotalCompressedSize += Size(Bs);
-  //fclose(Fp);
-  //fclose(Fp2);
 
   /* ---------- decode ---------- */
-  //Fp = fopen("decode.raw", "wb");
-  //Fp2 = fopen("decode.txt", "w");
   volume QVolBackup; Clone(QVol, &QVolBackup);
   InverseCdf53Old(&QVolBackup, NLevels_);
   Fill(Begin<i32>(QVol), End<i32>(QVol), 0);
@@ -256,10 +424,8 @@ void TestZfpNewDecoder() {
           StartTimer(&Timer);
           Decode2<u32>(Beg, Bp, 2e9, NOs[B], &Bs);
           TotalDecompressionTime += ElapsedTime(&Timer);
-          //if (Bp == NBitplanes - 1)
         }
         --Bp;
-        //printf("decode size = %lld\n", BitSize(Bs));
       }
       v3i P3;
       mg_BeginFor3(P3, v3i::Zero, NBlocks3, v3i::One) { // through blocks
@@ -267,9 +433,6 @@ void TestZfpNewDecoder() {
         v3i D3 = P3 * BlockDims3 + TileFrom3;
         InverseShuffle((u32*)TileVolO.Buffer.Data + S, (i32*)TileVolQ.Buffer.Data + S);
         InverseZfp((i32*)TileVolQ.Buffer.Data + S);
-        //fwrite((i32*)TileVolQ.Buffer.Data + S, Prod(BlockDims3) * sizeof(i32), 1, Fp);
-        //for (int I = 0; I < 64; ++I)
-        //  fprintf(Fp2, "%d\n", *((i32*)TileVolQ.Buffer.Data + S + I));
         v3i B3;
         mg_BeginFor3(B3, v3i::Zero, BlockDims3, v3i::One) {
           QVol.At<i32>(D3 + B3) = TileVolQ.At<i32>(S + Row(BlockDims3, B3));
@@ -280,10 +443,7 @@ void TestZfpNewDecoder() {
   auto DecompressedSize = Size(Bs);
   printf("decompressed size = %lld\n", DecompressedSize);
   InverseCdf53Old(&QVol, NLevels_);
-  //WriteBuffer("out.raw", QVol.Buffer);
   auto Psnr = PSNR(QVolBackup, QVol);
-  //fclose(Fp);
-  //fclose(Fp2);
   printf("psnr = %f\n", Psnr);
   /* write the bit stream */
   printf("zfp size %lld, time: %f %f\n", TotalCompressedSize, Seconds(TotalCompressionTime), Seconds(TotalDecompressionTime));
@@ -935,11 +1095,16 @@ __m256i get_mask3(const uint32_t input) {
 }
 
 int main(int Argc, const char** Argv) {
+  for (int I = 0; I < 8; ++I) {
+    v2i L = SubbandToLevel2(I);
+    printf("Subband to level %d: %d %d\n", I, L.X, L.Y);
+  }
+  return 0;
   //get_mask3(0x0A0B0C0D);
   //TestJp2k();
   //TestZfp2D();
   //u64 Val = 1729382256910270464ull;
-  TestZfpNewDecoder();
+  TestZfpNewDecoderNew();
   /* Read data */
   //cstr InputFile, OutputFile;
   //mg_AbortIf(!OptVal(Argc, Argv, "--input", &InputFile), "Provide --input");

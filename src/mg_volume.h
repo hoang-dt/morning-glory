@@ -68,6 +68,8 @@ i64 Size(const volume& Vol);
 i64 Row(const v3i& N, const v3i& P);
 v3i InvRow(i64 I, const v3i& N);
 
+//grid Intersect();
+
 mg_T(t)
 struct volume_iterator {
   t* Ptr = nullptr;

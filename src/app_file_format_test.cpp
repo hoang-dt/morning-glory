@@ -253,7 +253,7 @@ void TestNewWaveletCode() {
 int main(int Argc, char** Argv) {
   TestNewWaveletCode();
   array<grid> Subbands;
-  BuildSubbandsInPlace(v3i(16, 16, 16), 3, &Subbands);
+  BuildSubbands(v3i(16, 16, 16), 3, &Subbands);
   //for (int I = 0; I < Size(Subbands); ++I) {
   //  printf("----------- Subband %d\n", I);
   //  v3i Pos = Unpack3Ints64(Subbands[I].PosCompact);
