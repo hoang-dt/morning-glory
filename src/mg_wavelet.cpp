@@ -660,16 +660,16 @@ ForwardCdf53Ext(const extent& Ext, volume* Vol) {
 }
 
 /* Deposit BlockWavs to BlockVals */
-void InverseCdf53Block1D(
-  const array<grid>& Subbands, int Sb, const extent& WavBlocks, 
-  const grid& ) {
-  /* find the support by iterating through the levels */
-  v3i ValFrom3 = From(BlockVals->Grid), ValDims3 = Dims(BlockVals->Grid), ValStrd3 = Strd(BlockVals->Grid);
-  v3i WavFrom3 = From(BlockWavs.Grid), WavDims3 = Dims(BlockWavs.Grid), WavStrd3 = Strd(BlockWavs.Grid);
-
-  while (ValStrd3.X) {
-  }
-}
+//void InverseCdf53Block1D(
+//  const array<grid>& Subbands, int Sb, const extent& WavBlocks, 
+//  const grid& ) {
+//  /* find the support by iterating through the levels */
+//  v3i ValFrom3 = From(BlockVals->Grid), ValDims3 = Dims(BlockVals->Grid), ValStrd3 = Strd(BlockVals->Grid);
+//  v3i WavFrom3 = From(BlockWavs.Grid), WavDims3 = Dims(BlockWavs.Grid), WavStrd3 = Strd(BlockWavs.Grid);
+//
+//  while (ValStrd3.X) {
+//  }
+//}
 
 // TODO: this won't work for a general (sub)volume
 void
