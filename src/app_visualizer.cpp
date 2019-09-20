@@ -1,4 +1,5 @@
 #define ENTRY_CONFIG_IMPLEMENT_MAIN 1
+//#define USE_ENTRY 1
 #include <entry/entry.h>
 #include <entry/entry.cpp>
 #include <entry/entry_windows.cpp>
@@ -263,8 +264,6 @@ void renderDemo(struct NVGcontext* vg, float mx, float my, float width, float he
 
 	x = width-520; y = height-420;
 	//drawWindow(vg, "Widgets `n Stuff", x, y, 300, 400);
-	DrawGrid(vg, v2i(100, 100), v2i(64, 64), v2i(8, 8));
-	nvgRestore(vg);
 }
 
 class ExampleNanoVG : public entry::AppI
@@ -344,7 +343,13 @@ public:
 				, uint16_t(m_height)
 				);
 
-			showExampleDialog(this);
+			//showExampleDialog(this);
+			static char buf1[8] = "64"; ImGui::InputText("Nx", buf1, 8, ImGuiInputTextFlags_CharsDecimal);
+			static char buf2[8] = "64"; ImGui::InputText("Ny", buf2, 8, ImGuiInputTextFlags_CharsDecimal);
+			if (ImGui::Button("Draw grid")) {
+				ToInt(buf1, &N.X);
+				ToInt(buf2, &N.Y);
+			}
 			if (!ImGui::GetIO().WantCaptureMouse) {
 				if (m_mouseReleased && m_mouseState.m_buttons[entry::MouseButton::Left]) {
 					m_mouseDown = v2i(m_mouseState.m_mx, m_mouseState.m_my);
@@ -356,7 +361,6 @@ public:
 					m_mouseReleased = true;
 				}
 			}
-			imguiEndFrame();
 
 			int64_t now = bx::getHPCounter();
 			const double freq = double(bx::getHPFrequency() );
@@ -371,9 +375,11 @@ public:
 
 			nvgBeginFrame(m_nvg, m_width, m_height, 1.0f);
 
-			renderDemo(m_nvg, float(m_mouseState.m_mx), float(m_mouseState.m_my), float(m_width), float(m_height), time, 0, &m_data);
+			// renderDemo(m_nvg, float(m_mouseState.m_mx), float(m_mouseState.m_my), float(m_width), float(m_height), time, 0, &m_data);
+			DrawGrid(m_nvg, v2i(50, 50), N, v2i(8, 8));
 			DrawBox(m_nvg, m_mouseDown, m_mouseUp); // selection
 
+			imguiEndFrame();
 			nvgEndFrame(m_nvg);
 
 			// Advance to next frame. Rendering thread will be kicked to
@@ -400,6 +406,7 @@ public:
 
 	NVGcontext* m_nvg;
 	DemoData m_data;
+	v2i N; // total dimensions
 };
 
 } // namespace

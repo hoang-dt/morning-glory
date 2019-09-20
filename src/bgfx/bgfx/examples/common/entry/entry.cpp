@@ -729,7 +729,6 @@ restart:
 					{
 						const KeyEvent* key = static_cast<const KeyEvent*>(ev);
 						handle = key->m_handle;
-
 						inputSetKeyState(key->m_key, key->m_modifiers, key->m_down);
 					}
 					break;

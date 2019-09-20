@@ -318,6 +318,11 @@ void inputSetMouseResolution(uint16_t _width, uint16_t _height)
 void inputSetKeyState(entry::Key::Enum _key, uint8_t _modifiers, bool _down)
 {
 	s_input->m_keyboard.setKeyState(_key, _modifiers, _down);
+	ImGuiIO& io = ImGui::GetIO();
+	io.KeysDown[_key] = _down;
+	//io.KeyCtrl = .key.control;
+	//io.KeyShift = event.key.shift;
+	//io.KeyAlt = event.key.alt;
 }
 
 bool inputGetKeyState(entry::Key::Enum _key, uint8_t* _modifiers)
@@ -333,6 +338,7 @@ uint8_t inputGetModifiersState()
 void inputChar(uint8_t _len, const uint8_t _char[4])
 {
 	s_input->m_keyboard.pushChar(_len, _char);
+	ImGui::GetIO().AddInputCharacter(static_cast<ImWchar>(_char[0]));
 }
 
 const uint8_t* inputGetChar()
