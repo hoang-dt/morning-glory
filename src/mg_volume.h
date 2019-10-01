@@ -45,7 +45,13 @@ struct volume {
 
 bool operator==(const volume& V1, const volume& V2);
 
+v3i Dims(const v3i& First, const v3i& Last);
+v3i Dims(const v3i& First, const v3i& Last, const v3i& Strd);
+
 v3i From(const extent& Ext);
+v3i To(const extent& Ext);
+v3i First(const extent& Ext);
+v3i Last(const extent& Ext);
 v3i Dims(const extent& Ext);
 v3i Strd(const extent& Ext);
 i64 Size(const extent& Ext);
@@ -53,6 +59,9 @@ void SetFrom(extent& Ext, const v3i& From3);
 void SetDims(extent& Ext, const v3i& Dims3);
 
 v3i From(const grid& Grid);
+v3i To(const grid& Grid);
+v3i First(const grid& Grid);
+v3i Last(const grid& Grid);
 v3i Dims(const grid& Grid);
 v3i Strd(const grid& Grid);
 i64 Size(const grid& Grid);
@@ -61,6 +70,9 @@ void SetDims(grid& Grid, const v3i& Dims3);
 void SetStrd(grid& Grid, const v3i& Strd3);
 
 v3i From(const volume& Vol);
+v3i To(const volume& Vol);
+v3i First(const volume& Vol);
+v3i Last(const volume& Vol);
 v3i Dims(const volume& Vol);
 v3i Strd(const volume& Vol);
 i64 Size(const volume& Vol);
@@ -120,6 +132,10 @@ mg_T(t) void Copy(const t& SGrid, const volume& SVol, volume* DVol);
 mg_TT(t1, t2) void Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);
 /* Similar to copy, but add the source to the destination instead */
 mg_TT(t1, t2) void Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);
+/* Returns whether Grid1 is a sub-grid of Grid2 */
+mg_TT(t1, t2) bool IsSubGrid(const t1& Grid1, const t2& Grid2);
+/* Compute the position of Grid1 relative to Grid2 (Grid1 is a sub-grid of Grid2) */
+mg_TT(t1, t2) t1 Relative(const t1& Grid1, const t2& Grid2);
 
 /* Return a slab (from Grid) of size N in the direction of D. If N is positive,
 take from the lower end, otherwise take from the higher end. Useful for e.g.,

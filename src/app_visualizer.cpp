@@ -75,11 +75,11 @@ static char* cpToUTF8(int cp, char* str)
 
 void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, const v2i& Strd) {
 	nvgSave(Vg);
+	nvgStrokeColor(Vg, nvgRGBA(0,230,0,200) );
 	for (int Y = From.Y; Y < From.Y + Dims.Y * Strd.Y; Y += Strd.Y) {
 		for (int X = From.X; X < From.X + Dims.X * Strd.X; X += Strd.X) {
 			nvgBeginPath(Vg);
-			nvgRect(Vg, X, Y, Strd.X, Strd.Y);
-			nvgStrokeColor(Vg, nvgRGBA(0,230,0,200) );
+			nvgCircle(Vg, X, Y, 2);
 			nvgStroke(Vg);
 		}
 	}
@@ -361,6 +361,8 @@ public:
 					m_mouseReleased = true;
 				}
 			}
+			ImGui::SliderInt("Number of levels", &NLevels, 1, 4);
+			imguiEndFrame();
 
 			int64_t now = bx::getHPCounter();
 			const double freq = double(bx::getHPFrequency() );
@@ -376,10 +378,9 @@ public:
 			nvgBeginFrame(m_nvg, m_width, m_height, 1.0f);
 
 			// renderDemo(m_nvg, float(m_mouseState.m_mx), float(m_mouseState.m_my), float(m_width), float(m_height), time, 0, &m_data);
-			DrawGrid(m_nvg, v2i(50, 50), N, v2i(8, 8));
+			DrawGrid(m_nvg, v2i(50, 50), v2i(64, 64), v2i(8, 8));
 			DrawBox(m_nvg, m_mouseDown, m_mouseUp); // selection
 
-			imguiEndFrame();
 			nvgEndFrame(m_nvg);
 
 			// Advance to next frame. Rendering thread will be kicked to
@@ -407,6 +408,7 @@ public:
 	NVGcontext* m_nvg;
 	DemoData m_data;
 	v2i N; // total dimensions
+	int NLevels;
 };
 
 } // namespace

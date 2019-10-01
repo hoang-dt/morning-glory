@@ -23,7 +23,7 @@ mg_T(t) void ILiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
 /* New set of lifting functions. We assume the volume where we want to transform
 to happen (M) is contained within a bigger volume (Vol). When Dims(Grid) is even,
 extrapolation will happen, in a way that the last (odd) wavelet coefficient is 0.
-We assume the storage at index M.(x/y/z) is available to store the extrapolated 
+We assume the storage at index M.(x/y/z) is available to store the extrapolated
 values if necessary. */
 enum lift_option { Normal, PartialUpdateLast, NoUpdateLast };
 mg_T(t) void FLiftCdf53X(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
@@ -65,8 +65,8 @@ void FormSubbands(int NLevels, const grid& SrcGrid, const volume& SrcVol,
 int LevelToSubband(const v3i& Lvl3);
 v3i ExpandDomain(const v3i& N, int NLevels);
 
-v2i SubbandToLevel2(int S);
-v3i SubbandToLevel3(int S);
+/* If Norm(alize), the return levels are either 0 or 1 */
+v3i SubbandToLevel(int NDims, int Sb, bool Norm = false);
 
 /* Given a block of wavelet coefficients at some subband, return the grid that
 this block corresponds to in the original domain */

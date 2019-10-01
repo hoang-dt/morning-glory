@@ -659,17 +659,79 @@ ForwardCdf53Ext(const extent& Ext, volume* Vol) {
 #undef Body
 }
 
-/* Deposit BlockWavs to BlockVals */
-//void InverseCdf53Block1D(
-//  const array<grid>& Subbands, int Sb, const extent& WavBlocks, 
-//  const grid& ) {
-//  /* find the support by iterating through the levels */
-//  v3i ValFrom3 = From(BlockVals->Grid), ValDims3 = Dims(BlockVals->Grid), ValStrd3 = Strd(BlockVals->Grid);
-//  v3i WavFrom3 = From(BlockWavs.Grid), WavDims3 = Dims(BlockWavs.Grid), WavStrd3 = Strd(BlockWavs.Grid);
-//
-//  while (ValStrd3.X) {
-//  }
-//}
+// TODO: test this code
+void AggregateSubbands(const array<grid>& Subbands, array<grid>* AggSubbands) {
+  mg_Assert(Size(Subbands) > 0);
+  Clear(AggSubbands);
+  PushBack(AggSubbands, Subbands[0]);
+  for (int I = 1; I < Size(Subbands); ++I) {
+    const grid& AggS = (*AggSubbands)[I - 1];
+    const grid& S = Subbands[I];
+    v3i AggFrom3 = From(AggS), AggDims3 = Dims(AggS), AggStrd3 = Strd(AggS);
+    v3i From3 = From(S), Dims3 = Dims(S), Strd3 = Strd(S);
+    v3i NewAggFrom3 = AggFrom3, NewAggStrd3 = AggStrd3, NewAggDims3 = AggDims3;
+    for (int D = 0; D < 3; ++D) {
+      bool B = (From3[D] - AggFrom3[D]) % AggStrd3[D] != 0;
+      NewAggStrd3[D] /= 1 << B;
+      NewAggDims3[D] += Dims3[D] * B;
+    }
+    PushBack(AggSubbands, grid(NewAggFrom3, NewAggDims3, NewAggStrd3));
+  }
+}
+
+/*
+Deposit WavBlock to VolBlock
+NDims         = number of dimensions (1, 2, 3)
+ValExt        = the extent of the block on finest resolution
+Sb            = subband
+WavGrid       = grid of the block of wavelet coefficients
+WavVol        = the wavelet coefficients
+ValGrid       = grid of the values
+ValGridInVol  = block of values in the input volume
+ValVol        = volume of values */
+// TODO: add an inverse wavelet function where we skip the update step
+// TODO: write a function to return the size of the new block with additional wavelet coefficients
+// TODO: write a function to copy the existing wavelet coefficients to the new grid
+// TODO: complete this function (which should only contain code to do inverse wavelet transform)
+//grid WavGrid(SbFrom3 + WavBlockFrom3 * SbStrd3, WavBlockDims3, SbStrd3);
+struct wav_val_grids {
+  // TODO: how do we convey that we need copy data or not
+  grid WavGrid; // grid of wavelet coefficients to copy
+  grid ValGrid; // TODO: make sure this grid is never smaller than the input ValExt
+  grid WrkGrid; // determined using the WavGrid
+};
+// TODO: what happens when the input ValExt is bigger than the input WavGrid?
+wav_val_grids ComputeGrids(int NDims, const extent& ValExt, int Sb,
+  const grid& WavGrid, const extent& WavBlock, const volume& WavVol,
+  const grid& ValGrid, const grid& ValGridInVol, volume* ValVol)
+{
+  //mg_Assert(Dims(ValBlock) == Dims(VolBlock));
+  /* find the support of the value block */
+  v3i WavStrd3 = Strd(WavGrid);
+  v3i First3 = First(ValExt), Dims3 = Dims(ValExt), Last3 = Last(ValExt);
+  v3i K3 = (First3 - WavStrd3 * 2) / WavStrd3;
+  First3 = K3 * WavStrd3 + (1 - (K3 & 1)) * WavStrd3;
+  K3 = (Last3 + WavStrd3 * 2) / WavStrd3;
+  Last3 = K3 * WavStrd3 - (1 - (K3 & 1)) * WavStrd3;
+  /* "crop" the WavGrid by First3 and Last3 */
+  v3i WavFirst3 = Max(First(WavGrid), First3);
+  v3i WavLast3 = Min(Last(WavGrid), Last3);
+  v3i Lvl3 = SubbandToLevel(Sb, true);
+  v3i NewStrd3 = Min(WavStrd3 / (1 << Lvl3), Strd(ValGrid));
+  v3i NewFirst3, NewLast3;
+  NewFirst3 = (((From(ValExt) - 1) / NewStrd3) + 1) * NewStrd3;
+  NewLast3 = (Last(ValExt) / NewStrd3) * NewStrd3;
+  wav_val_grids Output;
+  Output.WavGrid = grid(WavFirst3, Dims(WavFirst3, WavLast3, WavStrd3), WavStrd3);
+  Output.ValGrid = grid(NewFirst3, Dims(NewFirst3, NewLast3, NewStrd3), NewStrd3);
+  return Output;
+}
+// TODO: visualize to test this function
+// TODO: make sure the inverse transform works even if the first sample is not even
+
+void CopyExistingValues(volume* ValVol) {
+
+}
 
 // TODO: this won't work for a general (sub)volume
 void
@@ -782,33 +844,22 @@ FormSubbands(int NLevels, const volume& SVol, volume* DVol) {
     Copy(SubbandsInPlace[I], SVol, Subbands[I], DVol);
 }
 
-v2i
-SubbandToLevel2(int S) {
-  if (S == 0)
-    return v2i(0, 0);
-  /* handle level 0 which has only 1 subband (other levels have 7 subbands) */
-  int Lvl = (S + 2) / 3;
-  /* subtract all subbands on previous levels (except the subband 0);
-  basically it reduces the case to the 2x2 case where subband 0 is in corner */
-  S -= 3 * (Lvl - 1);
-  /* bit 0 -> y axis offset; bit 1 -> x axis offset
-  we subtract from Lvl as it corresponds to the +x, +y corner */
-  return v2i(Lvl - !BitSet(S, 1), Lvl - !BitSet(S, 0));
-}
-
 v3i
-SubbandToLevel3(int S) {
-  if (S == 0)
-    return v3i(0, 0, 0);
+SubbandToLevel(int NDims, int Sb, bool Norm) {
+  if (Sb == 0)
+    return v3i::Zero;
   /* handle level 0 which has only 1 subband (other levels have 7 subbands) */
-  int Lvl = (S + 6) / 7;
+  int N = (1 << NDims) - 1; // 3 for 2D, 7 for 3D
+  int Lvl = (Sb + N - 1) / N;
   /* subtract all subbands on previous levels (except the subband 0);
   basically it reduces the case to the 2x2x2 case where subband 0 is in corner */
-  S -= 7 * (Lvl - 1);
-  S = SubbandOrders[3][S]; // basically swap 4 and 3
+  Sb -= N * (Lvl - 1);
+  Sb = SubbandOrders[NDims][Sb]; // in 3D, swap 4 and 3
   /* bit 0 -> z axis offset; bit 1 -> y axis offset; bit 2 -> x axis offset
   we subtract from Lvl as it corresponds to the +x, +y, +z corner */
-  return v3i(Lvl - !BitSet(S, 2), Lvl - !BitSet(S, 1), Lvl - !BitSet(S, 0));
+  if (Norm)
+    return v3i(BitSet(Sb, NDims - 1), BitSet(Sb, NDims - 2), BitSet(Sb, 0));
+  return v3i(Lvl - !BitSet(Sb, NDims - 1), Lvl - !BitSet(Sb, NDims - 2), Lvl - !BitSet(Sb, 0));
 }
 
 v3i

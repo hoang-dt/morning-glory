@@ -76,6 +76,10 @@ mg_Ti(t) v3<t>
 operator-(const v3<t>& Lhs, t Val) {
   return v3<t>(Lhs.X - Val, Lhs.Y - Val, Lhs.Z - Val);
 }
+mg_T(t) v3<t>
+operator-(t Val, const v3<t>& Lhs) {
+  return v3<t>(Val - Lhs.X, Val - Lhs.Y, Val - Lhs.Z);
+}
 mg_Ti(t) v3<t>
 operator*(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>(Lhs.X * Rhs.X, Lhs.Y * Rhs.Y, Lhs.Z * Rhs.Z);
@@ -91,6 +95,22 @@ operator/(const v3<t>& Lhs, const v3<t>& Rhs) {
 mg_Ti(t) v3<t>
 operator/(const v3<t>& Lhs, t Val) {
   return v3<t>(Lhs.X / Val, Lhs.Y / Val, Lhs.Z / Val);
+}
+mg_Ti(t) v3<t>
+operator&(const v3<t>& Lhs, const v3<t>& Rhs) {
+  return v3<t>(Lhs.X & Rhs.X, Lhs.Y & Rhs.Y, Lhs.Z & Rhs.Z);
+}
+mg_Ti(t) v3<t>
+operator&(const v3<t>& Lhs, t Val) {
+  return v3<t>(Lhs.X & Val, Lhs.Y & Val, Lhs.Z & Val);
+}
+mg_Ti(t) v3<t> 
+operator%(const v3<t>& Lhs, const v3<t>& Rhs) {
+  return v3<t>(Lhs.X % Rhs.X, Lhs.Y % Rhs.Y, Lhs.Z % Rhs.Z);
+}
+mg_Ti(t) v3<t> 
+operator%(const v3<t>& Lhs, t Val) {
+  return v3<t>(Lhs.X % Val, Lhs.Y % Val, Lhs.Z % Val);
 }
 mg_Ti(t) bool
 operator==(const v3<t>& Lhs, const v3<t>& Rhs) {
@@ -116,7 +136,30 @@ mg_Ti(t) bool
 operator>=(const v3<t>& Lhs, const v3<t>& Rhs) {
   return Lhs.X >= Rhs.X && Lhs.Y >= Rhs.Y && Lhs.Z >= Rhs.Z;
 }
-
+mg_TTi(t, u) v3<t>
+operator>>(const v3<t>& Lhs, const v3<u>& Rhs) {
+  return v3<t>(Lhs.X >> Rhs.X, Lhs.Y >> Rhs.Y, Lhs.Z >> Rhs.Z);
+}
+mg_TTi(t, u) v3<u>
+operator>>(u Val, const v3<t>& Lhs) {
+  return v3<u>(Val >> Lhs.X, Val >> Lhs.Y, Val >> Lhs.Z);
+}
+mg_TTi(t, u) v3<t>
+operator>>(const v3<t>& Lhs, u Val) {
+  return v3<t>(Lhs.X >> Val, Lhs.Y >> Val, Lhs.Z >> Val);
+}
+mg_TTi(t, u) v3<t>
+operator<<(const v3<t>& Lhs, const v3<u>& Rhs) {
+  return v3<t>(Lhs.X << Rhs.X, Lhs.Y << Rhs.Y, Lhs.Z << Rhs.Z);
+}
+mg_TTi(t, u) v3<t>
+operator<<(const v3<t>& Lhs, u Val) {
+  return v3<t>(Lhs.X << Val, Lhs.Y << Val, Lhs.Z << Val);
+}
+mg_TTi(t, u) v3<u>
+operator<<(u Val, const v3<t>& Lhs) {
+  return v3<u>(Val << Lhs.X, Val << Lhs.Y, Val << Lhs.Z);
+}
 mg_Ti(t) v3<t>
 Min(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>(Min(Lhs.X, Rhs.X), Min(Lhs.Y, Rhs.Y), Min(Lhs.Z, Rhs.Z));

@@ -1,9 +1,9 @@
 @echo off
 
 :: Parameters
-set "LLVMPath=C:\Program Files\LLVM"
+set "LLVMPath=C:\Users\User\scoop\apps\llvm\9.0.0"
 set "VSPath=C:\Program Files (x86)\Microsoft Visual Studio\2019\Community"
-set "VSVersion=14.22.27905"
+set "VSVersion=14.23.28105"
 set "WinSDKVersion=10.0.17763.0"
 set "WinSDKPath=C:\Program Files (x86)\Windows Kits\10"
 set "OUTPUT=app_compression_test.exe"
@@ -63,7 +63,7 @@ clang++.exe "../src/app_compression_test.cpp" -o "app_compression_test.o" -c %IN
 ::link %LINK_FILES% %LDFLAGS% %LDLIBS% -out:"%OUTPUT%"
 link.exe "app_compression_test.o" -libpath:"e:\Workspace\file-format-new\src\openjp3d" /DEBUG -out:"%OUTPUT%" %COMMON_LDFLAGS% %LDFLAGS% %COMMON_LIB_PATHS% %COMMON_LIBS% %LDLIBS%
 ::link.exe "app_compression_test.o" -libpath:"e:\Workspace\file-format-new\src\openjp3d" /DEBUG -out:"%OUTPUT%" openjp2.lib %COMMON_LDFLAGS% %LDFLAGS% %COMMON_LIB_PATHS% %COMMON_LIBS% %LDLIBS%
-del "build.o"
+del "app_compression_test.o"
 cd ..
 
 @echo off

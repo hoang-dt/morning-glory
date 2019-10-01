@@ -1094,11 +1094,27 @@ __m256i get_mask3(const uint32_t input) {
   return val;
 }
 
+#define swap(x, y, l) \
+  do { \
+    const uint64 m[] = { \
+      0x5555555555555555ul, \
+      0x3333333333333333ul, \
+      0x0f0f0f0f0f0f0f0ful, \
+      0x00ff00ff00ff00fful, \
+      0x0000ffff0000fffful, \
+      0x00000000fffffffful, \
+    }; \
+    uint s = 1u << (l); \
+    uint64 t = ((x) ^ ((y) >> s)) & m[(l)]; \
+    (x) ^= t; \
+    (y) ^= t << s; \
+  } while (0)
+
 int main(int Argc, const char** Argv) {
-  for (int I = 0; I < 8; ++I) {
-    v2i L = SubbandToLevel2(I);
-    printf("Subband to level %d: %d %d\n", I, L.X, L.Y);
-  }
+  //for (int I = 0; I < 8; ++I) {
+  //  v2i L = SubbandToLevel2(I);
+  //  printf("Subband to level %d: %d %d\n", I, L.X, L.Y);
+  //}
   return 0;
   //get_mask3(0x0A0B0C0D);
   //TestJp2k();

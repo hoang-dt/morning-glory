@@ -91,7 +91,13 @@ operator==(const volume& V1, const volume& V2) {
   return V1.Buffer == V2.Buffer && V1.Dims == V2.Dims && V1.Type == V2.Type;
 }
 
+mg_Inline v3i Dims(const v3i& First, const v3i& Last) { return Last - First + 1; }
+mg_Inline v3i Dims(const v3i& First, const v3i& Last, const v3i& Strd) { return (Last - First) / Strd + 1; }
+
 mg_Inline v3i From(const extent& Ext) { return Unpack3i64(Ext.From); }
+mg_Inline v3i To(const extent& Ext) { return From(Ext) + Dims(Ext); }
+mg_Inline v3i First(const extent& Ext) { return From(Ext); }
+mg_Inline v3i Last(const extent& Ext) { return To(Ext) - 1; }
 mg_Inline v3i Dims(const extent& Ext) { return Unpack3i64(Ext.Dims); }
 mg_Inline v3i Strd(const extent& Ext) { (void)Ext; return v3i::One; }
 mg_Inline i64 Size(const extent& Ext) { return Prod<i64>(Dims(Ext)); }
@@ -99,6 +105,9 @@ mg_Inline void SetFrom(extent& Ext, const v3i& From3) { Ext.From = Pack3i64(From
 mg_Inline void SetDims(extent& Ext, const v3i& Dims3) { Ext.Dims = Pack3i64(Dims3); }
 
 mg_Inline v3i From(const grid& Grid) { return Unpack3i64(Grid.From); }
+mg_Inline v3i To(const grid& Grid) { return From(Grid) + Dims(Grid) * Strd(Grid); }
+mg_Inline v3i First(const grid& Grid) { return From(Grid); }
+mg_Inline v3i Last(const grid& Grid) { return To(Grid) - Strd(Grid); }
 mg_Inline v3i Dims(const grid& Grid) { return Unpack3i64(Grid.Dims); }
 mg_Inline v3i Strd(const grid& Grid) { return Unpack3i64(Grid.Strd); }
 mg_Inline i64 Size(const grid& Grid) { return Prod<i64>(Dims(Grid)); };
@@ -107,6 +116,9 @@ mg_Inline void SetDims(grid& Grid, const v3i& Dims3) { Grid.Dims = Pack3i64(Dims
 mg_Inline void SetStrd(grid& Grid, const v3i& Strd3) { Grid.Dims = Pack3i64(Strd3); }
 
 mg_Inline v3i From(const volume& Vol) { (void)Vol; return v3i::Zero; }
+mg_Inline v3i To(const volume& Vol) { return Dims(Vol); }
+mg_Inline v3i First(const volume& Vol) { return From(Vol); }
+mg_Inline v3i Last(const volume& Vol) { return Dims(Vol) - 1; }
 mg_Inline v3i Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
 mg_Inline i64 Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
 
@@ -336,6 +348,7 @@ Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
 #undef Body
 }
 
+// TODO: what is this
 mg_TT(t1, t2) void
 Add2(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   mg_Assert(Dims(SGrid) == Dims(DGrid));\
@@ -348,6 +361,28 @@ Add2(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
   auto DIt = Begin<f64>(DGrid, *DVol), DEnd = End<f64>(DGrid, *DVol);\
   for (; SIt != SEnd; ++SIt, ++DIt)\
     *DIt += *SIt;
+}
+
+mg_TT(t1, t2) bool
+IsSubGrid(const t1& Grid1, const t2& Grid2) {
+  if (!(From(Grid1) >= From(Grid2)))
+    return false;
+  if (!(To(Grid1) <= To(Grid2)))
+    return false;
+  if (Strd(Grid1) % Strd(Grid2) != 0)
+    return false;
+  if ((From(Grid1) - From(Grid2)) % Strd(Grid2) != 0)
+    return false;
+  return true;
+}
+
+mg_TT(t1, t2) t1
+Relative(const t1& Grid1, const t2& Grid2) {
+  mg_Assert(IsSubGrid(Grid1, Grid2));
+  return 
+    grid((From(Grid1) - From(Grid2)) / Strd(Grid2),
+         Dims(Grid1),
+         Strd(Grid1) / Strd(Grid2));
 }
 
 // TODO: this can be turned into a slice function ala Python[start:stop]
