@@ -1094,33 +1094,59 @@ __m256i get_mask3(const uint32_t input) {
   return val;
 }
 
-#define swap(x, y, l) \
-  do { \
-    const uint64 m[] = { \
-      0x5555555555555555ul, \
-      0x3333333333333333ul, \
-      0x0f0f0f0f0f0f0f0ful, \
-      0x00ff00ff00ff00fful, \
-      0x0000ffff0000fffful, \
-      0x00000000fffffffful, \
-    }; \
-    uint s = 1u << (l); \
-    uint64 t = ((x) ^ ((y) >> s)) & m[(l)]; \
-    (x) ^= t; \
-    (y) ^= t << s; \
-  } while (0)
+#include <random>
+#include <limits>
 
 int main(int Argc, const char** Argv) {
+  std::random_device rd;     //Get a random seed from the OS entropy device, or whatever
+  std::mt19937_64 eng(rd());
+  std::uniform_int_distribution<unsigned long long> distr;
+  timer Timer;
+  StartTimer(&Timer);
+  u64 Data[64];
+  for (int T = 0; T < 100000; ++T) {
+    u64 Input[64];
+    for (int I = 0; I < 64; ++I) {
+      Input[I] = distr(eng);
+    }
+    TransposeRecursive(Input, Data);
+  }
+  i64 Time = ElapsedTime(&Timer);
+  printf("%f\n", Milliseconds(Time));
+  ResetTimer(&Timer);
+  for (int T = 0; T < 100000; ++T) {
+    u64 Input[64];
+    for (int I = 0; I < 64; ++I) {
+      Input[I] = distr(eng);
+    }
+    for (int I = 0; I < 64; ++I) {
+      TransposeAvx2(Input[I], I, Data);
+    }
+  }
+  Time = ElapsedTime(&Timer);
+  printf("%f\n", Milliseconds(Time));
+  ResetTimer(&Timer);
+  for (int T = 0; T < 100000; ++T) {
+    u64 Input[64];
+    for (int I = 0; I < 64; ++I) {
+      Input[I] = distr(eng);
+    }
+    for (int I = 0; I < 64; ++I) {
+      TransposeNormal(Input[I], I, Data);
+    }
+  }
+  Time = ElapsedTime(&Timer);
+  printf("%f\n", Milliseconds(Time));
+
   //for (int I = 0; I < 8; ++I) {
   //  v2i L = SubbandToLevel2(I);
   //  printf("Subband to level %d: %d %d\n", I, L.X, L.Y);
   //}
-  return 0;
   //get_mask3(0x0A0B0C0D);
   //TestJp2k();
   //TestZfp2D();
   //u64 Val = 1729382256910270464ull;
-  TestZfpNewDecoderNew();
+  //TestZfpNewDecoderNew();
   /* Read data */
   //cstr InputFile, OutputFile;
   //mg_AbortIf(!OptVal(Argc, Argv, "--input", &InputFile), "Provide --input");
