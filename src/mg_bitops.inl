@@ -82,31 +82,31 @@ Lsb(u64 V) {
 #endif
 
 // TODO: the following clashes with stlab which brings in MSVC's intrin.h
-#if defined(__BMI2__)
-#if defined(__clang__) || defined(__GNUC__)
-#include <intrin.h>
-#include <mmintrin.h>
-#include <x86intrin.h>
-mg_Inline i8
-LzCnt(u32 V, i8 Default) { return V ? (i8)_lzcnt_u32(V) : Default; }
-mg_Inline i8
-LzCnt(u64 V, i8 Default) { return V ? (i8)_lzcnt_u64(V) : Default; }
-mg_Inline i8
-TzCnt(u32 V, i8 Default) { return V ? (i8)_tzcnt_u32(V) : Default; }
-mg_Inline i8
-TzCnt(u64 V, i8 Default) { return V ? (i8)_tzcnt_u64(V) : Default; }
-#elif defined(_MSC_VER)
-#include <intrin.h>
-mg_Inline i8
-LzCnt(u32 V, i8 Default) { return V ? (i8)__lzcnt(V) : Default; }
-mg_Inline i8
-LzCnt(u64 V, i8 Default) { return V ? (i8)__lzcnt64(V) : Default; }
-mg_Inline i8
-TzCnt(u32 V, i8 Default) { return V ? (i8)__tzcnt(V) : Default; }
-mg_Inline i8
-TzCnt(u64 V, i8 Default) { return V ? (i8)__tzcnt64(V) : Default; }
-#endif
-#endif
+//#if defined(__BMI2__)
+//#if defined(__clang__) || defined(__GNUC__)
+//#include <intrin.h>
+//#include <mmintrin.h>
+//#include <x86intrin.h>
+//mg_Inline i8
+//LzCnt(u32 V, i8 Default) { return V ? (i8)_lzcnt_u32(V) : Default; }
+//mg_Inline i8
+//LzCnt(u64 V, i8 Default) { return V ? (i8)_lzcnt_u64(V) : Default; }
+//mg_Inline i8
+//TzCnt(u32 V, i8 Default) { return V ? (i8)_tzcnt_u32(V) : Default; }
+//mg_Inline i8
+//TzCnt(u64 V, i8 Default) { return V ? (i8)_tzcnt_u64(V) : Default; }
+//#elif defined(_MSC_VER)
+//#include <intrin.h>
+//mg_Inline i8
+//LzCnt(u32 V, i8 Default) { return V ? (i8)__lzcnt(V) : Default; }
+//mg_Inline i8
+//LzCnt(u64 V, i8 Default) { return V ? (i8)__lzcnt64(V) : Default; }
+//mg_Inline i8
+//TzCnt(u32 V, i8 Default) { return V ? (i8)__tzcnt(V) : Default; }
+//mg_Inline i8
+//TzCnt(u64 V, i8 Default) { return V ? (i8)__tzcnt64(V) : Default; }
+//#endif
+//#endif
 
 /* Reverse the operation that inserts two 0 bits after every bit of x */
 mg_Inline u32

@@ -25,7 +25,7 @@ to happen (M) is contained within a bigger volume (Vol). When Dims(Grid) is even
 extrapolation will happen, in a way that the last (odd) wavelet coefficient is 0.
 We assume the storage at index M.(x/y/z) is available to store the extrapolated
 values if necessary. */
-enum lift_option { Normal, PartialUpdateLast, NoUpdateLast };
+enum lift_option { Normal, PartialUpdateLast, NoUpdateLast, NoUpdate };
 mg_T(t) void FLiftCdf53X(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
 mg_T(t) void FLiftCdf53Y(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);
 mg_T(t) void FLiftCdf53Z(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol);

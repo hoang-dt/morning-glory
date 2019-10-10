@@ -24,6 +24,11 @@ extent(const v3i& From3, const v3i& Dims3)
   : From(Pack3i64(From3))
   , Dims(Pack3i64(Dims3)) {}
 
+mg_Inline extent::
+operator bool() const {
+  return Dims != 0;
+}
+
 mg_Inline grid::
 grid() = default;
 
@@ -46,6 +51,16 @@ mg_Inline grid::
 grid(const extent& Ext)
   : extent(Ext)
   , Strd(Pack3i64(v3i::One)) {}
+
+mg_Inline grid::
+grid(const volume& Vol)
+  : extent(Vol)
+  , Strd(Pack3i64(v3i::One)) {}
+
+mg_Inline grid::
+operator bool() const {
+  return Dims != 0;
+}
 
 mg_Inline volume::
 volume() = default;
@@ -76,6 +91,16 @@ mg_Ti(t) volume::
 volume(const buffer_t<t>& Buf)
   : volume(Buf.Data, Buf.Size) {}
 
+mg_Inline subvol_grid::
+subvol_grid(const volume& VolIn)
+  : Vol(VolIn)
+  , Grid(VolIn) {}
+
+mg_Inline subvol_grid::
+subvol_grid(const grid& GridIn, const volume& VolIn)
+  : Vol(VolIn)
+  , Grid(GridIn) {}
+
 mg_Ti(t) t& volume::
 At(const v3i& P) const {
   return (const_cast<t*>((const t*)Buffer.Data))[Row(Unpack3i64(Dims), P)];
@@ -91,12 +116,12 @@ operator==(const volume& V1, const volume& V2) {
   return V1.Buffer == V2.Buffer && V1.Dims == V2.Dims && V1.Type == V2.Type;
 }
 
-mg_Inline v3i Dims(const v3i& First, const v3i& Last) { return Last - First + 1; }
-mg_Inline v3i Dims(const v3i& First, const v3i& Last, const v3i& Strd) { return (Last - First) / Strd + 1; }
+mg_Inline v3i Dims(const v3i& Frst, const v3i& Last) { return Last - Frst + 1; }
+mg_Inline v3i Dims(const v3i& Frst, const v3i& Last, const v3i& Strd) { return (Last - Frst) / Strd + 1; }
 
 mg_Inline v3i From(const extent& Ext) { return Unpack3i64(Ext.From); }
 mg_Inline v3i To(const extent& Ext) { return From(Ext) + Dims(Ext); }
-mg_Inline v3i First(const extent& Ext) { return From(Ext); }
+mg_Inline v3i Frst(const extent& Ext) { return From(Ext); }
 mg_Inline v3i Last(const extent& Ext) { return To(Ext) - 1; }
 mg_Inline v3i Dims(const extent& Ext) { return Unpack3i64(Ext.Dims); }
 mg_Inline v3i Strd(const extent& Ext) { (void)Ext; return v3i::One; }
@@ -106,7 +131,7 @@ mg_Inline void SetDims(extent& Ext, const v3i& Dims3) { Ext.Dims = Pack3i64(Dims
 
 mg_Inline v3i From(const grid& Grid) { return Unpack3i64(Grid.From); }
 mg_Inline v3i To(const grid& Grid) { return From(Grid) + Dims(Grid) * Strd(Grid); }
-mg_Inline v3i First(const grid& Grid) { return From(Grid); }
+mg_Inline v3i Frst(const grid& Grid) { return From(Grid); }
 mg_Inline v3i Last(const grid& Grid) { return To(Grid) - Strd(Grid); }
 mg_Inline v3i Dims(const grid& Grid) { return Unpack3i64(Grid.Dims); }
 mg_Inline v3i Strd(const grid& Grid) { return Unpack3i64(Grid.Strd); }
@@ -117,7 +142,7 @@ mg_Inline void SetStrd(grid& Grid, const v3i& Strd3) { Grid.Dims = Pack3i64(Strd
 
 mg_Inline v3i From(const volume& Vol) { (void)Vol; return v3i::Zero; }
 mg_Inline v3i To(const volume& Vol) { return Dims(Vol); }
-mg_Inline v3i First(const volume& Vol) { return From(Vol); }
+mg_Inline v3i Frst(const volume& Vol) { return From(Vol); }
 mg_Inline v3i Last(const volume& Vol) { return Dims(Vol) - 1; }
 mg_Inline v3i Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
 mg_Inline i64 Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
@@ -284,7 +309,6 @@ NumDims(const v3i& N) { return (N.X > 1) + (N.Y > 1) + (N.Z > 1); }
 #undef mg_EndGridLoop
 #define mg_EndGridLoop }}}}
 
-// TODO: rewrite the following loops using the iterator interface
 mg_T(t) void
 Copy(const t& SGrid, const volume& SVol, volume* DVol) {
 #define Body(type)\
@@ -318,17 +342,19 @@ Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
 #undef Body
 }
 
-mg_TT(t1, t2) void
-Copy2(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol) {
-  mg_Assert(Dims(SGrid) == Dims(DGrid));\
-  mg_Assert(Dims(SGrid) <= Dims(SVol));\
-  mg_Assert(Dims(DGrid) <= Dims(*DVol));\
-  mg_Assert(DVol->Buffer && SVol.Buffer);\
-  mg_Assert(SVol.Type == DVol->Type);\
-  auto SIt = Begin<f64>(SGrid, SVol), SEnd = End<f64>(SGrid, SVol);\
-  auto DIt = Begin<f64>(DGrid, *DVol);\
-  for (; SIt != SEnd; ++SIt, ++DIt)\
-    *DIt = *SIt;
+mg_T(t) void 
+Copy(const t& Grid, const subvol_grid& SVol, subvol_grid* DVol) {
+  mg_Assert(Strd(SVol.Grid) % Strd(Grid) == 0);
+  mg_Assert(Strd(DVol->Grid) % Strd(Grid) == 0);
+  t Crop1 = Crop(Grid, SVol.Grid);
+  if (Crop1) {
+    t Crop2 = Crop(Crop1, DVol->Grid);
+    if (Crop2) {
+      grid SGrid = Relative(Crop2, SVol.Grid);
+      grid DGrid = Relative(Crop2, DVol->Grid);
+      Copy(SGrid, SVol.Volume, DGrid, &DVol->Volume);
+    }
+  }
 }
 
 mg_TT(t1, t2) void
@@ -379,10 +405,22 @@ IsSubGrid(const t1& Grid1, const t2& Grid2) {
 mg_TT(t1, t2) t1
 Relative(const t1& Grid1, const t2& Grid2) {
   mg_Assert(IsSubGrid(Grid1, Grid2));
-  return 
-    grid((From(Grid1) - From(Grid2)) / Strd(Grid2),
-         Dims(Grid1),
-         Strd(Grid1) / Strd(Grid2));
+  v3i From3 = (From(Grid1) - From(Grid2)) / Strd(Grid2);
+  return grid(From3, Dims(Grid1), Strd(Grid1) / Strd(Grid2));
+}
+
+mg_TT(t1, t2) t1
+Crop(const t1& Grid1, const t2& Grid2) {
+  v3i Strd3 = Strd(Grid1);
+  v3i Frst3 = ((Frst(Grid2) - 1) / Strd3 + 1) * Strd3;
+  v3i Last3 = (Last(Grid2) / Strd3) * Strd3;
+  t1 OutGrid = Grid1;
+  Frst3 = Max(Frst3, Frst(Grid1));
+  Last3 = Min(Last3, Last(Grid1));
+  v3i Dims3 = Frst3 <= Last3 ? (Last3 - Frst3) / Strd3 + 1 : v3i::Zero;
+  OutGrid.From = Pack3i64(Frst3);
+  OutGrid.Dims = Pack3i64(Dims3);
+  return OutGrid;
 }
 
 // TODO: this can be turned into a slice function ala Python[start:stop]
