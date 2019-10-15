@@ -311,21 +311,37 @@ void TestWaveletBlock() {
       } mg_EndFor3
     }
   }
-  { // big 3D test
-    v3i M(384, 384, 256);
-    volume Vol;
-    volume OutVol(M, dtype::float64);
-    ReadVolume("D:/Datasets/3D/Miranda/MIRANDA-DENSITY-[384-384-256]-Float64.raw",
-               M, dtype::float64, &Vol);
-    timer Timer;
-    StartTimer(&Timer);
-    ForwardCdf53Tile(3, v3i(32), Vol, &OutVol);
-    auto TotalTime = Milliseconds(ResetTimer(&Timer));
-    ForwardCdf53Old(&Vol, 3);
-    auto TotalTime2 = Milliseconds(ElapsedTime(&Timer));
-    printf("Time1 %fms Time2 %fms\n", TotalTime, TotalTime2);
-  }
+  //{ // big 3D test
+  //  v3i M(384, 384, 256);
+  //  volume Vol;
+  //  volume OutVol(M, dtype::float64);
+  //  ReadVolume("D:/Datasets/3D/Miranda/MIRANDA-DENSITY-[384-384-256]-Float64.raw",
+  //             M, dtype::float64, &Vol);
+  //  timer Timer;
+  //  StartTimer(&Timer);
+  //  ForwardCdf53Tile(3, v3i(32), Vol, &OutVol);
+  //  auto TotalTime = Milliseconds(ResetTimer(&Timer));
+  //  ForwardCdf53Old(&Vol, 3);
+  //  auto TotalTime2 = Milliseconds(ElapsedTime(&Timer));
+  //  printf("Time1 %fms Time2 %fms\n", TotalTime, TotalTime2);
+  //}
+}
+
+void TestWavGrid() {
+  v3i N(16, 16, 1);
+  int NLevels = 1;
+  int Sb = 0;
+  extent WavBlock(v3i(0), v3i(4));
+  array<grid> Subbands;
+  BuildSubbands(N, NLevels, &Subbands);
+  grid WavGrid = WavBlockToGrid(Subbands, Sb, WavBlock);
+  wav_grids WGrids;
+  wav_grids WG = ComputeWavGrids(2, 0, extent(v3i(0), v3i(4)), WavGrid, v3i(1000));
+  printf("ValGrid: " mg_PrStrGrid"\n", mg_PrGrid(WG.ValGrid));
+  printf("WavGrid: " mg_PrStrGrid"\n", mg_PrGrid(WG.WavGrid));
+  printf("WrkGrid: " mg_PrStrGrid"\n", mg_PrGrid(WG.WrkGrid));
 }
 
 mg_RegisterTest(Wavelet_TestWavelet, TestWavelet)
 mg_RegisterTest(Wavelet_TestWaveletBlock, TestWaveletBlock)
+mg_RegisterTest(Wavelet_TestWavGrid, TestWavGrid)

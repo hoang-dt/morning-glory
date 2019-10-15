@@ -395,7 +395,7 @@ IsSubGrid(const t1& Grid1, const t2& Grid2) {
     return false;
   if (!(To(Grid1) <= To(Grid2)))
     return false;
-  if (Strd(Grid1) % Strd(Grid2) != 0)
+  if ((Strd(Grid1) % Strd(Grid2)) != 0)
     return false;
   if ((From(Grid1) - From(Grid2)) % Strd(Grid2) != 0)
     return false;

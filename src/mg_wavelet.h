@@ -72,6 +72,13 @@ v3i SubbandToLevel(int NDims, int Sb, bool Norm = false);
 this block corresponds to in the original domain */
 grid WavBlockToGrid(const array<grid>& Subbands, int Sb, const extent& Ext);
 
+struct wav_grids {
+  grid WavGrid; // grid of wavelet coefficients to copy
+  grid ValGrid; // the output grid of values
+  grid WrkGrid; // determined using the WavGrid
+};
+wav_grids ComputeWavGrids(int NDims, int Sb, const extent& ValExt, const grid& WavGrid, const v3i& ValStrd);
+
 } // namespace mg
 
 #include "mg_wavelet.inl"

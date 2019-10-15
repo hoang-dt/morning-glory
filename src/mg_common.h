@@ -161,6 +161,9 @@ using v3ul = v3<u64>;
 using v3f  = v3<f32>;
 using v3d  = v3<f64>;
 
+#define mg_PrStrV3i "(%d %d %d)"
+#define mg_PrV3i(P) (P).X, (P).Y, (P).Z
+
 /* 3-level nested for loop */
 #define mg_BeginFor3(Counter, Begin, End, Step)
 #define mg_EndFor3

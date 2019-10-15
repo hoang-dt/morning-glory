@@ -1098,29 +1098,10 @@ __m256i get_mask3(const uint32_t input) {
 #include <limits>
 
 int main(int Argc, const char** Argv) {
-  cstr VolFile = "D:/Datasets/3D/Small/MIRANDA-DENSITY-[128-128-128]-Float64.raw";
-  volume Vol;
-  auto Ok = ReadVolume(VolFile, v3i(128), dtype::float64, &Vol);
-  volume Backup; Clone(Vol, &Backup);  
-  int NLevels = 3;
-  grid G(Vol);
-  v3i F = From(G), DD = Dims(G), S = Strd(G);
-  v3i D = Dims(Vol);
-  for (int I = 0; I < NLevels; ++I) {
-    //FLiftCdf53OldX<f64>((f64*)Vol.Buffer.Data, Dims(Vol), v3i(I));
-    //FLiftCdf53OldY<f64>((f64*)Vol.Buffer.Data, Dims(Vol), v3i(I));
-    //FLiftCdf53OldZ<f64>((f64*)Vol.Buffer.Data, Dims(Vol), v3i(I));
-    FLiftCdf53X<f64>(grid(Vol), Dims(Vol), lift_option::Normal, &Vol);
-    FLiftCdf53Y<f64>(grid(Vol), Dims(Vol), lift_option::Normal, &Vol);
-    FLiftCdf53Z<f64>(grid(Vol), Dims(Vol), lift_option::Normal, &Vol);
-  }
-  for (int I = NLevels - 1; I >= 0; --I) {
-    ILiftCdf53OldZ<f64>((f64*)Vol.Buffer.Data, Dims(Vol), v3i(I));
-    ILiftCdf53OldY<f64>((f64*)Vol.Buffer.Data, Dims(Vol), v3i(I));
-    ILiftCdf53OldX<f64>((f64*)Vol.Buffer.Data, Dims(Vol), v3i(I));
-  }
-  f64 Db = PSNR(Backup, Vol);
-  printf("%f\n", Db);
+  v3i P(1, 2, 3);
+  printf(mg_PrStrV3i "\n", mg_PrV3i(P));
+  grid G(v3i(1, 2, 3), v3i(4, 5, 6), v3i(7, 8 ,9));
+  printf(mg_PrStrGrid "\n", mg_PrGrid(G));
   //for (int I = 0; I < 8; ++I) {
   //  v2i L = SubbandToLevel2(I);
   //  printf("Subband to level %d: %d %d\n", I, L.X, L.Y);

@@ -57,5 +57,27 @@ void TestGridIterator() {
   }
 }
 
-mg_RegisterTest(Volume_GridIterator, TestGridIterator)
+void TestCrop() {
+  grid G1(v3i(0), v3i(5), v3i(2));
+  extent G2(v3i(1), v3i(6));
+  auto G = Crop(G1, G2);
+  mg_Assert(G == grid(v3i(2), v3i(3), v3i(2)));
+  G = Crop(G1, extent(v3i(0), v3i(8)));
+  mg_Assert(G == grid(v3i(0), v3i(4), v3i(2)));
+  G = Crop(G1, extent(v3i(7, 5, 0), v3i(8)));
+  mg_Assert(G == grid(v3i(8, 6, 0), v3i(1, 2, 5), v3i(2)));
+  G = Crop(G1, extent(v3i(9, 5, 0), v3i(8)));
+  mg_Assert(!G);
+  //printf(mg_PrStrGrid "\n", mg_PrGrid(G));
+}
 
+void TestRelative() {
+  grid G1(v3i(0), v3i(5), v3i(2));
+  grid G2(v3i(2), v3i(2), v3i(4));
+  auto G = Relative(G2, G1);
+  mg_Assert(G == grid(v3i(1), v3i(2), v3i(2)));
+}
+
+mg_RegisterTest(Volume_GridIterator, TestGridIterator)
+mg_RegisterTest(Volume_Crop, TestCrop)
+mg_RegisterTest(Volume_Relative, TestRelative)

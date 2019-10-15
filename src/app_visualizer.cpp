@@ -1,8 +1,10 @@
 #define ENTRY_CONFIG_IMPLEMENT_MAIN 1
-//#define USE_ENTRY 1
+#define USE_ENTRY 1
 #include <entry/entry.h>
 #include <entry/entry.cpp>
 #include <entry/entry_windows.cpp>
+#include <entry/input.cpp>
+#include <entry/cmd.cpp>
 #include <imgui/imgui.h>
 #include <common.h>
 #include <bgfx_utils.h>
@@ -11,16 +13,9 @@
 #include <bx/string.h>
 #include <bx/timer.h>
 #include <bimg/decode.h>
-#include <entry/input.cpp>
-#include <entry/cmd.cpp>
 #include <nanovg/nanovg.h>
-#include <bx/src/amalgamated.cpp>
-#include <bgfx/src/amalgamated.cpp>
 #include <nanovg/nanovg.cpp>
 #include <nanovg/nanovg_bgfx.cpp>
-#include <bimg/src/image.cpp>
-#include <bimg/src/image_decode.cpp>
-#include <bimg/src/image_gnf.cpp>
 #define BLENDISH_IMPLEMENTATION
 #include <blendish.h>
 #include <meshoptimizer/src/vertexcodec.cpp>
@@ -353,10 +348,12 @@ public:
 			if (!ImGui::GetIO().WantCaptureMouse) {
 				if (m_mouseReleased && m_mouseState.m_buttons[entry::MouseButton::Left]) {
 					m_mouseDown = v2i(m_mouseState.m_mx, m_mouseState.m_my);
+          printf("mouse down %d %d\n", m_mouseState.m_mx, m_mouseState.m_my);
 					m_mouseReleased = false;
 				}
 				if (m_mouseState.m_buttons[entry::MouseButton::Left]) {
 					m_mouseUp = v2i(m_mouseState.m_mx, m_mouseState.m_my);
+          printf("mouse up %d %d\n", m_mouseState.m_mx, m_mouseState.m_my);
 				} else {
 					m_mouseReleased = true;
 				}
@@ -377,9 +374,9 @@ public:
 
 			nvgBeginFrame(m_nvg, m_width, m_height, 1.0f);
 
-			// renderDemo(m_nvg, float(m_mouseState.m_mx), float(m_mouseState.m_my), float(m_width), float(m_height), time, 0, &m_data);
-			DrawGrid(m_nvg, v2i(50, 50), v2i(64, 64), v2i(8, 8));
+			//renderDemo(m_nvg, float(m_mouseState.m_mx), float(m_mouseState.m_my), float(m_width), float(m_height), time, 0, &m_data);
 			DrawBox(m_nvg, m_mouseDown, m_mouseUp); // selection
+			DrawGrid(m_nvg, v2i(50, 50), v2i(64, 64), v2i(8, 8));
 
 			nvgEndFrame(m_nvg);
 

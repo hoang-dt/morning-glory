@@ -693,15 +693,9 @@ ValVol        = volume of values */
 // TODO: write a function to copy the existing wavelet coefficients to the new grid
 // TODO: complete this function (which should only contain code to do inverse wavelet transform)
 //grid WavGrid(SbFrom3 + WavBlockFrom3 * SbStrd3, WavBlockDims3, SbStrd3);
-struct wav_grids {
-  grid WavGrid; // grid of wavelet coefficients to copy
-  grid ValGrid; // the output grid of values
-  grid WrkGrid; // determined using the WavGrid
-};
-
 // TODO: what is a good starting value for ValGrid?
 wav_grids ComputeWavGrids(
-  int NDims, int Sb, const extent& ValExt, const grid& WavGrid, const grid& ValGrid)
+  int NDims, int Sb, const extent& ValExt, const grid& WavGrid, const v3i& ValStrd)
 {
   /* find the support of the value block */
   v3i WavStrd3 = Strd(WavGrid);
@@ -713,10 +707,10 @@ wav_grids ComputeWavGrids(
   /* "crop" the WavGrid by First3 and Last3 */
   v3i WavFrst3 = Max(Frst(WavGrid), Frst3);
   v3i WavLast3 = Min(Last(WavGrid), Last3);
-  v3i Lvl3 = SubbandToLevel(Sb, true);
-  v3i NewStrd3 = Min(WavStrd3 / (1 << Lvl3), Strd(ValGrid));
+  v3i Lvl3 = SubbandToLevel(NDims, Sb, true);
+  v3i NewStrd3 = Min(WavStrd3 / (1 << Lvl3), ValStrd);
   v3i NewFrst3, NewLast3;
-  NewFrst3 = (((Frst(ValExt) - 1) / NewStrd3) + 1) * NewStrd3;
+  NewFrst3 = ((Frst(ValExt) + NewStrd3 - 1) / NewStrd3) * NewStrd3;
   NewLast3 = (Last(ValExt) / NewStrd3) * NewStrd3;
   wav_grids Output;
   Output.WavGrid = grid(WavFrst3, Dims(WavFrst3, WavLast3, WavStrd3), WavStrd3);
@@ -731,11 +725,11 @@ wav_grids ComputeWavGrids(
 
 // copy the existing values
 // TODO: visualize to test this function
-void CopyWavs(
-  const grid& WavGrid, const volume& WavVol, const grid& WrkGrid, volume* WrkVol) 
-{
-
-}
+//void CopyWavs(
+//  const grid& WavGrid, const volume& WavVol, const grid& WrkGrid, volume* WrkVol) 
+//{
+//
+//}
 
 // TODO: this won't work for a general (sub)volume
 void
@@ -885,5 +879,4 @@ grid WavBlockToGrid(const array<grid>& Subbands, int Sb, const extent& Ext) {
 }
 
 } // namespace mg
-
 
