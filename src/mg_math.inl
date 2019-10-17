@@ -17,6 +17,9 @@ IsEven(const v3i& P) { return v3i(IsEven(P.X), IsEven(P.Y), IsEven(P.Z)); }
 mg_Inline v3i
 IsOdd(const v3i& P) { return v3i(IsOdd(P.X), IsOdd(P.Y), IsOdd(P.Z)); }
 
+mg_Ti(t) bool
+IsBetween(t Val, t A, t B) { return (A <= Val && Val <= B) || (B <= Val && Val <= A); }
+
 mg_Inline bool
 IsPow2(int X) { mg_Assert(X > 0); return X && !(X & (X - 1)); }
 
@@ -65,11 +68,26 @@ mg_Ti(t) v2<t> operator+(const v2<t>& Lhs, t Val) {
   return v2<t>(Lhs.X + Val, Lhs.Y + Val);
 }
 mg_Ti(t) v2<t>
+operator*(const v2<t>& Lhs, const v2<t>& Rhs) {
+  return v2<t>(Lhs.X * Rhs.X, Lhs.Y * Rhs.Y);
+}
+mg_Ti(t) v2<t> operator*(const v2<t>& Lhs, t Val) {
+  return v2<t>(Lhs.X * Val, Lhs.Y * Val);
+}
+mg_Ti(t) v2<t>
 operator/(const v2<t>& Lhs, const v2<t>& Rhs) {
   return v2<t>(Lhs.X / Rhs.X, Lhs.Y / Rhs.Y);
 }
 mg_Ti(t) v2<t> operator/(const v2<t>& Lhs, t Val) {
   return v2<t>(Lhs.X / Val, Lhs.Y / Val);
+}
+mg_Ti(t) v2<t>
+Min(const v2<t>& Lhs, const v2<t>& Rhs) {
+  return v2<t>(Min(Lhs.X, Rhs.X), Min(Lhs.Y, Rhs.Y));
+}
+mg_Ti(t) v2<t>
+Max(const v2<t>& Lhs, const v2<t>& Rhs) {
+  return v2<t>(Max(Lhs.X, Rhs.X), Max(Lhs.Y, Rhs.Y));
 }
 
 mg_TTi(t = int, u) t

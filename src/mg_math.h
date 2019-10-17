@@ -15,6 +15,7 @@ bool IsEven(i64 X);
 bool IsOdd (i64 X);
 v3i  IsEven(const v3i& P);
 v3i  IsOdd (const v3i& P);
+mg_T(t) bool IsBetween(t Val, t A, t B);
 
 mg_T(t) int Exponent(t Val);
 
@@ -23,8 +24,13 @@ mg_TT(t, u = t) t Prod(const v3<u>& Vec);
 /* 2D vector math */
 mg_T(t) v2<t> operator+(const v2<t>& Lhs, const v2<t>& Rhs);
 mg_T(t) v2<t> operator/(const v2<t>& Lhs, const v2<t>& Rhs);
-mg_T(t) v2<t> operator/(const v2<t>& Lhs, t Rhs);
+mg_T(t) v2<t> operator*(const v2<t>& Lhs, const v2<t>& Rhs);
 mg_T(t) v2<t> operator+(const v2<t>& Lhs, t Val);
+mg_T(t) v2<t> operator/(const v2<t>& Lhs, t Rhs);
+mg_T(t) v2<t> operator*(const v2<t>& Lhs, t Val);
+
+mg_T(t) v2<t> Min(const v2<t>& Lhs, const v2<t>& Rhs);
+mg_T(t) v2<t> Max(const v2<t>& Lhs, const v2<t>& Rhs);
 
 // TODO: generalize the t parameter to u for the RHS
 /* 3D vector math */

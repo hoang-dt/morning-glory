@@ -653,8 +653,8 @@ namespace
 		bgfx::submit(gl->viewId, gl->prog);
 	}
 
-	static void glnvg__convexFill(struct GLNVGcontext* gl, struct GLNVGcall* call)
-	{
+ static void glnvg__convexFill(struct GLNVGcontext* gl, struct GLNVGcall* call)
+ {
 		struct GLNVGpath* paths = &gl->paths[call->pathOffset];
 		int i, npaths = call->pathCount;
 
@@ -664,10 +664,49 @@ namespace
 		{
 			if (paths[i].fillCount == 0) continue;
 			bgfx::setState(gl->state);
-			bgfx::setVertexBuffer(0, &gl->tvb);
-			bgfx::setTexture(0, gl->s_tex, gl->th);
-			fan(paths[i].fillOffset, paths[i].fillCount);
-			bgfx::submit(gl->viewId, gl->prog);
+			const uint32_t MAX_TRANSIENT_INDEX_SIZE = 65536;
+			if (paths[i].fillOffset >= MAX_TRANSIENT_INDEX_SIZE)
+			{
+				// Because we have exceeded the 16-bit transient index buffer limitation in BGFX, we need to
+				// form a separate transient vertex buffer for each fan separately. This is an issue with BGFX which
+				// needs to be addressed
+				uint32_t numTris = paths[i].fillCount - 2;
+				bgfx::TransientVertexBuffer tmpVBuffer;
+				bgfx::allocTransientVertexBuffer(&tmpVBuffer, numTris * 3, s_nvgLayout);
+				for (uint32_t ii = 0; ii < numTris; ++ii)
+				{
+					for (uint32_t jj = 0; jj < 3; jj++)
+					{
+						uint32_t vIdx = (ii * 3 + jj);
+						uint32_t tIdx = paths[i].fillOffset + vIdx;
+						bx::memCopy(
+							tmpVBuffer.data + (vIdx * sizeof(struct NVGvertex)),
+							gl->verts + tIdx,
+							sizeof(struct NVGvertex));
+					}
+				}
+				bgfx::setVertexBuffer(0, &tmpVBuffer);
+				bgfx::setTexture(0, gl->s_tex, gl->th);
+
+				bgfx::TransientIndexBuffer tib;
+				bgfx::allocTransientIndexBuffer(&tib, numTris * 3);
+				uint16_t* data = (uint16_t*)tib.data;
+				for (uint32_t ii = 0; ii < numTris; ++ii)
+				{
+					data[ii * 3 + 0] = 0;
+					data[ii * 3 + 1] = ii + 1;
+					data[ii * 3 + 2] = ii + 2;
+				}
+
+				bgfx::setIndexBuffer(&tib);
+				bgfx::submit(gl->viewId, gl->prog);
+			}
+			else {
+				bgfx::setVertexBuffer(0, &gl->tvb);
+				bgfx::setTexture(0, gl->s_tex, gl->th);
+				fan(paths[i].fillOffset, paths[i].fillCount);
+				bgfx::submit(gl->viewId, gl->prog);
+			}
 		}
 
 		if (gl->edgeAntiAlias)

@@ -71,31 +71,39 @@ static char* cpToUTF8(int cp, char* str)
 
 void DrawSubbandSep(NVGcontext* Vg, const v2i& TopLeft, const v2i& N, int Spacing, int NLevels) {
 	nvgSave(Vg);
-	nvgStrokeColor(Vg, nvgRGBA(130,0,0,200));
+	nvgStrokeColor(Vg, nvgRGBA(100,0,0,250));
+  nvgStrokeWidth(Vg, 2);
   v2i M = N;
   for (int L = 0; L < NLevels; ++L) {
     M = (M + 1) / 2;
     nvgBeginPath(Vg);
-    nvgMoveTo(Vg, TopLeft.X + Spacing * M.X - Spacing / 2, TopLeft.Y);
-    nvgLineTo(Vg, TopLeft.X + Spacing * M.X - Spacing / 2, TopLeft.Y + Spacing * M.Y);
+    nvgMoveTo(Vg, TopLeft.X + Spacing * M.X - Spacing / 2, TopLeft.Y - Spacing / 2);
+    nvgLineTo(Vg, TopLeft.X + Spacing * M.X - Spacing / 2, TopLeft.Y + Spacing * M.Y * 2 - Spacing / 2);
     nvgStroke(Vg);
     nvgBeginPath(Vg);
-    nvgMoveTo(Vg, TopLeft.X, TopLeft.Y + M.Y * Spacing - Spacing / 2);
-    nvgLineTo(Vg, TopLeft.X + Spacing * M.X, TopLeft.Y + M.Y * Spacing - Spacing / 2);
+    nvgMoveTo(Vg, TopLeft.X - Spacing / 2, TopLeft.Y + M.Y * Spacing - Spacing / 2);
+    nvgLineTo(Vg, TopLeft.X + Spacing * M.X * 2 - Spacing / 2, TopLeft.Y + M.Y * Spacing - Spacing / 2);
     nvgStroke(Vg);
   }
 	nvgRestore(Vg);
 }
 
-void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, int Spacing) {
+void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, int Spacing, 
+  const v2i& SelTopLeft, const v2i& SelBotRight)
+{
 	nvgSave(Vg);
-	nvgStrokeColor(Vg, nvgRGBA(0,130,0,200) );
-	nvgFillColor(Vg, nvgRGBA(0,130,0,200) );
+  nvgStrokeWidth(Vg,1.0f);
 	for (int Y = From.Y; Y < From.Y + Dims.Y * Spacing; Y += Spacing) {
 		for (int X = From.X; X < From.X + Dims.X * Spacing; X += Spacing) {
 			nvgBeginPath(Vg);
-			nvgCircle(Vg, X, Y, 2);
-			nvgStroke(Vg);
+			nvgCircle(Vg, X, Y, 4);
+      //nvgStrokeColor(Vg, nvgRGBA(0,130,0,200) );
+      if (IsBetween(X, SelTopLeft.X, SelBotRight.X) && IsBetween(Y, SelTopLeft.Y, SelBotRight.Y))
+        nvgFillColor(Vg, nvgRGBA(0, 0, 130, 200));
+      else
+        nvgFillColor(Vg, nvgRGBA(0,130,0,200) );
+      nvgStroke(Vg);
+			nvgFill(Vg);
 		}
 	}
 	nvgRestore(Vg);
@@ -110,6 +118,17 @@ void DrawBox(NVGcontext* Vg, const v2i& From, const v2i& To) {
 	nvgRestore(Vg);
 }
 
+void DrawText(NVGcontext* Vg, const v2i& Where, cstr Text, int Size) {
+  nvgSave(Vg);
+	nvgFillColor(Vg, nvgRGBA(58,30,34,250));
+  nvgFontSize(Vg, Size);
+  nvgFontFace(Vg, "sans");
+  nvgTextAlign(Vg, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+	nvgFontBlur(Vg, 0);
+  nvgText(Vg, Where.X, Where.Y, Text, nullptr);
+  nvgRestore(Vg);
+}
+
 void drawWindow(struct NVGcontext* vg, const char* title, float x, float y, float w, float h)
 {
 	float cornerRadius = 3.0f;
@@ -117,33 +136,33 @@ void drawWindow(struct NVGcontext* vg, const char* title, float x, float y, floa
 	struct NVGpaint headerPaint;
 
 	nvgSave(vg);
-	//	nvgClearState(vg);
+	//fonsClearState(vg);
 
 	// Window
-	nvgBeginPath(vg);
-	nvgRect(vg, x,y, w,h);
-	nvgFillColor(vg, nvgRGBA(28,30,34,192) );
-	//	nvgFillColor(vg, nvgRGBA(0,0,0,128) );
-	nvgFill(vg);
+	//nvgBeginPath(vg);
+	//nvgRect(vg, x,y, w,h);
+	//nvgFillColor(vg, nvgRGBA(28,30,34,192) );
+	//nvgFillColor(vg, nvgRGBA(0,0,0,128) );
+	//nvgFill(vg);
 
 	// Header
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, x+1,y+1, w-2,30, cornerRadius-1);
-	nvgFillColor(vg, nvgRGBA(240,30,34,192));
-	nvgFill(vg);
-	nvgBeginPath(vg);
-	// nvgMoveTo(vg, x+0.5f, y+0.5f+30);
-	// nvgLineTo(vg, x+0.5f+w-1, y+0.5f+30);
-	nvgStrokeColor(vg, nvgRGBA(0,0,0,32) );
-	nvgStroke(vg);
+	//nvgBeginPath(vg);
+	//nvgRoundedRect(vg, x+1,y+1, w-2,30, cornerRadius-1);
+	//nvgFillColor(vg, nvgRGBA(240,30,34,192));
+	//nvgFill(vg);
+	//nvgBeginPath(vg);
+	//nvgMoveTo(vg, x+0.5f, y+0.5f+30);
+	//nvgLineTo(vg, x+0.5f+w-1, y+0.5f+30);
+	//nvgStrokeColor(vg, nvgRGBA(0,0,0,32) );
+	//nvgStroke(vg);
 
 	nvgFontSize(vg, 18.0f);
 	nvgFontFace(vg, "sans-bold");
 	nvgTextAlign(vg,NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
 
-	// nvgFontBlur(vg,2);
-	// nvgFillColor(vg, nvgRGBA(0,0,0,128) );
-	// nvgText(vg, x+w/2,y+16+1, title, NULL);
+	//nvgFontBlur(vg,2);
+	//nvgFillColor(vg, nvgRGBA(0,0,0,128) );
+	//nvgText(vg, x+w/2,y+16+1, title, NULL);
 
 	nvgFontBlur(vg,0);
 	nvgFillColor(vg, nvgRGBA(220,220,220,160) );
@@ -278,7 +297,7 @@ void renderDemo(struct NVGcontext* vg, float mx, float my, float width, float he
 	float x,y,popx,popy;
 
 	x = width-520; y = height-420;
-	//drawWindow(vg, "Widgets `n Stuff", x, y, 300, 400);
+	drawWindow(vg, "Widgets `n Stuff", x, y, 300, 400);
 }
 
 class ExampleNanoVG : public entry::AppI
@@ -361,19 +380,26 @@ public:
 				, character);
 
 			//showExampleDialog(this);
-			static char buf1[8] = "64"; ImGui::InputText("Nx", buf1, 8, ImGuiInputTextFlags_CharsDecimal);
-			static char buf2[8] = "64"; ImGui::InputText("Ny", buf2, 8, ImGuiInputTextFlags_CharsDecimal);
+			static char buf1[8] = "32"; ImGui::InputText("Nx", buf1, 8, ImGuiInputTextFlags_CharsDecimal);
+			static char buf2[8] = "32"; ImGui::InputText("Ny", buf2, 8, ImGuiInputTextFlags_CharsDecimal);
 			if (ImGui::Button("Draw grid")) {
 				ToInt(buf1, &N.X);
 				ToInt(buf2, &N.Y);
 			}
 			if (!ImGui::GetIO().WantCaptureMouse) {
+        int ValDomainBot = ValDomainTopLeft.Y + N.Y * Spacing;
 				if (m_mouseReleased && m_mouseState.m_buttons[entry::MouseButton::Left]) {
-					m_mouseDown = v2i(m_mouseState.m_mx, m_mouseState.m_my);
+          if (m_mouseState.m_my < WavDomainTopLeft.Y - (WavDomainTopLeft.Y - ValDomainBot) / 2)
+            ValMouseDown = v2i(m_mouseState.m_mx, m_mouseState.m_my);
+          else
+            WavMouseDown = v2i(m_mouseState.m_mx, m_mouseState.m_my);
 					m_mouseReleased = false;
 				}
 				if (m_mouseState.m_buttons[entry::MouseButton::Left]) {
-					m_mouseUp = v2i(m_mouseState.m_mx, m_mouseState.m_my);
+          if (m_mouseState.m_my < WavDomainTopLeft.Y - (WavDomainTopLeft.Y - ValDomainBot) / 2)
+					  ValMouseUp = v2i(m_mouseState.m_mx, m_mouseState.m_my);
+          else
+					  WavMouseUp = v2i(m_mouseState.m_mx, m_mouseState.m_my);
 				} else {
 					m_mouseReleased = true;
 				}
@@ -395,17 +421,28 @@ public:
 			nvgBeginFrame(m_nvg, m_width, m_height, 1.0f);
 
 			//renderDemo(m_nvg, float(m_mouseState.m_mx), float(m_mouseState.m_my), float(m_width), float(m_height), time, 0, &m_data);
-			DrawBox(m_nvg, m_mouseDown, m_mouseUp); // selection
+			//DrawBox(m_nvg, ValMouseDown, ValMouseUp); // selection
+			//DrawBox(m_nvg, WavMouseDown, WavMouseUp); // selection
       // draw the val grid
-			DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing);
-			DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing);
+			DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, ValMouseDown, ValMouseUp);
+			DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing, WavMouseDown, WavMouseUp);
       DrawSubbandSep(m_nvg, WavDomainTopLeft, N, Spacing, NLevels);
-      // TODO: draw the wavelet grid
       // TODO: select the val grid
       // TODO: change the colors of the selected points
       // TODO: select the wavelet grid
       // TODO: draw the wavgrid, wrkgrid, valgrid
       // TODO: select between wrkgrid and valgrid with a radio button
+      //nvgText(m_nvg, 50, 30, "hello", nullptr);
+      /* print the selection in the Val domain */
+      v2i ValMouseFrom = Max(Min(ValMouseDown, ValMouseUp), ValDomainTopLeft);
+      v2i ValMouseTo = Min(Max(ValMouseDown, ValMouseUp), ValDomainTopLeft + N * Spacing);
+      int ValSelFromX = (int)ceil(float(ValMouseFrom.X - ValDomainTopLeft.X) / Spacing);
+      int ValSelFromY = (int)ceil(float(ValMouseFrom.Y - ValDomainTopLeft.Y) / Spacing);
+      int ValSelToX = (int)floor(float(ValMouseTo.X - ValDomainTopLeft.X) / Spacing);
+      int ValSelToY = (int)floor(float(ValMouseTo.Y - ValDomainTopLeft.Y) / Spacing);
+      char Temp[50];
+      sprintf(Temp, "(%d %d) to (%d %d)", ValSelFromX, ValSelFromY, ValSelToX, ValSelToY);
+      DrawText(m_nvg, v2i(50, 30), Temp, 20);
 
 			nvgEndFrame(m_nvg);
 
@@ -425,8 +462,10 @@ public:
 	uint32_t m_reset;
 
 	entry::MouseState m_mouseState;
-	v2i m_mouseDown = v2i::Zero;
-	v2i m_mouseUp = v2i::Zero;
+	v2i ValMouseDown = v2i::Zero;
+	v2i ValMouseUp = v2i::Zero;
+	v2i WavMouseDown = v2i::Zero;
+	v2i WavMouseUp = v2i::Zero;
 	bool m_mouseReleased = true;
 
 	int64_t m_timeOffset;
@@ -434,9 +473,9 @@ public:
 	NVGcontext* m_nvg;
 	DemoData m_data;
   v2i ValDomainTopLeft = v2i(50, 50);
-  v2i WavDomainTopLeft = v2i(50, 450);
+  v2i WavDomainTopLeft = v2i(50, 500);
 	v2i N = v2i(32, 32); // total dimensions
-  int Spacing = 10;
+  int Spacing = 12;
 	int NLevels = 1;
 };
 
