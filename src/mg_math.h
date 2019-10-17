@@ -20,7 +20,14 @@ mg_T(t) int Exponent(t Val);
 
 mg_TT(t, u = t) t Prod(const v3<u>& Vec);
 
+/* 2D vector math */
+mg_T(t) v2<t> operator+(const v2<t>& Lhs, const v2<t>& Rhs);
+mg_T(t) v2<t> operator/(const v2<t>& Lhs, const v2<t>& Rhs);
+mg_T(t) v2<t> operator/(const v2<t>& Lhs, t Rhs);
+mg_T(t) v2<t> operator+(const v2<t>& Lhs, t Val);
+
 // TODO: generalize the t parameter to u for the RHS
+/* 3D vector math */
 mg_T(t) v3<t> operator+(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) v3<t> operator-(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) v3<t> operator*(const v3<t>& Lhs, const v3<t>& Rhs);

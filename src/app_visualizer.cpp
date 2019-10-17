@@ -21,6 +21,7 @@
 #include <meshoptimizer/src/vertexcodec.cpp>
 #include <meshoptimizer/src/indexcodec.cpp>
 #include "mg_common.h"
+#include "mg_math.h"
 #include "mg_volume.h"
 #include "mg_all.cpp"
 
@@ -68,11 +69,30 @@ static char* cpToUTF8(int cp, char* str)
 	return str;
 }
 
-void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, const v2i& Strd) {
+void DrawSubbandSep(NVGcontext* Vg, const v2i& TopLeft, const v2i& N, int Spacing, int NLevels) {
 	nvgSave(Vg);
-	nvgStrokeColor(Vg, nvgRGBA(0,230,0,200) );
-	for (int Y = From.Y; Y < From.Y + Dims.Y * Strd.Y; Y += Strd.Y) {
-		for (int X = From.X; X < From.X + Dims.X * Strd.X; X += Strd.X) {
+	nvgStrokeColor(Vg, nvgRGBA(130,0,0,200));
+  v2i M = N;
+  for (int L = 0; L < NLevels; ++L) {
+    M = (M + 1) / 2;
+    nvgBeginPath(Vg);
+    nvgMoveTo(Vg, TopLeft.X + Spacing * M.X - Spacing / 2, TopLeft.Y);
+    nvgLineTo(Vg, TopLeft.X + Spacing * M.X - Spacing / 2, TopLeft.Y + Spacing * M.Y);
+    nvgStroke(Vg);
+    nvgBeginPath(Vg);
+    nvgMoveTo(Vg, TopLeft.X, TopLeft.Y + M.Y * Spacing - Spacing / 2);
+    nvgLineTo(Vg, TopLeft.X + Spacing * M.X, TopLeft.Y + M.Y * Spacing - Spacing / 2);
+    nvgStroke(Vg);
+  }
+	nvgRestore(Vg);
+}
+
+void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, int Spacing) {
+	nvgSave(Vg);
+	nvgStrokeColor(Vg, nvgRGBA(0,130,0,200) );
+	nvgFillColor(Vg, nvgRGBA(0,130,0,200) );
+	for (int Y = From.Y; Y < From.Y + Dims.Y * Spacing; Y += Spacing) {
+		for (int X = From.X; X < From.X + Dims.X * Spacing; X += Spacing) {
 			nvgBeginPath(Vg);
 			nvgCircle(Vg, X, Y, 2);
 			nvgStroke(Vg);
@@ -292,7 +312,7 @@ public:
 		// Set view 0 clear state.
 		bgfx::setViewClear(0
 			, BGFX_CLEAR_COLOR|BGFX_CLEAR_DEPTH
-			, 0x303030ff
+			, 0xffffffff
 			, 1.0f
 			, 0
 			);
@@ -328,6 +348,8 @@ public:
 	{
 		if (!entry::processEvents(m_width, m_height, m_debug, m_reset, &m_mouseState) )
 		{
+      const uint8_t* data = inputGetChar();
+      const uint8_t character = data != nullptr ? 0u[data] : 0u;
 			imguiBeginFrame(m_mouseState.m_mx
 				,  m_mouseState.m_my
 				, (m_mouseState.m_buttons[entry::MouseButton::Left  ] ? IMGUI_MBUT_LEFT   : 0)
@@ -336,7 +358,7 @@ public:
 				,  m_mouseState.m_mz
 				, uint16_t(m_width)
 				, uint16_t(m_height)
-				);
+				, character);
 
 			//showExampleDialog(this);
 			static char buf1[8] = "64"; ImGui::InputText("Nx", buf1, 8, ImGuiInputTextFlags_CharsDecimal);
@@ -348,12 +370,10 @@ public:
 			if (!ImGui::GetIO().WantCaptureMouse) {
 				if (m_mouseReleased && m_mouseState.m_buttons[entry::MouseButton::Left]) {
 					m_mouseDown = v2i(m_mouseState.m_mx, m_mouseState.m_my);
-          printf("mouse down %d %d\n", m_mouseState.m_mx, m_mouseState.m_my);
 					m_mouseReleased = false;
 				}
 				if (m_mouseState.m_buttons[entry::MouseButton::Left]) {
 					m_mouseUp = v2i(m_mouseState.m_mx, m_mouseState.m_my);
-          printf("mouse up %d %d\n", m_mouseState.m_mx, m_mouseState.m_my);
 				} else {
 					m_mouseReleased = true;
 				}
@@ -376,7 +396,16 @@ public:
 
 			//renderDemo(m_nvg, float(m_mouseState.m_mx), float(m_mouseState.m_my), float(m_width), float(m_height), time, 0, &m_data);
 			DrawBox(m_nvg, m_mouseDown, m_mouseUp); // selection
-			DrawGrid(m_nvg, v2i(50, 50), v2i(64, 64), v2i(8, 8));
+      // draw the val grid
+			DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing);
+			DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing);
+      DrawSubbandSep(m_nvg, WavDomainTopLeft, N, Spacing, NLevels);
+      // TODO: draw the wavelet grid
+      // TODO: select the val grid
+      // TODO: change the colors of the selected points
+      // TODO: select the wavelet grid
+      // TODO: draw the wavgrid, wrkgrid, valgrid
+      // TODO: select between wrkgrid and valgrid with a radio button
 
 			nvgEndFrame(m_nvg);
 
@@ -404,8 +433,11 @@ public:
 
 	NVGcontext* m_nvg;
 	DemoData m_data;
-	v2i N; // total dimensions
-	int NLevels;
+  v2i ValDomainTopLeft = v2i(50, 50);
+  v2i WavDomainTopLeft = v2i(50, 450);
+	v2i N = v2i(32, 32); // total dimensions
+  int Spacing = 10;
+	int NLevels = 1;
 };
 
 } // namespace

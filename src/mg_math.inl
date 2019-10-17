@@ -57,6 +57,21 @@ Exponent(t Val) {
   return -traits<t>::ExpBias;
 }
 
+mg_Ti(t) v2<t>
+operator+(const v2<t>& Lhs, const v2<t>& Rhs) {
+  return v2<t>(Lhs.X + Rhs.X, Lhs.Y + Rhs.Y);
+}
+mg_Ti(t) v2<t> operator+(const v2<t>& Lhs, t Val) {
+  return v2<t>(Lhs.X + Val, Lhs.Y + Val);
+}
+mg_Ti(t) v2<t>
+operator/(const v2<t>& Lhs, const v2<t>& Rhs) {
+  return v2<t>(Lhs.X / Rhs.X, Lhs.Y / Rhs.Y);
+}
+mg_Ti(t) v2<t> operator/(const v2<t>& Lhs, t Val) {
+  return v2<t>(Lhs.X / Val, Lhs.Y / Val);
+}
+
 mg_TTi(t = int, u) t
 Prod(const v3<u>& Vec) { return t(Vec.X) * t(Vec.Y) * t(Vec.Z); }
 
@@ -76,7 +91,7 @@ mg_Ti(t) v3<t>
 operator-(const v3<t>& Lhs, t Val) {
   return v3<t>(Lhs.X - Val, Lhs.Y - Val, Lhs.Z - Val);
 }
-mg_T(t) v3<t>
+mg_Ti(t) v3<t>
 operator-(t Val, const v3<t>& Lhs) {
   return v3<t>(Val - Lhs.X, Val - Lhs.Y, Val - Lhs.Z);
 }

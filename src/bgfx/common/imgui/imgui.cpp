@@ -13,7 +13,7 @@
 #include "imgui.h"
 #include "../bgfx_utils.h"
 
-//#define USE_ENTRY 1
+#define USE_ENTRY 1
 
 #ifndef USE_ENTRY
 #	define USE_ENTRY 0
