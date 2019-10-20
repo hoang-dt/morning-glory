@@ -143,8 +143,8 @@ box GetPointBox(const v2i& MouseDown, const v2i& MouseUp, const v2i& TopLeft,
   v2i MouseTo = Min(Max(MouseDown, MouseUp), TopLeft + N * Spacing);
   int PointFromX = (int)ceil(float(MouseFrom.X - TopLeft.X) / Spacing.X);
   int PointFromY = (int)ceil(float(MouseFrom.Y - TopLeft.Y) / Spacing.Y);
-  int PointToX = (int)ceil(float(MouseTo.X - TopLeft.X) / Spacing.X);
-  int PointToY = (int)ceil(float(MouseTo.Y - TopLeft.Y) / Spacing.Y);
+  int PointToX = (int)floor(float(MouseTo.X - TopLeft.X) / Spacing.X) + 1;
+  int PointToY = (int)floor(float(MouseTo.Y - TopLeft.Y) / Spacing.Y) + 1;
   return box{ v2i(PointFromX, PointFromY), v2i(PointToX, PointToY) };
 }
 
@@ -464,6 +464,8 @@ public:
 
       /* Wav domain */
       box WavBox = GetPointBox(WavMouseDown, WavMouseUp, WavDomainTopLeft, N, Spacing);
+      //sprintf(Temp, "(%d %d) to (%d %d)", WavMouseDown.X, WavMouseDown.Y, WavMouseUp.X, WavMouseUp.Y);
+      //DrawText(m_nvg, v2i(50, 530), Temp, 20);
       int WavFromX = (int)ceil(float(Max(0, Min(WavMouseDown.X, WavDomainTopLeft.X + N.X * Spacing.X)) - WavDomainTopLeft.X) / Spacing.X);
       int WavFromY = (int)ceil(float(Max(0, Min(WavMouseDown.Y, WavDomainTopLeft.Y + N.Y * Spacing.Y)) - WavDomainTopLeft.Y) / Spacing.Y);
       int Sb = -1;
@@ -473,7 +475,7 @@ public:
           break;
         }
       }
-      extent WavCrop = Crop(extent(v3i(WavBox.From, 0), v3i(WavBox.To - WavBox.From, 1)), Subbands[Sb]);
+      extent WavCrop = /*extent(v3i(WavBox.From, 0), v3i(WavBox.To - WavBox.From + 1, 1)); */Crop(extent(v3i(WavBox.From, 0), v3i(WavBox.To - WavBox.From + 1, 1)), Subbands[Sb]);
       DrawGrid(m_nvg, WavDomainTopLeft + From(WavCrop).XY * Spacing, (To(WavCrop) - From(WavCrop)).XY, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
       sprintf(Temp, "(%d %d) to (%d %d)", From(WavCrop).X, From(WavCrop).Y, To(WavCrop).X, To(WavCrop).Y);
       DrawText(m_nvg, v2i(50, 450), Temp, 20);
