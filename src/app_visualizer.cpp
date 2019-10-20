@@ -23,6 +23,7 @@
 #include "mg_common.h"
 #include "mg_math.h"
 #include "mg_volume.h"
+#include "mg_wavelet.h"
 #include "mg_all.cpp"
 
 namespace
@@ -69,7 +70,7 @@ static char* cpToUTF8(int cp, char* str)
 	return str;
 }
 
-void DrawSubbandSep(NVGcontext* Vg, const v2i& TopLeft, const v2i& N, int Spacing, int NLevels) {
+void DrawSubbandSep(NVGcontext* Vg, const v2i& TopLeft, const v2i& N, const v2i& Spacing, int NLevels) {
 	nvgSave(Vg);
 	nvgStrokeColor(Vg, nvgRGBA(100,0,0,250));
   nvgStrokeWidth(Vg, 2);
@@ -77,43 +78,45 @@ void DrawSubbandSep(NVGcontext* Vg, const v2i& TopLeft, const v2i& N, int Spacin
   for (int L = 0; L < NLevels; ++L) {
     M = (M + 1) / 2;
     nvgBeginPath(Vg);
-    nvgMoveTo(Vg, TopLeft.X + Spacing * M.X - Spacing / 2, TopLeft.Y - Spacing / 2);
-    nvgLineTo(Vg, TopLeft.X + Spacing * M.X - Spacing / 2, TopLeft.Y + Spacing * M.Y * 2 - Spacing / 2);
+    nvgMoveTo(Vg, TopLeft.X + Spacing.X * M.X - Spacing.X / 2, TopLeft.Y - Spacing.X / 2);
+    nvgLineTo(Vg, TopLeft.X + Spacing.X * M.X - Spacing.X / 2, TopLeft.Y + Spacing.Y * M.Y * 2 - Spacing.Y / 2);
     nvgStroke(Vg);
     nvgBeginPath(Vg);
-    nvgMoveTo(Vg, TopLeft.X - Spacing / 2, TopLeft.Y + M.Y * Spacing - Spacing / 2);
-    nvgLineTo(Vg, TopLeft.X + Spacing * M.X * 2 - Spacing / 2, TopLeft.Y + M.Y * Spacing - Spacing / 2);
+    nvgMoveTo(Vg, TopLeft.X - Spacing.X / 2, TopLeft.Y + M.Y * Spacing.Y - Spacing.Y / 2);
+    nvgLineTo(Vg, TopLeft.X + Spacing.X * M.X * 2 - Spacing.X / 2, TopLeft.Y + M.Y * Spacing.Y - Spacing.Y / 2);
     nvgStroke(Vg);
   }
 	nvgRestore(Vg);
 }
 
-void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, int Spacing, 
-  const v2i& SelTopLeft, const v2i& SelBotRight)
+enum draw_mode { Fill, Stroke, FillStroke };
+void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, const v2i& Spacing, const NVGcolor& Color, draw_mode Mode)
 {
 	nvgSave(Vg);
   nvgStrokeWidth(Vg,1.0f);
-	for (int Y = From.Y; Y < From.Y + Dims.Y * Spacing; Y += Spacing) {
-		for (int X = From.X; X < From.X + Dims.X * Spacing; X += Spacing) {
+  if (Mode != Stroke)
+    nvgFillColor(Vg, Color);
+  if (Mode != Fill)
+    nvgStrokeColor(Vg, Color);
+	for (int Y = From.Y; Y < From.Y + Dims.Y * Spacing.Y; Y += Spacing.Y) {
+		for (int X = From.X; X < From.X + Dims.X * Spacing.X; X += Spacing.X) {
 			nvgBeginPath(Vg);
 			nvgCircle(Vg, X, Y, 4);
       //nvgStrokeColor(Vg, nvgRGBA(0,130,0,200) );
-      if (IsBetween(X, SelTopLeft.X, SelBotRight.X) && IsBetween(Y, SelTopLeft.Y, SelBotRight.Y))
-        nvgFillColor(Vg, nvgRGBA(0, 0, 130, 200));
-      else
-        nvgFillColor(Vg, nvgRGBA(0,130,0,200) );
-      nvgStroke(Vg);
-			nvgFill(Vg);
+      if (Mode != Fill)
+        nvgStroke(Vg);
+      if (Mode != Stroke)
+			  nvgFill(Vg);
 		}
 	}
 	nvgRestore(Vg);
 }
 
-void DrawBox(NVGcontext* Vg, const v2i& From, const v2i& To) {
+void DrawBox(NVGcontext* Vg, const v2i& From, const v2i& To, const NVGcolor& Color) {
 	nvgSave(Vg);
 	nvgBeginPath(Vg);
 	nvgRect(Vg, From.X, From.Y, To.X - From.X, To.Y - From.Y);
-	nvgFillColor(Vg, nvgRGBA(230,0,0,30) );
+	nvgFillColor(Vg, Color);
 	nvgFill(Vg);
 	nvgRestore(Vg);
 }
@@ -127,6 +130,22 @@ void DrawText(NVGcontext* Vg, const v2i& Where, cstr Text, int Size) {
 	nvgFontBlur(Vg, 0);
   nvgText(Vg, Where.X, Where.Y, Text, nullptr);
   nvgRestore(Vg);
+}
+
+struct box {
+  v2i From;
+  v2i To;
+};
+box GetPointBox(const v2i& MouseDown, const v2i& MouseUp, const v2i& TopLeft, 
+  const v2i& N, const v2i& Spacing) 
+{
+  v2i MouseFrom = Max(Min(MouseDown, MouseUp), TopLeft);
+  v2i MouseTo = Min(Max(MouseDown, MouseUp), TopLeft + N * Spacing);
+  int PointFromX = (int)ceil(float(MouseFrom.X - TopLeft.X) / Spacing.X);
+  int PointFromY = (int)ceil(float(MouseFrom.Y - TopLeft.Y) / Spacing.Y);
+  int PointToX = (int)ceil(float(MouseTo.X - TopLeft.X) / Spacing.X);
+  int PointToY = (int)ceil(float(MouseTo.Y - TopLeft.Y) / Spacing.Y);
+  return box{ v2i(PointFromX, PointFromY), v2i(PointToX, PointToY) };
 }
 
 void drawWindow(struct NVGcontext* vg, const char* title, float x, float y, float w, float h)
@@ -347,6 +366,9 @@ public:
 		bndSetIconImage(createImage(m_nvg, "images/blender_icons16.png", 0) );
 
 		m_timeOffset = bx::getHPCounter();
+
+    BuildSubbands(v3i(N, 1), NLevels, &Subbands);
+    BuildSubbands(v3i(N, 1), NLevels, &SubbandsG);
 	}
 
 	int shutdown() override
@@ -387,7 +409,7 @@ public:
 				ToInt(buf2, &N.Y);
 			}
 			if (!ImGui::GetIO().WantCaptureMouse) {
-        int ValDomainBot = ValDomainTopLeft.Y + N.Y * Spacing;
+        int ValDomainBot = ValDomainTopLeft.Y + N.Y * Spacing.Y;
 				if (m_mouseReleased && m_mouseState.m_buttons[entry::MouseButton::Left]) {
           if (m_mouseState.m_my < WavDomainTopLeft.Y - (WavDomainTopLeft.Y - ValDomainBot) / 2)
             ValMouseDown = v2i(m_mouseState.m_mx, m_mouseState.m_my);
@@ -404,7 +426,10 @@ public:
 					m_mouseReleased = true;
 				}
 			}
-			ImGui::SliderInt("Number of levels", &NLevels, 1, 4);
+			if (ImGui::SliderInt("Number of levels", &NLevels, 1, 4)) {
+        BuildSubbands(v3i(N, 1), NLevels, &Subbands);
+        BuildSubbands(v3i(N, 1), NLevels, &SubbandsG);
+      }
 			imguiEndFrame();
 
 			int64_t now = bx::getHPCounter();
@@ -424,26 +449,54 @@ public:
 			//DrawBox(m_nvg, ValMouseDown, ValMouseUp); // selection
 			//DrawBox(m_nvg, WavMouseDown, WavMouseUp); // selection
       // draw the val grid
-			DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, ValMouseDown, ValMouseUp);
-			DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing, WavMouseDown, WavMouseUp);
+			DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
+			DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
       DrawSubbandSep(m_nvg, WavDomainTopLeft, N, Spacing, NLevels);
-      // TODO: select the val grid
-      // TODO: change the colors of the selected points
       // TODO: select the wavelet grid
       // TODO: draw the wavgrid, wrkgrid, valgrid
       // TODO: select between wrkgrid and valgrid with a radio button
-      //nvgText(m_nvg, 50, 30, "hello", nullptr);
       /* print the selection in the Val domain */
-      v2i ValMouseFrom = Max(Min(ValMouseDown, ValMouseUp), ValDomainTopLeft);
-      v2i ValMouseTo = Min(Max(ValMouseDown, ValMouseUp), ValDomainTopLeft + N * Spacing);
-      int ValSelFromX = (int)ceil(float(ValMouseFrom.X - ValDomainTopLeft.X) / Spacing);
-      int ValSelFromY = (int)ceil(float(ValMouseFrom.Y - ValDomainTopLeft.Y) / Spacing);
-      int ValSelToX = (int)floor(float(ValMouseTo.X - ValDomainTopLeft.X) / Spacing);
-      int ValSelToY = (int)floor(float(ValMouseTo.Y - ValDomainTopLeft.Y) / Spacing);
+      box ValBox = GetPointBox(ValMouseDown, ValMouseUp, ValDomainTopLeft, N, Spacing);
       char Temp[50];
-      sprintf(Temp, "(%d %d) to (%d %d)", ValSelFromX, ValSelFromY, ValSelToX, ValSelToY);
+      sprintf(Temp, "(%d %d) to (%d %d)", ValBox.From.X, ValBox.From.Y, ValBox.To.X, ValBox.To.Y);
       DrawText(m_nvg, v2i(50, 30), Temp, 20);
+      DrawGrid(m_nvg, ValDomainTopLeft + ValBox.From * Spacing, ValBox.To - ValBox.From, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
 
+      /* Wav domain */
+      box WavBox = GetPointBox(WavMouseDown, WavMouseUp, WavDomainTopLeft, N, Spacing);
+      int WavFromX = (int)ceil(float(Max(0, Min(WavMouseDown.X, WavDomainTopLeft.X + N.X * Spacing.X)) - WavDomainTopLeft.X) / Spacing.X);
+      int WavFromY = (int)ceil(float(Max(0, Min(WavMouseDown.Y, WavDomainTopLeft.Y + N.Y * Spacing.Y)) - WavDomainTopLeft.Y) / Spacing.Y);
+      int Sb = -1;
+      for (int I = 0; I < Size(Subbands); ++I) {
+        if (v3i(WavFromX, WavFromY, 0) >= From(Subbands[I]) && v3i(WavFromX, WavFromY, 0) <= To(Subbands[I])) {
+          Sb = I;
+          break;
+        }
+      }
+      extent WavCrop = Crop(extent(v3i(WavBox.From, 0), v3i(WavBox.To - WavBox.From, 1)), Subbands[Sb]);
+      DrawGrid(m_nvg, WavDomainTopLeft + From(WavCrop).XY * Spacing, (To(WavCrop) - From(WavCrop)).XY, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
+      sprintf(Temp, "(%d %d) to (%d %d)", From(WavCrop).X, From(WavCrop).Y, To(WavCrop).X, To(WavCrop).Y);
+      DrawText(m_nvg, v2i(50, 450), Temp, 20);
+      sprintf(Temp, "Subband %d", Sb);
+      DrawText(m_nvg, v2i(50, 470), Temp, 20);
+
+      /* WavGrid domain */
+      //DrawGrid(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing, ValBox.To - ValBox.From, Spacing, nvgRGBA(130, 0, 0, 200));
+			DrawGrid(m_nvg, WavGDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
+      extent WavCropLocal = WavCrop;
+      SetFrom(WavCropLocal, From(WavCrop) - From(Subbands[Sb]));
+      grid WavGGrid = SubGrid(SubbandsG[Sb], WavCropLocal);
+      sprintf(Temp, "from (%d %d) dims (%d %d) stride (%d %d)", From(WavGGrid).X, From(WavGGrid).Y, Dims(WavGGrid).X, Dims(WavGGrid).Y, Strd(WavGGrid).X, Strd(WavGGrid).Y);
+      DrawText(m_nvg, v2i(500, 30), Temp, 20);
+      //box WavGBox = GetPointBox(0, WavGFrom(WavGGrid).XY, WavGDomainTopLeft, N, Spacing);
+			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing, Dims(WavGGrid).XY, Spacing * Strd(WavGGrid).XY, nvgRGBA(0, 130, 0, 200), draw_mode::Fill);
+      //DrawBox(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing - Spacing / 2, WavGDomainTopLeft + From(WavGGrid).XY * Spacing + (Dims(WavGGrid).XY - 1) * Spacing * Strd(WavGGrid).XY - Spacing / 2, nvgRGBA(0, 230, 0, 50));
+      DrawBox(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing - Spacing / 2, WavGDomainTopLeft + ValBox.From * Spacing + (ValBox.To - ValBox.From) * Spacing - Spacing / 2, nvgRGBA(230, 0, 0, 50));
+      extent Footprint = WavFootprint(2, Sb, WavGGrid);
+      DrawBox(m_nvg, WavGDomainTopLeft + From(Footprint).XY * Spacing - Spacing / 2, WavGDomainTopLeft + From(Footprint).XY * Spacing + (Dims(Footprint) - 1).XY * Spacing + Spacing / 2, nvgRGBA(0, 0, 230, 50));
+      sprintf(Temp, "from (%d %d) dims (%d %d)", From(Footprint).X, From(Footprint).Y, Dims(Footprint).X, Dims(Footprint).Y);
+      DrawText(m_nvg, v2i(500, 50), Temp, 20);
+      // TODO: highlight the output WavGrid
 			nvgEndFrame(m_nvg);
 
 			// Advance to next frame. Rendering thread will be kicked to
@@ -474,9 +527,12 @@ public:
 	DemoData m_data;
   v2i ValDomainTopLeft = v2i(50, 50);
   v2i WavDomainTopLeft = v2i(50, 500);
+  v2i WavGDomainTopLeft = v2i(500, 50);
 	v2i N = v2i(32, 32); // total dimensions
-  int Spacing = 12;
+  v2i Spacing = v2i(12, 12);
 	int NLevels = 1;
+  array<extent> Subbands;
+  array<grid> SubbandsG;
 };
 
 } // namespace

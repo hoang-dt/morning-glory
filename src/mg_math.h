@@ -23,9 +23,11 @@ mg_TT(t, u = t) t Prod(const v3<u>& Vec);
 
 /* 2D vector math */
 mg_T(t) v2<t> operator+(const v2<t>& Lhs, const v2<t>& Rhs);
+mg_T(t) v2<t> operator-(const v2<t>& Lhs, const v2<t>& Rhs);
 mg_T(t) v2<t> operator/(const v2<t>& Lhs, const v2<t>& Rhs);
 mg_T(t) v2<t> operator*(const v2<t>& Lhs, const v2<t>& Rhs);
 mg_T(t) v2<t> operator+(const v2<t>& Lhs, t Val);
+mg_T(t) v2<t> operator-(const v2<t>& Lhs, t Val);
 mg_T(t) v2<t> operator/(const v2<t>& Lhs, t Rhs);
 mg_T(t) v2<t> operator*(const v2<t>& Lhs, t Val);
 

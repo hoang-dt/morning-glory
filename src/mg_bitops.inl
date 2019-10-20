@@ -164,10 +164,10 @@ Unpack3Ints32(u32 V) {
 }
 
 mg_Inline u64
-Pack3i64(v3i V) { return u64(V.X) + (u64(V.Y) << 21) + (u64(V.Z) << 42); }
+Pack3i64(const v3i& V) { return u64(V.X & 0x1FFFFF) + (u64(V.Y & 0x1FFFFF) << 21) + (u64(V.Z & 0x1FFFFF) << 42); }
 mg_Inline v3i
 Unpack3i64(u64 V) {
-  return v3i(V & 0x1FFFFF, (V & 0x3FFFFE00000) >> 21, (V & 0x7FFFFC0000000000ull) >> 42);
+  return v3i((i64(V & 0x1FFFFF) << 43) >> 43, (i64(V & 0x3FFFFE00000) << 22) >> 43, (i64(V & 0x7FFFFC0000000000ull) << 1) >> 43);
 }
 
 mg_Inline u32

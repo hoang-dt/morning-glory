@@ -765,6 +765,7 @@ void
 BuildSubbands(const v3i& N, int NLevels, array<extent>* Subbands) {
   int NDims = NumDims(N);
   stack_array<u8, 8>& Order = SubbandOrders[NDims];
+  Clear(Subbands);
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
   v3i M = N;
   for (int I = 0; I < NLevels; ++I) {
@@ -794,6 +795,7 @@ void
 BuildSubbands(const v3i& N, int NLevels, array<grid>* Subbands) {
   int NDims = NumDims(N);
   stack_array<u8, 8>& Order = SubbandOrders[NDims];
+  Clear(Subbands);
   Reserve(Subbands, ((1 << NDims) - 1) * NLevels + 1);
   v3i M = N; // dimensions of all the subbands at the current level
   v3i S(1, 1, 1); // strides
@@ -872,10 +874,19 @@ ExpandDomain(const v3i& N, int NLevels) {
   return N + Count;
 }
 
-grid WavBlockToGrid(const array<grid>& Subbands, int Sb, const extent& Ext) {
-  const grid& SbGrid = Subbands[Sb];
-  v3i From3 = From(SbGrid) + Strd(SbGrid) * From(Ext);
-  return grid(From3, Dims(Ext), Strd(SbGrid));
+extent WavFootprint(int NDims, int Sb, const grid& WavGrid) {
+  // TODO: 2D?
+  v3i Lvl3 = SubbandToLevel(NDims, Sb, true);
+  v3i From3 = From(WavGrid);
+  v3i Strd3 = Strd(WavGrid);
+  From3.X -= Lvl3.X ? (3 * Strd3.X / 2 - 1) : (Strd3.X - 1);
+  From3.Y -= Lvl3.Y ? (3 * Strd3.Y / 2 - 1) : (Strd3.Y - 1);
+  From3.Z -= Lvl3.Z ? (3 * Strd3.Z / 2 - 1) : (Strd3.Z - 1);
+  v3i Last3 = Last(WavGrid);
+  Last3.X += Lvl3.X ? (3 * Strd3.X / 2 - 1) : (Strd3.X - 1);
+  Last3.Y += Lvl3.Y ? (3 * Strd3.Y / 2 - 1) : (Strd3.Y - 1);
+  Last3.Z += Lvl3.Z ? (3 * Strd3.Z / 2 - 1) : (Strd3.Z - 1);
+  return extent(From3, Last3 - From3 + 1);
 }
 
 } // namespace mg

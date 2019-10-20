@@ -68,16 +68,15 @@ v3i ExpandDomain(const v3i& N, int NLevels);
 /* If Norm(alize), the return levels are either 0 or 1 */
 v3i SubbandToLevel(int NDims, int Sb, bool Norm = false);
 
-/* Given a block of wavelet coefficients at some subband, return the grid that
-this block corresponds to in the original domain */
-grid WavBlockToGrid(const array<grid>& Subbands, int Sb, const extent& Ext);
-
 struct wav_grids {
   grid WavGrid; // grid of wavelet coefficients to copy
   grid ValGrid; // the output grid of values
   grid WrkGrid; // determined using the WavGrid
 };
 wav_grids ComputeWavGrids(int NDims, int Sb, const extent& ValExt, const grid& WavGrid, const v3i& ValStrd);
+
+/* Return the footprint (influence range) of a block of wavelet coefficients */
+extent WavFootprint(int NDims, int Sb, const grid& WavGrid);
 
 } // namespace mg
 

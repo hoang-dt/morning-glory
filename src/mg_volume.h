@@ -151,6 +151,7 @@ mg_T(t) void Copy(const t& Grid, const subvol_grid& SVol, subvol_grid* DVol);
 mg_TT(t1, t2) void Add(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);
 /* Returns whether Grid1 is a sub-grid of Grid2 */
 mg_TT(t1, t2) bool IsSubGrid(const t1& Grid1, const t2& Grid2);
+mg_TT(t1, t2) t1 SubGrid(const t1& Grid1, const t2& Grid2);
 /* Compute the position of Grid1 relative to Grid2 (Grid1 is a sub-grid of Grid2) */
 mg_TT(t1, t2) t1 Relative(const t1& Grid1, const t2& Grid2);
 /* "Crop" Grid1 against Grid2 */

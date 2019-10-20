@@ -68,6 +68,13 @@ mg_Ti(t) v2<t> operator+(const v2<t>& Lhs, t Val) {
   return v2<t>(Lhs.X + Val, Lhs.Y + Val);
 }
 mg_Ti(t) v2<t>
+operator-(const v2<t>& Lhs, const v2<t>& Rhs) {
+  return v2<t>(Lhs.X - Rhs.X, Lhs.Y - Rhs.Y);
+}
+mg_Ti(t) v2<t> operator-(const v2<t>& Lhs, t Val) {
+  return v2<t>(Lhs.X - Val, Lhs.Y - Val);
+}
+mg_Ti(t) v2<t>
 operator*(const v2<t>& Lhs, const v2<t>& Rhs) {
   return v2<t>(Lhs.X * Rhs.X, Lhs.Y * Rhs.Y);
 }

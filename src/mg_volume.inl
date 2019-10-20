@@ -402,6 +402,11 @@ IsSubGrid(const t1& Grid1, const t2& Grid2) {
   return true;
 }
 
+mg_TT(t1, t2) t1 
+SubGrid(const t1& Grid1, const t2& Grid2) {
+  return t1(From(Grid1) + Strd(Grid1) * From(Grid2), Dims(Grid2), Strd(Grid1) * Strd(Grid2));
+}
+
 mg_TT(t1, t2) t1
 Relative(const t1& Grid1, const t2& Grid2) {
   mg_Assert(IsSubGrid(Grid1, Grid2));

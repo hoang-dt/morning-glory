@@ -34,7 +34,7 @@ u32 DecodeMorton2Y(u32 Code);
 u32 EncodeMorton3(u32 X, u32 Y, u32 Z);
 
 /* Stuff three 21-bit uints into one 64-bit uint */
-u64 Pack3i64  (v3i V);
+u64 Pack3i64  (const v3i& V);
 v3i Unpack3i64(u64 V);
 /* Return the low 32 bits of the input */
 u32 LowBits64 (u64 V);
