@@ -143,8 +143,8 @@ box GetPointBox(const v2i& MouseDown, const v2i& MouseUp, const v2i& TopLeft,
   v2i MouseTo = Min(Max(MouseDown, MouseUp), TopLeft + N * Spacing);
   int PointFromX = (int)ceil(float(MouseFrom.X - TopLeft.X) / Spacing.X);
   int PointFromY = (int)ceil(float(MouseFrom.Y - TopLeft.Y) / Spacing.Y);
-  int PointToX = (int)floor(float(MouseTo.X - TopLeft.X) / Spacing.X) + 1;
-  int PointToY = (int)floor(float(MouseTo.Y - TopLeft.Y) / Spacing.Y) + 1;
+  int PointToX = (int)floor(float(MouseTo.X - TopLeft.X) / Spacing.X);
+  int PointToY = (int)floor(float(MouseTo.Y - TopLeft.Y) / Spacing.Y);
   return box{ v2i(PointFromX, PointFromY), v2i(PointToX, PointToY) };
 }
 
@@ -460,7 +460,7 @@ public:
       char Temp[50];
       sprintf(Temp, "(%d %d) to (%d %d)", ValBox.From.X, ValBox.From.Y, ValBox.To.X, ValBox.To.Y);
       DrawText(m_nvg, v2i(50, 30), Temp, 20);
-      DrawGrid(m_nvg, ValDomainTopLeft + ValBox.From * Spacing, ValBox.To - ValBox.From, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
+      DrawGrid(m_nvg, ValDomainTopLeft + ValBox.From * Spacing, ValBox.To - ValBox.From + 1, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
 
       /* Wav domain */
       box WavBox = GetPointBox(WavMouseDown, WavMouseUp, WavDomainTopLeft, N, Spacing);
@@ -493,12 +493,15 @@ public:
       //box WavGBox = GetPointBox(0, WavGFrom(WavGGrid).XY, WavGDomainTopLeft, N, Spacing);
 			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing, Dims(WavGGrid).XY, Spacing * Strd(WavGGrid).XY, nvgRGBA(0, 130, 0, 200), draw_mode::Fill);
       //DrawBox(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing - Spacing / 2, WavGDomainTopLeft + From(WavGGrid).XY * Spacing + (Dims(WavGGrid).XY - 1) * Spacing * Strd(WavGGrid).XY - Spacing / 2, nvgRGBA(0, 230, 0, 50));
-      DrawBox(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing - Spacing / 2, WavGDomainTopLeft + ValBox.From * Spacing + (ValBox.To - ValBox.From) * Spacing - Spacing / 2, nvgRGBA(230, 0, 0, 50));
+      DrawBox(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing - Spacing / 2, WavGDomainTopLeft + ValBox.From * Spacing + (ValBox.To - ValBox.From) * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
       extent Footprint = WavFootprint(2, Sb, WavGGrid);
       DrawBox(m_nvg, WavGDomainTopLeft + From(Footprint).XY * Spacing - Spacing / 2, WavGDomainTopLeft + From(Footprint).XY * Spacing + (Dims(Footprint) - 1).XY * Spacing + Spacing / 2, nvgRGBA(0, 0, 230, 50));
-      sprintf(Temp, "from (%d %d) dims (%d %d)", From(Footprint).X, From(Footprint).Y, Dims(Footprint).X, Dims(Footprint).Y);
-      DrawText(m_nvg, v2i(500, 50), Temp, 20);
       // TODO: highlight the output WavGrid
+      extent ValExt(v3i(ValBox.From, 0), v3i(ValBox.To - ValBox.From + 1, 1));
+      wav_grids WavGrids = ComputeWavGrids(2, Sb, ValExt, WavGGrid, v3i(1000));
+      sprintf(Temp, "from (%d %d) dims (%d %d) stride (%d %d)", From(WavGrids.WavGrid).X, From(WavGrids.WavGrid).Y, Dims(WavGrids.WavGrid).X, Dims(WavGrids.WavGrid).Y, Strd(WavGrids.WavGrid).X, Strd(WavGrids.WavGrid).Y);
+      DrawText(m_nvg, v2i(500, 50), Temp, 20);
+			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WavGrid).XY * Spacing, Dims(WavGrids.WavGrid).XY, Spacing * Strd(WavGrids.WavGrid).XY, nvgRGBA(130, 0, 130, 200), draw_mode::Fill);
 			nvgEndFrame(m_nvg);
 
 			// Advance to next frame. Rendering thread will be kicked to

@@ -697,17 +697,21 @@ ValVol        = volume of values */
 wav_grids ComputeWavGrids(
   int NDims, int Sb, const extent& ValExt, const grid& WavGrid, const v3i& ValStrd)
 {
+  // TODO: can we figure out the subband through the input grid?
+  // TODO: can we figure out the NDims from the WavGrid?
   /* find the support of the value block */
-  v3i WavStrd3 = Strd(WavGrid);
-  v3i Frst3 = Frst(ValExt), Last3 = Last(ValExt);
-  v3i K3 = (Frst3 - WavStrd3 * 2) / WavStrd3;
-  Frst3 = K3 * WavStrd3 + (1 - (K3 & 1)) * WavStrd3;
-  K3 = (Last3 + WavStrd3 * 2) / WavStrd3;
-  Last3 = K3 * WavStrd3 - (1 - (K3 & 1)) * WavStrd3;
-  /* "crop" the WavGrid by First3 and Last3 */
-  v3i WavFrst3 = Max(Frst(WavGrid), Frst3);
-  v3i WavLast3 = Min(Last(WavGrid), Last3);
   v3i Lvl3 = SubbandToLevel(NDims, Sb, true);
+  v3i WavFrst3 = Frst(WavGrid), WavStrd3 = Strd(WavGrid);
+  v3i SbFrst3 = WavFrst3 % WavStrd3;
+  v3i S3(Lvl3.X ? 3 * WavStrd3.X / 2 - 1 : WavStrd3.X - 1,
+         Lvl3.Y ? 3 * WavStrd3.Y / 2 - 1 : WavStrd3.Y - 1,
+         Lvl3.Z ? 3 * WavStrd3.Z / 2 - 1 : WavStrd3.Z - 1);
+  v3i Frst3 = Max(Frst(ValExt), SbFrst3 + S3), Last3 = Max(Last(ValExt), SbFrst3 - S3);
+  Frst3 = SbFrst3 + ((Frst3 - S3 - SbFrst3 + WavStrd3 - 1) / WavStrd3) * WavStrd3;
+  Last3 = SbFrst3 + ((Last3 + S3 - SbFrst3) / WavStrd3) * WavStrd3;
+  /* "crop" the WavGrid by First3 and Last3 */
+  WavFrst3 = Max(Frst3, WavFrst3);
+  v3i WavLast3 = Min(Last3, Last(WavGrid));
   v3i NewStrd3 = Min(WavStrd3 / (1 << Lvl3), ValStrd);
   v3i NewFrst3, NewLast3;
   NewFrst3 = ((Frst(ValExt) + NewStrd3 - 1) / NewStrd3) * NewStrd3;
