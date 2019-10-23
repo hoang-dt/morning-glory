@@ -22,9 +22,13 @@
 #include <meshoptimizer/src/indexcodec.cpp>
 #include "mg_common.h"
 #include "mg_math.h"
+#include "mg_rendering.h"
 #include "mg_volume.h"
 #include "mg_wavelet.h"
 #include "mg_all.cpp"
+#define NOC_FILE_DIALOG_WIN32
+#define NOC_FILE_DIALOG_IMPLEMENTATION
+#include "noc_file_dialog.h"
 
 namespace
 {
@@ -90,8 +94,7 @@ void DrawSubbandSep(NVGcontext* Vg, const v2i& TopLeft, const v2i& N, const v2i&
 }
 
 enum draw_mode { Fill, Stroke, FillStroke };
-void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, const v2i& Spacing, const NVGcolor& Color, draw_mode Mode)
-{
+void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, const v2i& Spacing, const NVGcolor& Color, draw_mode Mode) {
 	nvgSave(Vg);
   nvgStrokeWidth(Vg,1.0f);
   if (Mode != Stroke)
@@ -101,7 +104,32 @@ void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, const v2i& Spaci
 	for (int Y = From.Y; Y < From.Y + Dims.Y * Spacing.Y; Y += Spacing.Y) {
 		for (int X = From.X; X < From.X + Dims.X * Spacing.X; X += Spacing.X) {
 			nvgBeginPath(Vg);
-			nvgCircle(Vg, X, Y, 4);
+			//nvgCircle(Vg, X, Y, 4);
+      nvgRect(Vg, X - 4, Y - 4, 8, 8);
+      //nvgStrokeColor(Vg, nvgRGBA(0,130,0,200) );
+      if (Mode != Fill)
+        nvgStroke(Vg);
+      if (Mode != Stroke)
+			  nvgFill(Vg);
+		}
+	}
+	nvgRestore(Vg);
+}
+
+void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, const v2i& Spacing, const array<v3<u8>>& VolColor, draw_mode Mode) {
+	nvgSave(Vg);
+  nvgStrokeWidth(Vg,1.0f);
+	for (int Y = From.Y; Y < From.Y + Dims.Y * Spacing.Y; Y += Spacing.Y) {
+		for (int X = From.X; X < From.X + Dims.X * Spacing.X; X += Spacing.X) {
+      const v3<u8>& Color = VolColor[(Y - From.Y) / Spacing.Y * Dims.X + (X - From.X) / Spacing.X];
+      if (Mode != Stroke)
+        nvgFillColor(Vg, nvgRGBA(Color.R, Color.G, Color.B, 255));
+      if (Mode != Fill)
+        nvgStrokeColor(Vg, nvgRGBA(Color.R, Color.G, Color.B, 255));
+			nvgBeginPath(Vg);
+      //printf("%d %d %d\n", Color.R, Color.G, Color.B);
+			//nvgCircle(Vg, X, Y, 4);
+      nvgRect(Vg, X - 4, Y - 4, 8, 8);
       //nvgStrokeColor(Vg, nvgRGBA(0,130,0,200) );
       if (Mode != Fill)
         nvgStroke(Vg);
@@ -136,8 +164,8 @@ struct box {
   v2i From;
   v2i To;
 };
-box GetPointBox(const v2i& MouseDown, const v2i& MouseUp, const v2i& TopLeft, 
-  const v2i& N, const v2i& Spacing) 
+box GetPointBox(const v2i& MouseDown, const v2i& MouseUp, const v2i& TopLeft,
+  const v2i& N, const v2i& Spacing)
 {
   v2i MouseFrom = Max(Min(MouseDown, MouseUp), TopLeft);
   v2i MouseTo = Min(Max(MouseDown, MouseUp), TopLeft + N * Spacing);
@@ -402,8 +430,8 @@ public:
 				, character);
 
 			//showExampleDialog(this);
-			static char buf1[8] = "32"; ImGui::InputText("Nx", buf1, 8, ImGuiInputTextFlags_CharsDecimal);
-			static char buf2[8] = "32"; ImGui::InputText("Ny", buf2, 8, ImGuiInputTextFlags_CharsDecimal);
+			static char buf1[8] = "33"; ImGui::InputText("Nx", buf1, 8, ImGuiInputTextFlags_CharsDecimal);
+			static char buf2[8] = "33"; ImGui::InputText("Ny", buf2, 8, ImGuiInputTextFlags_CharsDecimal);
 			if (ImGui::Button("Draw grid")) {
 				ToInt(buf1, &N.X);
 				ToInt(buf2, &N.Y);
@@ -430,7 +458,6 @@ public:
         BuildSubbands(v3i(N, 1), NLevels, &Subbands);
         BuildSubbands(v3i(N, 1), NLevels, &SubbandsG);
       }
-			imguiEndFrame();
 
 			int64_t now = bx::getHPCounter();
 			const double freq = double(bx::getHPFrequency() );
@@ -449,7 +476,11 @@ public:
 			//DrawBox(m_nvg, ValMouseDown, ValMouseUp); // selection
 			//DrawBox(m_nvg, WavMouseDown, WavMouseUp); // selection
       // draw the val grid
-			DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
+      if (!Vol.Buffer)
+			  DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
+      else
+			  DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, VolColor, draw_mode::Fill);
+
 			DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
       DrawSubbandSep(m_nvg, WavDomainTopLeft, N, Spacing, NLevels);
       // TODO: select the wavelet grid
@@ -460,7 +491,8 @@ public:
       char Temp[50];
       sprintf(Temp, "(%d %d) to (%d %d)", ValBox.From.X, ValBox.From.Y, ValBox.To.X, ValBox.To.Y);
       DrawText(m_nvg, v2i(50, 30), Temp, 20);
-      DrawGrid(m_nvg, ValDomainTopLeft + ValBox.From * Spacing, ValBox.To - ValBox.From + 1, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
+      //DrawGrid(m_nvg, ValDomainTopLeft + ValBox.From * Spacing, ValBox.To - ValBox.From + 1, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
+      DrawBox(m_nvg, ValDomainTopLeft + ValBox.From * Spacing - Spacing / 2, ValDomainTopLeft + ValBox.From * Spacing + (ValBox.To - ValBox.From) * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
 
       /* Wav domain */
       box WavBox = GetPointBox(WavMouseDown, WavMouseUp, WavDomainTopLeft, N, Spacing);
@@ -486,7 +518,7 @@ public:
       //DrawGrid(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing, ValBox.To - ValBox.From, Spacing, nvgRGBA(130, 0, 0, 200));
 			DrawGrid(m_nvg, WavGDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
       extent WavCropLocal = WavCrop;
-      SetFrom(WavCropLocal, From(WavCrop) - From(Subbands[Sb]));
+      SetFrom(&WavCropLocal, From(WavCrop) - From(Subbands[Sb]));
       grid WavGGrid = SubGrid(SubbandsG[Sb], WavCropLocal);
       sprintf(Temp, "from (%d %d) dims (%d %d) stride (%d %d)", From(WavGGrid).X, From(WavGGrid).Y, Dims(WavGGrid).X, Dims(WavGGrid).Y, Strd(WavGGrid).X, Strd(WavGGrid).Y);
       DrawText(m_nvg, v2i(500, 30), Temp, 20);
@@ -501,7 +533,51 @@ public:
       wav_grids WavGrids = ComputeWavGrids(2, Sb, ValExt, WavGGrid, v3i(1000));
       sprintf(Temp, "from (%d %d) dims (%d %d) stride (%d %d)", From(WavGrids.WavGrid).X, From(WavGrids.WavGrid).Y, Dims(WavGrids.WavGrid).X, Dims(WavGrids.WavGrid).Y, Strd(WavGrids.WavGrid).X, Strd(WavGrids.WavGrid).Y);
       DrawText(m_nvg, v2i(500, 50), Temp, 20);
-			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WavGrid).XY * Spacing, Dims(WavGrids.WavGrid).XY, Spacing * Strd(WavGrids.WavGrid).XY, nvgRGBA(130, 0, 130, 200), draw_mode::Fill);
+      ImGui::Checkbox("WavGrid", &DrawWavGrid);
+      if (DrawWavGrid)
+			  DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WavGrid).XY * Spacing, Dims(WavGrids.WavGrid).XY, Spacing * Strd(WavGrids.WavGrid).XY, nvgRGBA(130, 0, 130, 200), draw_mode::Fill);
+      else
+			  DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WrkGrid).XY * Spacing, Dims(WavGrids.WrkGrid).XY, Spacing * Strd(WavGrids.WrkGrid).XY, nvgRGBA(130, 130, 0, 200), draw_mode::Fill);
+      // draw the val grid
+      DrawGrid(m_nvg, ValDomainTopLeft + From(WavGrids.ValGrid).XY * Spacing, Dims(WavGrids.ValGrid).XY, Spacing * Strd(WavGrids.ValGrid).XY, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
+      if (ImGui::Button("Load transfer function")) {
+        cstr TfFile = noc_file_dialog_open(NOC_FILE_DIALOG_OPEN, "json\0*.json", nullptr, nullptr);
+        if (TfFile) {
+          printf("Loading transfer function %s\n", TfFile);
+          Dealloc(&Tf);
+          auto Result = ReadTransferFunc(TfFile, &Tf);
+          if (!Result) {
+            printf("Error: %s\n", ToString(Result));
+          }
+        }
+      }
+      if (ImGui::Button("Load data")) {
+        cstr DataFile = noc_file_dialog_open(NOC_FILE_DIALOG_OPEN, "raw\0*.raw", nullptr, nullptr);
+        if (DataFile) {
+          printf("Loading raw file %s\n", DataFile);
+          Dealloc(&Vol);
+          auto Result = ReadVolume(DataFile, v3i(N, 1), dtype::float64, &Vol);
+          if (!Result) {
+            printf("Error: %s\n", ToString(Result));
+          } else if (Size(Vol.Buffer) != Prod(N) * SizeOf(dtype::float64)) {
+            printf("Error: size mismatch\n");
+            Dealloc(&Vol);
+          } else { // succeed
+            // find the min, max value of Volume
+            auto MM = MinMaxElem(Begin<f64>(Vol), End<f64>(Vol));
+            MinVal = *(MM.Min), MaxVal = *(MM.Max);
+            Resize(&VolColor, Prod(N));
+            for (int Y = 0; Y < N.Y; ++Y) {
+              for (int X = 0; X < N.X; ++X) {
+                f64 Val = (Vol.At<f64>(Y * N.X + X) - MinVal) / (MaxVal - MinVal);
+                VolColor[Y * N.X + X] = v3<u8>(GetRGB(Tf, Val) * 255.0);
+              }
+            }
+          }
+        }
+      }
+
+			imguiEndFrame();
 			nvgEndFrame(m_nvg);
 
 			// Advance to next frame. Rendering thread will be kicked to
@@ -525,6 +601,11 @@ public:
 	v2i WavMouseDown = v2i::Zero;
 	v2i WavMouseUp = v2i::Zero;
 	bool m_mouseReleased = true;
+  bool DrawWavGrid = true;
+  transfer_func Tf;
+  volume Vol;
+  f64 MinVal, MaxVal;
+  array<v3<u8>> VolColor;
 
 	int64_t m_timeOffset;
 
@@ -533,7 +614,7 @@ public:
   v2i ValDomainTopLeft = v2i(50, 50);
   v2i WavDomainTopLeft = v2i(50, 500);
   v2i WavGDomainTopLeft = v2i(500, 50);
-	v2i N = v2i(32, 32); // total dimensions
+	v2i N = v2i(33, 33); // total dimensions
   v2i Spacing = v2i(12, 12);
 	int NLevels = 1;
   array<extent> Subbands;

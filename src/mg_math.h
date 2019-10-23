@@ -19,6 +19,7 @@ mg_T(t) bool IsBetween(t Val, t A, t B);
 
 mg_T(t) int Exponent(t Val);
 
+mg_TT(t, u = t) t Prod(const v2<u>& Vec);
 mg_TT(t, u = t) t Prod(const v3<u>& Vec);
 
 /* 2D vector math */
@@ -73,6 +74,8 @@ i64 Pow(i64 Base, int Exp);
 i64 NextPow2(i64 Val);
 
 int GeometricSum(int Base, int N);
+
+mg_T(t) t Lerp(t V1, t V2, f64 T);
 
 } // namespace mg
 

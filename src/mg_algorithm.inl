@@ -25,7 +25,7 @@ MaxElem(i Beg, i End, f& Comp) {
   return MaxElem;
 }
 
-mg_T(i) MinMax<i>
+mg_T(i) min_max<i>
 MinMaxElem(i Beg, i End) {
   auto MinElem = Beg;
   auto MaxElem = Beg;
@@ -35,10 +35,10 @@ MinMaxElem(i Beg, i End) {
     else if (*Pos > *MaxElem)
       MaxElem = Pos;
   }
-  return MinMax<i>{MinElem, MaxElem};
+  return min_max<i>{MinElem, MaxElem};
 }
 
-mg_TT(i, f) MinMax<i>
+mg_TT(i, f) min_max<i>
 MinMaxElem(i Beg, i End, const f& Comp) {
   auto MinElem = Beg;
   auto MaxElem = Beg;
@@ -48,7 +48,7 @@ MinMaxElem(i Beg, i End, const f& Comp) {
     else if (Comp(*MaxElem, *Pos))
       MaxElem = Pos;
   }
-  return MinMax<i>{ MinElem, MaxElem };
+  return min_max<i>{ MinElem, MaxElem };
 }
 
 mg_TT(i, t) i

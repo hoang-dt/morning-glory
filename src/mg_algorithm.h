@@ -10,9 +10,9 @@ mg_T(t) t Max(const t& a, const t& b);
 
 mg_T(i) i MaxElem(i Beg, i End);
 mg_TT(i, f) i MaxElem(i Beg, i End, const f& Comp);
-mg_T(i) struct MinMax { i Min, Max; };
-mg_T(i) MinMax<i> MinMaxElem(i Beg, i End);
-mg_TT(i, f) MinMax<i> MinMaxElem(i Beg, i End, const f& Comp);
+mg_T(i) struct min_max { i Min, Max; };
+mg_T(i) min_max<i> MinMaxElem(i Beg, i End);
+mg_TT(i, f) min_max<i> MinMaxElem(i Beg, i End, const f& Comp);
 
 mg_TT(i, t) i Find(i Beg, i End, const t& Val);
 mg_TT(i, t) i FindLast(i RevBeg, i RevEnd, const t& Val);

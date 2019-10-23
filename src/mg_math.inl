@@ -98,6 +98,9 @@ Max(const v2<t>& Lhs, const v2<t>& Rhs) {
 }
 
 mg_TTi(t = int, u) t
+Prod(const v2<u>& Vec) { return t(Vec.X) * t(Vec.Y); }
+
+mg_TTi(t = int, u) t
 Prod(const v3<u>& Vec) { return t(Vec.X) * t(Vec.Y) * t(Vec.Z); }
 
 mg_Ti(t) v3<t>
@@ -247,6 +250,12 @@ Pow(i64 Base, int Exp) {
   for (int I = 0; I < Exp; ++I)
     Result *= Base;
   return Result;
+}
+
+mg_Ti(t) t
+Lerp(t V1, t V2, f64 T) {
+  mg_Assert(0 <= T && T <= 1);
+  return V1 + (V2 - V1) * T;
 }
 
 } // namespace mg

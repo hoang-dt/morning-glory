@@ -169,40 +169,6 @@ using v3d  = v3<f64>;
 #define mg_EndFor3
 #define mg_BeginFor3Lockstep(C1, B1, E1, S1, C2, B2, E2, S2)
 
-mg_T(t) struct buffer_t;
-struct allocator;
-struct buffer {
-  byte* Data = nullptr;
-  i64 Bytes = 0;
-  allocator* Alloc = nullptr;
-  buffer();
-  mg_TA
-  buffer(t (&Arr)[N]);
-  buffer(const byte* DataIn, i64 BytesIn, allocator* AllocIn = nullptr);
-  mg_T(t) buffer(const buffer_t<t>& Buf);
-  byte& operator[](i64 Idx) const;
-  explicit operator bool() const;
-};
-
-bool operator==(const buffer& Buf1, const buffer& Buf2);
-
-mg_T(t)
-struct buffer_t {
-  t* Data = nullptr;
-  i64 Size = 0;
-  allocator* Alloc = nullptr;
-  buffer_t();
-  template <int N>
-  buffer_t(t (&Arr)[N]);
-  buffer_t(const t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
-  buffer_t(const buffer& Buf);
-  t& operator[](i64 Idx) const;
-  explicit operator bool() const;
-};
-
-mg_T(t) i64 Size(const buffer_t<t>& Buf);
-mg_T(t) i64 Bytes(const buffer_t<t>& Buf);
-
 } // namespace mg
 
 #include "mg_common.inl"

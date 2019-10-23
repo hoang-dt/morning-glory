@@ -286,7 +286,7 @@ ForwardCdf53Tile2D(int NLvls, const v3i& TDims3, const volume& Vol
     extent E(Pos3 * TDims3, TDims3Ext);
     v3i From3 = From(E);
     v3i Dims3 = Min(Dims(E), M - From3);
-    SetDims(E, Dims3);
+    SetDims(&E, Dims3);
     if (!(From3 < M)) // tile outside domain
       continue;
     Copy(E, Vol, extent(v3i::Zero, Dims(E)), &TileVol);
@@ -545,7 +545,7 @@ ForwardCdf53Tile(int NLvls, const v3i& TDims3, const volume& Vol
     extent E(Pos3 * TDims3, TDims3Ext);
     v3i From3 = From(E);
     v3i Dims3 = Min(Dims(E), M - From3);
-    SetDims(E, Dims3);
+    SetDims(&E, Dims3);
     if (!(From3 < M)) // tile outside domain
       continue;
     Copy(E, Vol, extent(v3i::Zero, Dims(E)), &TileVol);
@@ -706,24 +706,31 @@ wav_grids ComputeWavGrids(
   v3i S3(Lvl3.X ? 3 * WavStrd3.X / 2 - 1 : WavStrd3.X - 1,
          Lvl3.Y ? 3 * WavStrd3.Y / 2 - 1 : WavStrd3.Y - 1,
          Lvl3.Z ? 3 * WavStrd3.Z / 2 - 1 : WavStrd3.Z - 1);
-  v3i Frst3 = Max(Frst(ValExt), SbFrst3 + S3), Last3 = Max(Last(ValExt), SbFrst3 - S3);
+  v3i ValFrst3 = Frst(ValExt), ValLast3 = Last(ValExt);
+  v3i Frst3 = Max(ValFrst3, SbFrst3 + S3), Last3 = Max(ValLast3, SbFrst3 - S3);
   Frst3 = SbFrst3 + ((Frst3 - S3 - SbFrst3 + WavStrd3 - 1) / WavStrd3) * WavStrd3;
   Last3 = SbFrst3 + ((Last3 + S3 - SbFrst3) / WavStrd3) * WavStrd3;
   /* "crop" the WavGrid by First3 and Last3 */
   WavFrst3 = Max(Frst3, WavFrst3);
   v3i WavLast3 = Min(Last3, Last(WavGrid));
-  v3i NewStrd3 = Min(WavStrd3 / (1 << Lvl3), ValStrd);
-  v3i NewFrst3, NewLast3;
-  NewFrst3 = ((Frst(ValExt) + NewStrd3 - 1) / NewStrd3) * NewStrd3;
-  NewLast3 = (Last(ValExt) / NewStrd3) * NewStrd3;
   wav_grids Output;
-  Output.WavGrid = grid(WavFrst3, Dims(WavFrst3, WavLast3, WavStrd3), WavStrd3);
-  Output.ValGrid = grid(NewFrst3, Dims(NewFrst3, NewLast3, NewStrd3), NewStrd3);
-  /* for the work grid, first sample has to be even, and the dims have to be odd */
-  v3i WrkFrst3 = WavFrst3 - IsOdd(WavFrst3 / NewStrd3);
-  v3i WrkDims3 = Dims(WrkFrst3, WavLast3, NewStrd3);
-  WrkDims3 = WrkDims3 + IsEven(WrkDims3);
-  Output.WrkGrid = grid(WrkFrst3, WrkDims3, NewStrd3);
+  if (WavLast3 >= WavFrst3) {
+    v3i NewStrd3 = Min(WavStrd3 / (1 << Lvl3), ValStrd);
+    v3i NewFrst3, NewLast3;
+    NewFrst3 = ((ValFrst3 + NewStrd3 - 1) / NewStrd3) * NewStrd3;
+    NewLast3 = (ValLast3 / NewStrd3) * NewStrd3;
+    Output.WavGrid = grid(WavFrst3, Dims(WavFrst3, WavLast3, WavStrd3), WavStrd3);
+    Output.ValGrid = grid(NewFrst3, Dims(NewFrst3, NewLast3, NewStrd3), NewStrd3);
+    /* for the work grid, first sample has to be even, and the dims have to be odd */
+    v3i WrkFrst3 = WavFrst3 - IsOdd(WavFrst3 / NewStrd3) * NewStrd3;
+    v3i WrkDims3 = Dims(WrkFrst3, WavLast3, NewStrd3);
+    WrkDims3 = WrkDims3 + IsEven(WrkDims3);
+    Output.WrkGrid = grid(WrkFrst3, WrkDims3, NewStrd3);
+  } else {
+    Output.WavGrid = grid::Invalid();
+    Output.ValGrid = grid::Invalid();
+    Output.WrkGrid = grid::Invalid();
+  }
   return Output;
 }
 

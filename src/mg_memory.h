@@ -23,6 +23,8 @@ at the end of scope. */
 #define mg_ArrayOfMallocArrays(Name, Type, SizeOuter, SizeInner)
 #define mg_MallocArrayOfArrays(Name, Type, SizeOuter, SizeInner)
 
+struct buffer;
+
 struct allocator {
   virtual bool Alloc(buffer* Buf, i64 Bytes) = 0;
   virtual void Dealloc(buffer* Buf) = 0;
@@ -54,6 +56,25 @@ struct mallocator : public allocator {
   bool Alloc(buffer* Buf, i64 Bytes) override;
   void Dealloc(buffer* Buf) override;
   void DeallocAll() override;
+};
+
+static inline mallocator& Mallocator() {
+  static mallocator Instance;
+  return Instance;
+}
+
+mg_T(t) struct buffer_t;
+struct buffer {
+  byte* Data = nullptr;
+  i64 Bytes = 0;
+  allocator* Alloc = nullptr;
+  buffer(allocator* AllocIn = &Mallocator());
+  mg_TA
+  buffer(t (&Arr)[N]);
+  buffer(const byte* DataIn, i64 BytesIn, allocator* AllocIn = nullptr);
+  mg_T(t) buffer(const buffer_t<t>& Buf);
+  byte& operator[](i64 Idx) const;
+  explicit operator bool() const;
 };
 
 struct linear_allocator : public owning_allocator {
@@ -97,11 +118,6 @@ struct fallback_allocator : public allocator {
   void DeallocAll() override;
 };
 
-static inline mallocator& Mallocator() {
-  static mallocator Instance;
-  return Instance;
-}
-
 void Clone(const buffer& Src, buffer* Dst, allocator* Alloc = &Mallocator());
 
 /* Abstract away memory allocations/deallocations */
@@ -118,6 +134,28 @@ void ZeroBuf(buffer* Buf);
 mg_T(t) void ZeroTypedBuf(buffer_t<t>* Buf);
 /* Copy one buffer to another. Here the order of arguments are the reverse of memcpy. */
 void MemCopy(const buffer& Src, buffer* Dst);
+
+i64 Size(const buffer& Buf);
+void Resize(buffer* Buf, i64 Size);
+
+bool operator==(const buffer& Buf1, const buffer& Buf2);
+
+mg_T(t)
+struct buffer_t {
+  t* Data = nullptr;
+  i64 Size = 0;
+  allocator* Alloc = nullptr;
+  buffer_t();
+  template <int N>
+  buffer_t(t (&Arr)[N]);
+  buffer_t(const t* DataIn, i64 SizeIn, allocator* AllocIn = nullptr);
+  buffer_t(const buffer& Buf);
+  t& operator[](i64 Idx) const;
+  explicit operator bool() const;
+};
+
+mg_T(t) i64 Size(const buffer_t<t>& Buf);
+mg_T(t) i64 Bytes(const buffer_t<t>& Buf);
 
 } // namespace mg
 

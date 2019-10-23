@@ -73,6 +73,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		src\mg_memory_map.h = src\mg_memory_map.h
 		src\mg_mutex.h = src\mg_mutex.h
 		src\mg_mutex.inl = src\mg_mutex.inl
+		src\mg_rendering.h = src\mg_rendering.h
 		src\mg_scopeguard.h = src\mg_scopeguard.h
 		src\mg_signal_processing.cpp = src\mg_signal_processing.cpp
 		src\mg_signal_processing.h = src\mg_signal_processing.h

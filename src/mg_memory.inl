@@ -28,6 +28,83 @@ DeallocTypedBuf(buffer_t<t>* Buf) {
   DeallocBuf(&RawBuf);
 }
 
+mg_Inline buffer::
+buffer(allocator* AllocIn)
+  : Alloc(AllocIn) {}
+
+mg_Inline buffer::
+buffer(const byte* DataIn, i64 BytesIn, allocator* AllocIn)
+  : Data(const_cast<byte*>(DataIn)), Bytes(BytesIn), Alloc(AllocIn) {}
+
+mg_TAi buffer::
+buffer(t (&Arr)[N])
+  : Data((byte*)const_cast<t*>(&Arr[0])), Bytes(sizeof(Arr)) {}
+
+mg_Ti(t) buffer::
+buffer(const buffer_t<t>& Buf)
+  : Data((byte*)const_cast<t*>(Buf.Data))
+  , Bytes(Buf.Size * sizeof(t)), Alloc(Buf.Alloc) {}
+
+mg_Inline byte& buffer::
+operator[](i64 Idx) const {
+  assert(Idx < Bytes);
+  return const_cast<byte&>(Data[Idx]);
+}
+
+mg_Inline buffer::
+operator bool() const { return this->Data && this->Bytes; }
+
+mg_Inline bool
+operator==(const buffer& Buf1, const buffer& Buf2) {
+  return Buf1.Data == Buf2.Data && Buf1.Bytes == Buf2.Bytes;
+}
+
+mg_Inline i64
+Size(const buffer& Buf) { return Buf.Bytes; }
+
+mg_Inline void
+Resize(buffer* Buf, i64 NewSize) {
+  if (Size(*Buf) < NewSize) {
+    DeallocBuf(Buf);
+    AllocBuf(Buf, NewSize);
+  }
+}
+
+/* typed_buffer stuffs */
+mg_Ti(t) buffer_t<t>::
+buffer_t() = default;
+
+mg_T(t) template <int N> mg_Inline buffer_t<t>::
+buffer_t(t (&Arr)[N])
+  : Data(&Arr[0]), Size(N) {}
+
+mg_Ti(t) buffer_t<t>::
+buffer_t(const t* DataIn, i64 SizeIn, allocator* AllocIn)
+  : Data(const_cast<t*>(DataIn)), Size(SizeIn), Alloc(AllocIn) {}
+
+mg_Ti(t) buffer_t<t>::
+buffer_t(const buffer& Buf)
+  : Data((t*)const_cast<byte*>(Buf.Data))
+  , Size(Buf.Bytes / sizeof(t)), Alloc(Buf.Alloc) {}
+
+mg_Ti(t) t& buffer_t<t>::
+operator[](i64 Idx) const {
+  assert(Idx < Size);
+  return const_cast<t&>(Data[Idx]);
+}
+
+mg_Ti(t) i64
+Size(const buffer_t<t>& Buf) { return Buf.Size; }
+
+mg_Ti(t) i64
+Bytes(const buffer_t<t>& Buf) { return Buf.Size * sizeof(t); }
+
+mg_Ti(t) buffer_t<t>::
+operator bool() const { return Data && Size; }
+
+#undef mg_TA
+#undef mg_TAi
+
 } // namespace mg
 
 #undef mg_MallocArray
@@ -64,3 +141,5 @@ DeallocTypedBuf(buffer_t<t>* Buf) {
     for (int I = 0; I < (SizeOuter); ++I) DeallocTypedBuf(&Name[I]);\
     DeallocTypedBuf(&Name);\
   })
+
+

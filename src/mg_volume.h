@@ -19,6 +19,7 @@ struct extent {
   explicit extent(const volume& Vol);
   extent(const v3i& From3, const v3i& Dims3);
   operator bool() const;
+  static extent Invalid();
 };
 
 struct grid : public extent {
@@ -30,6 +31,7 @@ struct grid : public extent {
   grid(const v3i& From3, const v3i& Dims3, const v3i& Strd3);
   explicit grid(const extent& Ext);
   operator bool() const;
+  static grid Invalid();
 };
 
 struct volume {
@@ -69,8 +71,8 @@ v3i Last(const extent& Ext);
 v3i Dims(const extent& Ext);
 v3i Strd(const extent& Ext);
 i64 Size(const extent& Ext);
-void SetFrom(extent& Ext, const v3i& From3);
-void SetDims(extent& Ext, const v3i& Dims3);
+void SetFrom(extent* Ext, const v3i& From3);
+void SetDims(extent* Ext, const v3i& Dims3);
 
 v3i From(const grid& Grid);
 v3i To(const grid& Grid);
@@ -79,9 +81,9 @@ v3i Last(const grid& Grid);
 v3i Dims(const grid& Grid);
 v3i Strd(const grid& Grid);
 i64 Size(const grid& Grid);
-void SetFrom(grid& Grid, const v3i& From3);
-void SetDims(grid& Grid, const v3i& Dims3);
-void SetStrd(grid& Grid, const v3i& Strd3);
+void SetFrom(grid* Grid, const v3i& From3);
+void SetDims(grid* Grid, const v3i& Dims3);
+void SetStrd(grid* Grid, const v3i& Strd3);
 
 v3i From(const volume& Vol);
 v3i To(const volume& Vol);
@@ -90,6 +92,7 @@ v3i Last(const volume& Vol);
 v3i Dims(const volume& Vol);
 v3i Strd(const volume& Vol);
 i64 Size(const volume& Vol);
+void SetDims(volume* Vol, const v3i& Dims3);
 
 i64 Row(const v3i& N, const v3i& P);
 v3i InvRow(i64 I, const v3i& N);
@@ -134,12 +137,12 @@ struct grid_iterator {
 mg_T(t) grid_iterator<t> Begin(const grid& Grid, const volume& Vol);
 mg_T(t) grid_iterator<t> End(const grid& Grid, const volume& Vol);
 
-///* assumption: Grid1 is on top of Grid2 */
-//grid_volume GridCollapse(const grid& Top, const grid_volume& Bot);
-//grid GridCollapse(const grid& Top, const grid& Bot);
-
 /* Read a volume from a file. */
 error<> ReadVolume(cstr FileName, const v3i& Dims3, dtype Type, volume* Vol);
+
+void Resize(volume* Vol, const v3i& Dims3);
+void Resize(volume* Vol, const v3i& Dims3, dtype Type);
+void Dealloc(volume* Vol);
 
 /* Copy a region of the first volume to a region of the second volume */
 mg_T(t) void Copy(const t& SGrid, const volume& SVol, volume* DVol);

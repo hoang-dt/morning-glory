@@ -26,7 +26,12 @@ extent(const v3i& From3, const v3i& Dims3)
 
 mg_Inline extent::
 operator bool() const {
-  return Dims != 0;
+  return Unpack3i64(Dims) > v3i::Zero;
+}
+
+mg_Inline extent extent::
+Invalid() {
+  return extent(v3i::Zero, v3i::Zero);
 }
 
 mg_Inline grid::
@@ -59,7 +64,12 @@ grid(const volume& Vol)
 
 mg_Inline grid::
 operator bool() const {
-  return Dims != 0;
+  return Unpack3i64(Dims) > v3i::Zero;
+}
+
+mg_Inline grid grid::
+Invalid() {
+  return grid(v3i::Zero, v3i::Zero, v3i::Zero);
 }
 
 mg_Inline volume::
@@ -119,33 +129,34 @@ operator==(const volume& V1, const volume& V2) {
 mg_Inline v3i Dims(const v3i& Frst, const v3i& Last) { return Last - Frst + 1; }
 mg_Inline v3i Dims(const v3i& Frst, const v3i& Last, const v3i& Strd) { return (Last - Frst) / Strd + 1; }
 
-mg_Inline v3i From(const extent& Ext) { return Unpack3i64(Ext.From); }
-mg_Inline v3i To(const extent& Ext) { return From(Ext) + Dims(Ext); }
-mg_Inline v3i Frst(const extent& Ext) { return From(Ext); }
-mg_Inline v3i Last(const extent& Ext) { return To(Ext) - 1; }
-mg_Inline v3i Dims(const extent& Ext) { return Unpack3i64(Ext.Dims); }
-mg_Inline v3i Strd(const extent& Ext) { (void)Ext; return v3i::One; }
-mg_Inline i64 Size(const extent& Ext) { return Prod<i64>(Dims(Ext)); }
-mg_Inline void SetFrom(extent& Ext, const v3i& From3) { Ext.From = Pack3i64(From3); }
-mg_Inline void SetDims(extent& Ext, const v3i& Dims3) { Ext.Dims = Pack3i64(Dims3); }
+mg_Inline v3i  From(const extent& Ext) { return Unpack3i64(Ext.From); }
+mg_Inline v3i  To(const extent& Ext) { return From(Ext) + Dims(Ext); }
+mg_Inline v3i  Frst(const extent& Ext) { return From(Ext); }
+mg_Inline v3i  Last(const extent& Ext) { return To(Ext) - 1; }
+mg_Inline v3i  Dims(const extent& Ext) { return Unpack3i64(Ext.Dims); }
+mg_Inline v3i  Strd(const extent& Ext) { (void)Ext; return v3i::One; }
+mg_Inline i64  Size(const extent& Ext) { return Prod<i64>(Dims(Ext)); }
+mg_Inline void SetFrom(extent* Ext, const v3i& From3) { Ext->From = Pack3i64(From3); }
+mg_Inline void SetDims(extent* Ext, const v3i& Dims3) { Ext->Dims = Pack3i64(Dims3); }
 
-mg_Inline v3i From(const grid& Grid) { return Unpack3i64(Grid.From); }
-mg_Inline v3i To(const grid& Grid) { return From(Grid) + Dims(Grid) * Strd(Grid); }
-mg_Inline v3i Frst(const grid& Grid) { return From(Grid); }
-mg_Inline v3i Last(const grid& Grid) { return To(Grid) - Strd(Grid); }
-mg_Inline v3i Dims(const grid& Grid) { return Unpack3i64(Grid.Dims); }
-mg_Inline v3i Strd(const grid& Grid) { return Unpack3i64(Grid.Strd); }
-mg_Inline i64 Size(const grid& Grid) { return Prod<i64>(Dims(Grid)); };
-mg_Inline void SetFrom(grid& Grid, const v3i& From3) { Grid.From = Pack3i64(From3); }
-mg_Inline void SetDims(grid& Grid, const v3i& Dims3) { Grid.Dims = Pack3i64(Dims3); }
-mg_Inline void SetStrd(grid& Grid, const v3i& Strd3) { Grid.Dims = Pack3i64(Strd3); }
+mg_Inline v3i  From(const grid& Grid) { return Unpack3i64(Grid.From); }
+mg_Inline v3i  To(const grid& Grid) { return From(Grid) + Dims(Grid) * Strd(Grid); }
+mg_Inline v3i  Frst(const grid& Grid) { return From(Grid); }
+mg_Inline v3i  Last(const grid& Grid) { return To(Grid) - Strd(Grid); }
+mg_Inline v3i  Dims(const grid& Grid) { return Unpack3i64(Grid.Dims); }
+mg_Inline v3i  Strd(const grid& Grid) { return Unpack3i64(Grid.Strd); }
+mg_Inline i64  Size(const grid& Grid) { return Prod<i64>(Dims(Grid)); };
+mg_Inline void SetFrom(grid* Grid, const v3i& From3) { Grid->From = Pack3i64(From3); }
+mg_Inline void SetDims(grid* Grid, const v3i& Dims3) { Grid->Dims = Pack3i64(Dims3); }
+mg_Inline void SetStrd(grid* Grid, const v3i& Strd3) { Grid->Dims = Pack3i64(Strd3); }
 
-mg_Inline v3i From(const volume& Vol) { (void)Vol; return v3i::Zero; }
-mg_Inline v3i To(const volume& Vol) { return Dims(Vol); }
-mg_Inline v3i Frst(const volume& Vol) { return From(Vol); }
-mg_Inline v3i Last(const volume& Vol) { return Dims(Vol) - 1; }
-mg_Inline v3i Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
-mg_Inline i64 Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
+mg_Inline v3i  From(const volume& Vol) { (void)Vol; return v3i::Zero; }
+mg_Inline v3i  To(const volume& Vol) { return Dims(Vol); }
+mg_Inline v3i  Frst(const volume& Vol) { return From(Vol); }
+mg_Inline v3i  Last(const volume& Vol) { return Dims(Vol) - 1; }
+mg_Inline v3i  Dims(const volume& Vol) { return Unpack3i64(Vol.Dims); }
+mg_Inline i64  Size(const volume& Vol) { return Prod<i64>(Dims(Vol)); }
+mg_Inline void SetDims(volume* Vol, const v3i& Dims3) { Vol->Dims = Pack3i64(Dims3); }
 
 mg_Ti(t) volume_iterator<t>
 Begin(const volume& Vol) {
@@ -438,10 +449,10 @@ Slab(const t& Grid, dimension D, int N) {
     v3i From3 = From(Grid);
     v3i Strd3 = Strd(Grid);
     From3[D] += (Dims3[D] + N) * Strd3[D];
-    SetFrom(Slab, From3);
+    SetFrom(&Slab, From3);
   }
   Dims3[D] = abs(N);
-  SetDims(Slab, Dims3);
+  SetDims(&Slab, Dims3);
   return Slab;
 }
 
@@ -450,7 +461,7 @@ Translate(const t& Grid, dimension D, int N) {
   v3i From3 = From(Grid);
   From3[D] += N;
   t Slab = Grid;
-  SetFrom(Slab, From3);
+  SetFrom(&Slab, From3);
   return Slab;
 }
 

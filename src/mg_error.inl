@@ -14,6 +14,11 @@ mg_T(t) error<t>::
 error(t CodeIn, bool StrGenedIn, cstr MsgIn) :
   Msg(MsgIn), Code(CodeIn), StackIdx(0), StrGened(StrGenedIn) {}
 
+mg_T(t) error<t>::
+operator bool() const {
+  return Code == t::NoError;
+}
+
 mg_T(t) cstr
 ToString(const error<t>& Err, bool Force) {
   if (Force || !Err.StrGened) {
