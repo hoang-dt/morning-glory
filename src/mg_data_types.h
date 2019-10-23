@@ -1,3 +1,5 @@
+// TODO: add RGB types
+
 #pragma once
 
 #include "mg_common.h"

@@ -347,6 +347,29 @@ void renderDemo(struct NVGcontext* vg, float mx, float my, float width, float he
 	drawWindow(vg, "Widgets `n Stuff", x, y, 300, 400);
 }
 
+void ComputeWavelet(const volume& Vol, volume* Wav, int NLevels) {
+  Clone(Vol, Wav);
+  v3i N = Dims(Vol);
+  for (int I = 0; I < NLevels; ++I) {
+    FLiftCdf53OldX((f64*)Wav->Buffer.Data, N, v3i(I));
+    FLiftCdf53OldY((f64*)Wav->Buffer.Data, N, v3i(I));
+    FLiftCdf53OldZ((f64*)Wav->Buffer.Data, N, v3i(I));
+  }
+}
+
+void ComputeVolColor(const volume& Vol, const transfer_func& Tf, array<v3<u8>>* VolColor) {
+  auto MM = MinMaxElem(Begin<f64>(Vol), End<f64>(Vol));
+  f64 MinWav = *(MM.Min), MaxWav = *(MM.Max);
+  v3i N = Dims(Vol);
+  Resize(VolColor, Prod(N));
+  for (int Y = 0; Y < N.Y; ++Y) {
+    for (int X = 0; X < N.X; ++X) {
+      f64 Val = (Vol.At<f64>(Y * N.X + X) - MinWav) / (MaxWav - MinWav);
+      (*VolColor)[Y * N.X + X] = v3<u8>(GetRGB(Tf, Val) * 255.0);
+    }
+  }
+}
+
 class ExampleNanoVG : public entry::AppI
 {
 public:
@@ -397,6 +420,26 @@ public:
 
     BuildSubbands(v3i(N, 1), NLevels, &Subbands);
     BuildSubbands(v3i(N, 1), NLevels, &SubbandsG);
+
+    cstr TfFile = "D:/Datasets/ParaView Transfer Functions/rainbow-desaturated.json";
+    //Dealloc(&Tf);
+    auto Result = ReadTransferFunc(TfFile, &Tf);
+    if (!Result) {
+      printf("Error: %s\n", ToString(Result));
+    }
+    cstr DataFile = "D:/Datasets/3D/Small/MIRANDA-PRESSURE-[33-33-1]-Float64.raw";
+    //Dealloc(&Vol);
+    Result = ReadVolume(DataFile, v3i(N, 1), dtype::float64, &Vol);
+    if (!Result) {
+      printf("Error: %s\n", ToString(Result));
+    } else if (Size(Vol.Buffer) != Prod(N) * SizeOf(dtype::float64)) {
+      printf("Error: size mismatch\n");
+      Dealloc(&Vol);
+    } else { // succeed
+      ComputeVolColor(Vol, Tf, &VolColor);
+      ComputeWavelet(Vol, &Wav, NLevels);
+      ComputeVolColor(Wav, Tf, &WavColor);
+    }
 	}
 
 	int shutdown() override
@@ -457,6 +500,8 @@ public:
 			if (ImGui::SliderInt("Number of levels", &NLevels, 1, 4)) {
         BuildSubbands(v3i(N, 1), NLevels, &Subbands);
         BuildSubbands(v3i(N, 1), NLevels, &SubbandsG);
+        ComputeWavelet(Vol, &Wav, NLevels);
+        ComputeVolColor(Wav, Tf, &WavColor);
       }
 
 			int64_t now = bx::getHPCounter();
@@ -476,12 +521,13 @@ public:
 			//DrawBox(m_nvg, ValMouseDown, ValMouseUp); // selection
 			//DrawBox(m_nvg, WavMouseDown, WavMouseUp); // selection
       // draw the val grid
-      if (!Vol.Buffer)
-			  DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
-      else
-			  DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, VolColor, draw_mode::Fill);
+      //if (!Vol.Buffer)
+			//DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
+      //else
+			DrawGrid(m_nvg, ValDomainTopLeft, N, Spacing, VolColor, draw_mode::Fill);
 
-			DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
+			//DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
+			DrawGrid(m_nvg, WavDomainTopLeft, N, Spacing, WavColor, draw_mode::Fill);
       DrawSubbandSep(m_nvg, WavDomainTopLeft, N, Spacing, NLevels);
       // TODO: select the wavelet grid
       // TODO: draw the wavgrid, wrkgrid, valgrid
@@ -508,7 +554,7 @@ public:
         }
       }
       extent WavCrop = /*extent(v3i(WavBox.From, 0), v3i(WavBox.To - WavBox.From + 1, 1)); */Crop(extent(v3i(WavBox.From, 0), v3i(WavBox.To - WavBox.From + 1, 1)), Subbands[Sb]);
-      DrawGrid(m_nvg, WavDomainTopLeft + From(WavCrop).XY * Spacing, (To(WavCrop) - From(WavCrop)).XY, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
+      DrawGrid(m_nvg, WavDomainTopLeft + From(WavCrop).XY * Spacing, (To(WavCrop) - From(WavCrop)).XY, Spacing, nvgRGBA(130, 0, 0, 200), draw_mode::Stroke);
       sprintf(Temp, "(%d %d) to (%d %d)", From(WavCrop).X, From(WavCrop).Y, To(WavCrop).X, To(WavCrop).Y);
       DrawText(m_nvg, v2i(50, 450), Temp, 20);
       sprintf(Temp, "Subband %d", Sb);
@@ -516,14 +562,14 @@ public:
 
       /* WavGrid domain */
       //DrawGrid(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing, ValBox.To - ValBox.From, Spacing, nvgRGBA(130, 0, 0, 200));
-			DrawGrid(m_nvg, WavGDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
+			DrawGrid(m_nvg, WavGDomainTopLeft, N, Spacing, nvgRGBA(0, 130, 0, 100), draw_mode::Stroke);
       extent WavCropLocal = WavCrop;
       SetFrom(&WavCropLocal, From(WavCrop) - From(Subbands[Sb]));
       grid WavGGrid = SubGrid(SubbandsG[Sb], WavCropLocal);
       sprintf(Temp, "from (%d %d) dims (%d %d) stride (%d %d)", From(WavGGrid).X, From(WavGGrid).Y, Dims(WavGGrid).X, Dims(WavGGrid).Y, Strd(WavGGrid).X, Strd(WavGGrid).Y);
       DrawText(m_nvg, v2i(500, 30), Temp, 20);
       //box WavGBox = GetPointBox(0, WavGFrom(WavGGrid).XY, WavGDomainTopLeft, N, Spacing);
-			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing, Dims(WavGGrid).XY, Spacing * Strd(WavGGrid).XY, nvgRGBA(0, 130, 0, 200), draw_mode::Fill);
+			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing, Dims(WavGGrid).XY, Spacing * Strd(WavGGrid).XY, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
       //DrawBox(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing - Spacing / 2, WavGDomainTopLeft + From(WavGGrid).XY * Spacing + (Dims(WavGGrid).XY - 1) * Spacing * Strd(WavGGrid).XY - Spacing / 2, nvgRGBA(0, 230, 0, 50));
       DrawBox(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing - Spacing / 2, WavGDomainTopLeft + ValBox.From * Spacing + (ValBox.To - ValBox.From) * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
       extent Footprint = WavFootprint(2, Sb, WavGGrid);
@@ -533,49 +579,14 @@ public:
       wav_grids WavGrids = ComputeWavGrids(2, Sb, ValExt, WavGGrid, v3i(1000));
       sprintf(Temp, "from (%d %d) dims (%d %d) stride (%d %d)", From(WavGrids.WavGrid).X, From(WavGrids.WavGrid).Y, Dims(WavGrids.WavGrid).X, Dims(WavGrids.WavGrid).Y, Strd(WavGrids.WavGrid).X, Strd(WavGrids.WavGrid).Y);
       DrawText(m_nvg, v2i(500, 50), Temp, 20);
-      ImGui::Checkbox("WavGrid", &DrawWavGrid);
+      ImGui::Checkbox("WavGrid/WrkGrid", &DrawWavGrid);
+      // draw wavgrid/wrkgrid
       if (DrawWavGrid)
-			  DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WavGrid).XY * Spacing, Dims(WavGrids.WavGrid).XY, Spacing * Strd(WavGrids.WavGrid).XY, nvgRGBA(130, 0, 130, 200), draw_mode::Fill);
+			  DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WavGrid).XY * Spacing, Dims(WavGrids.WavGrid).XY, Spacing * Strd(WavGrids.WavGrid).XY, nvgRGBA(130, 0, 130, 200), draw_mode::Stroke);
       else
-			  DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WrkGrid).XY * Spacing, Dims(WavGrids.WrkGrid).XY, Spacing * Strd(WavGrids.WrkGrid).XY, nvgRGBA(130, 130, 0, 200), draw_mode::Fill);
+			  DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WrkGrid).XY * Spacing, Dims(WavGrids.WrkGrid).XY, Spacing * Strd(WavGrids.WrkGrid).XY, nvgRGBA(130, 130, 0, 255), draw_mode::Stroke);
       // draw the val grid
-      DrawGrid(m_nvg, ValDomainTopLeft + From(WavGrids.ValGrid).XY * Spacing, Dims(WavGrids.ValGrid).XY, Spacing * Strd(WavGrids.ValGrid).XY, nvgRGBA(130, 0, 0, 200), draw_mode::Fill);
-      if (ImGui::Button("Load transfer function")) {
-        cstr TfFile = noc_file_dialog_open(NOC_FILE_DIALOG_OPEN, "json\0*.json", nullptr, nullptr);
-        if (TfFile) {
-          printf("Loading transfer function %s\n", TfFile);
-          Dealloc(&Tf);
-          auto Result = ReadTransferFunc(TfFile, &Tf);
-          if (!Result) {
-            printf("Error: %s\n", ToString(Result));
-          }
-        }
-      }
-      if (ImGui::Button("Load data")) {
-        cstr DataFile = noc_file_dialog_open(NOC_FILE_DIALOG_OPEN, "raw\0*.raw", nullptr, nullptr);
-        if (DataFile) {
-          printf("Loading raw file %s\n", DataFile);
-          Dealloc(&Vol);
-          auto Result = ReadVolume(DataFile, v3i(N, 1), dtype::float64, &Vol);
-          if (!Result) {
-            printf("Error: %s\n", ToString(Result));
-          } else if (Size(Vol.Buffer) != Prod(N) * SizeOf(dtype::float64)) {
-            printf("Error: size mismatch\n");
-            Dealloc(&Vol);
-          } else { // succeed
-            // find the min, max value of Volume
-            auto MM = MinMaxElem(Begin<f64>(Vol), End<f64>(Vol));
-            MinVal = *(MM.Min), MaxVal = *(MM.Max);
-            Resize(&VolColor, Prod(N));
-            for (int Y = 0; Y < N.Y; ++Y) {
-              for (int X = 0; X < N.X; ++X) {
-                f64 Val = (Vol.At<f64>(Y * N.X + X) - MinVal) / (MaxVal - MinVal);
-                VolColor[Y * N.X + X] = v3<u8>(GetRGB(Tf, Val) * 255.0);
-              }
-            }
-          }
-        }
-      }
+      DrawGrid(m_nvg, ValDomainTopLeft + From(WavGrids.ValGrid).XY * Spacing, Dims(WavGrids.ValGrid).XY, Spacing * Strd(WavGrids.ValGrid).XY, nvgRGBA(130, 0, 0, 200), draw_mode::Stroke);
 
 			imguiEndFrame();
 			nvgEndFrame(m_nvg);
@@ -604,8 +615,11 @@ public:
   bool DrawWavGrid = true;
   transfer_func Tf;
   volume Vol;
+  volume Wav;
   f64 MinVal, MaxVal;
+  f64 MinWav, MaxWav;
   array<v3<u8>> VolColor;
+  array<v3<u8>> WavColor;
 
 	int64_t m_timeOffset;
 
@@ -616,7 +630,7 @@ public:
   v2i WavGDomainTopLeft = v2i(500, 50);
 	v2i N = v2i(33, 33); // total dimensions
   v2i Spacing = v2i(12, 12);
-	int NLevels = 1;
+	int NLevels = 2;
   array<extent> Subbands;
   array<grid> SubbandsG;
 };
