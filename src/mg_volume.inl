@@ -439,6 +439,11 @@ Crop(const t1& Grid1, const t2& Grid2) {
   return OutGrid;
 }
 
+mg_Ti(t) bool
+IsInGrid(const t& Grid, const v3i& Point) {
+  return (Point - From(Grid)) % Strd(Grid) == v3i::Zero;
+}
+
 // TODO: this can be turned into a slice function ala Python[start:stop]
 mg_T(t) t
 Slab(const t& Grid, dimension D, int N) {

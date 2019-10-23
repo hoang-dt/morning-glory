@@ -34,6 +34,7 @@ struct grid : public extent {
   static grid Invalid();
 };
 
+// TODO: do not allocate in the constructor, use Alloc() function
 struct volume {
   buffer Buffer = {};
   u64 Dims = 0;
@@ -159,6 +160,7 @@ mg_TT(t1, t2) t1 SubGrid(const t1& Grid1, const t2& Grid2);
 mg_TT(t1, t2) t1 Relative(const t1& Grid1, const t2& Grid2);
 /* "Crop" Grid1 against Grid2 */
 mg_TT(t1, t2) t1 Crop(const t1& Grid1, const t2& Grid2);
+mg_T(t) bool IsInGrid(const t& Grid, const v3i& Point);
 
 /* Return a slab (from Grid) of size N in the direction of D. If N is positive,
 take from the lower end, otherwise take from the higher end. Useful for e.g.,

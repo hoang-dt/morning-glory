@@ -157,10 +157,10 @@ EncodeMorton3(u32 X, u32 Y, u32 Z) {
 }
 
 mg_Inline u32
-Pack3Ints32(v3i V) { return u32(V.X) + (u32(V.Y) << 10) + (u32(V.Z) << 20); }
+Pack3i32(const v3i& V) { return u32(V.X & 0x3FF) + (u32(V.Y & 0x3FF) << 10) + (u32(V.Z & 0x3FF) << 20); }
 mg_Inline v3i
-Unpack3Ints32(u32 V) {
-  return v3i(V & 0x3FF, (V & 0xFFC00) >> 10, (V & 0x3FFFFC00) >> 20);
+Unpack3i32(u32 V) {
+  return v3i((i32(V & 0x3FF) << 22) >> 22, (i32(V & 0xFFC00) << 12) >> 22, (i32(V & 0x3FFFFC00) << 2) >> 22);
 }
 
 mg_Inline u64
