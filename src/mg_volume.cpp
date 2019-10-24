@@ -22,10 +22,9 @@ void
 Resize(volume* Vol, const v3i& Dims3) {
   mg_Assert(Vol->Type != dtype::__Invalid__);
   i64 NewSize = Prod<u64>(Dims3) * SizeOf(Vol->Type);
-  if (Size(Vol->Buffer) < NewSize) {
+  if (Size(Vol->Buffer) < NewSize)
     Resize(&Vol->Buffer, NewSize);
-    SetDims(Vol, Dims3);
-  }
+  SetDims(Vol, Dims3);
 }
 
 void 

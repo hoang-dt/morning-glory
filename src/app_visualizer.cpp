@@ -173,12 +173,20 @@ void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& N, const v2i& Spacing,
 	nvgRestore(Vg);
 }
 
-void DrawBox(NVGcontext* Vg, const v2i& From, const v2i& To, const NVGcolor& Color) {
+void DrawBox(NVGcontext* Vg, const v2i& From, const v2i& To, 
+  const NVGcolor& Color, draw_mode Mode = draw_mode::Fill) 
+{
 	nvgSave(Vg);
 	nvgBeginPath(Vg);
 	nvgRect(Vg, From.X, From.Y, To.X - From.X, To.Y - From.Y);
-	nvgFillColor(Vg, Color);
-	nvgFill(Vg);
+  if (Mode != draw_mode::Stroke) {
+	  nvgFillColor(Vg, Color);
+    nvgFill(Vg);
+  }
+  if (Mode != draw_mode::Stroke) {
+    nvgStrokeColor(Vg, Color);
+    nvgFill(Vg);
+  }
 	nvgRestore(Vg);
 }
 
@@ -615,7 +623,7 @@ public:
       sprintf(Temp, "from (%d %d) dims (%d %d) stride (%d %d)", From(WavGGrid).X, From(WavGGrid).Y, Dims(WavGGrid).X, Dims(WavGGrid).Y, Strd(WavGGrid).X, Strd(WavGGrid).Y);
       //DrawText(m_nvg, v2i(500, 30), Temp, 20);
 			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing, Dims(WavGGrid).XY, Spacing * Strd(WavGGrid).XY, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
-      DrawBox(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing - Spacing / 2, WavGDomainTopLeft + ValBox.From * Spacing + (ValBox.To - ValBox.From) * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
+      //DrawBox(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing - Spacing / 2, WavGDomainTopLeft + ValBox.From * Spacing + (ValBox.To - ValBox.From) * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
       extent Footprint = WavFootprint(2, Sb, WavGGrid);
       //DrawBox(m_nvg, WavGDomainTopLeft + From(Footprint).XY * Spacing - Spacing / 2, WavGDomainTopLeft + From(Footprint).XY * Spacing + (Dims(Footprint) - 1).XY * Spacing + Spacing / 2, nvgRGBA(0, 0, 230, 50));
       //extent ValExt(v3i(ValBox.From, 0), v3i(ValBox.To - ValBox.From + 1, 1));
@@ -643,10 +651,19 @@ public:
         Resize(&WrkGridColor, Dims(WrkGrid), dtype::int32);
         Fill(Begin<i32>(WrkGridColor), End<i32>(WrkGridColor), Pack3i32(v3i(50, 50, 50)));
         Copy(WavCrop, WavColor, Rel, &WrkGridColor);
+        /* (optionally) copy the data from the affected blocks */
+        WavFp = WavFootprint(2, Sb, WavGrids.WavGrid);
+        Clear(&AffectedBlocks);
+        printf("wavfp from (%d %d) (%d %d) (%d %d)\n", From(WavFp).X, From(WavFp).Y, Dims(WavFp).X, Dims(WavFp).Y, Strd(WavFp).X, Strd(WavFp).Y);
+        BegBlock = (From(WavFp)  / BlockSize).XY;
+        EndBlock = ((Last(WavFp) ) / BlockSize).XY;
+        printf("begin block %d %d end block %d %d", BegBlock.X, BegBlock.Y, EndBlock.X, EndBlock.Y);
       }
       /* render the work grid */
       if (WrkGrid.Buffer && WrkGridColor.Buffer) {
         DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WrkGrid).XY * Spacing, Dims(WrkGridColor).XY, Spacing * Strd(WavGrids.WrkGrid).XY, WrkGridColor, draw_mode::Fill);
+        DrawBox(m_nvg, WavGDomainTopLeft + BegBlock * BlockSize * Spacing - Spacing / 2, WavGDomainTopLeft + (EndBlock + 1) * BlockSize * Spacing - Spacing / 2, nvgRGBA(0, 230, 0, 20));
+        //DrawBox(m_nvg, WavGDomainTopLeft + From(WavFp).XY * Spacing - Spacing / 2, WavGDomainTopLeft + Last(WavFp).XY * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
       }
 
 			imguiEndFrame();
@@ -685,6 +702,9 @@ public:
   volume VolColor;
   volume WavColor;
   int BlockSize = 8;
+  v2i BegBlock = v2i::Zero;
+  v2i EndBlock = v2i::Zero;
+  extent WavFp;
 
 	int64_t m_timeOffset;
 
@@ -698,6 +718,7 @@ public:
 	int NLevels = 2;
   array<extent> Subbands;
   array<grid> SubbandsG;
+  array<v2i> AffectedBlocks;
 };
 
 } // namespace
