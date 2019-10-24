@@ -146,14 +146,18 @@ NVGcolor Int32ToColor(int Val) {
   return nvgRGBA(C.R, C.G, C.B, 255);
 }
 
-void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& Dims, const v2i& Spacing,
+void DrawGrid(NVGcontext* Vg, const v2i& From, const v2i& N, const v2i& Spacing,
   const volume& VolColor, draw_mode Mode) 
 {
 	nvgSave(Vg);
   nvgStrokeWidth(Vg,1.0f);
-	for (int Y = From.Y; Y < From.Y + Dims.Y * Spacing.Y; Y += Spacing.Y) {
-		for (int X = From.X; X < From.X + Dims.X * Spacing.X; X += Spacing.X) {
-      NVGcolor Color = Int32ToColor(VolColor.At<i32>(v3i((Y - From.Y) / Spacing.Y, (X - From.X) / Spacing.X, 0)));
+  v2i D3 = Dims(VolColor).XY;
+	for (int Y = From.Y; Y < From.Y + N.Y * Spacing.Y; Y += Spacing.Y) {
+		for (int X = From.X; X < From.X + N.X * Spacing.X; X += Spacing.X) {
+      int YY = (Y - From.Y) / Spacing.Y;
+      int XX = (X - From.X) / Spacing.X;
+      int C = VolColor.At<i32>(v3i(XX, YY, 0));
+      NVGcolor Color = Int32ToColor(C);
       if (Mode != draw_mode::Stroke)
         nvgFillColor(Vg, Color);
       if (Mode != draw_mode::Fill)
@@ -471,7 +475,7 @@ public:
     BuildSubbands(v3i(N, 1), NLevels, &SubbandsG);
 
     cstr TfFile = "D:/Datasets/ParaView Transfer Functions/rainbow-desaturated.json";
-    cstr WavTfFile = "D:/Datasets/ParaView Transfer Functions/blues.json";
+    cstr WavTfFile = "D:/Datasets/ParaView Transfer Functions/cool-warm-extended.json";
     //Dealloc(&Tf);
     auto Result = ReadTransferFunc(TfFile, &Tf);
     auto Result2 = ReadTransferFunc(WavTfFile, &WavTf);
@@ -613,7 +617,7 @@ public:
 			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing, Dims(WavGGrid).XY, Spacing * Strd(WavGGrid).XY, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
       DrawBox(m_nvg, WavGDomainTopLeft + ValBox.From * Spacing - Spacing / 2, WavGDomainTopLeft + ValBox.From * Spacing + (ValBox.To - ValBox.From) * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
       extent Footprint = WavFootprint(2, Sb, WavGGrid);
-      DrawBox(m_nvg, WavGDomainTopLeft + From(Footprint).XY * Spacing - Spacing / 2, WavGDomainTopLeft + From(Footprint).XY * Spacing + (Dims(Footprint) - 1).XY * Spacing + Spacing / 2, nvgRGBA(0, 0, 230, 50));
+      //DrawBox(m_nvg, WavGDomainTopLeft + From(Footprint).XY * Spacing - Spacing / 2, WavGDomainTopLeft + From(Footprint).XY * Spacing + (Dims(Footprint) - 1).XY * Spacing + Spacing / 2, nvgRGBA(0, 0, 230, 50));
       //extent ValExt(v3i(ValBox.From, 0), v3i(ValBox.To - ValBox.From + 1, 1));
       extent ValExt(v3i(N, 1));
       wav_grids WavGrids = ComputeWavGrids(2, Sb, ValExt, WavGGrid, v3i(1000));
@@ -631,12 +635,10 @@ public:
       DrawBlockSep(m_nvg, WavGDomainTopLeft, N, v2i(BlockSize), Spacing);
       grid Rel; 
       if (ImGui::Button("Copy wavelets")) {
-        printf("from (%d %d) dims (%d %d) stride (%d %d)", From(WavGrids.WavGrid).X, From(WavGrids.WavGrid).Y, Dims(WavGrids.WavGrid).X, Dims(WavGrids.WavGrid).Y, Strd(WavGrids.WavGrid).X, Strd(WavGrids.WavGrid).Y);
         // copy the wavelet coefficients over to the workgrid
         Resize(&WrkGrid, Dims(WavGrids.WrkGrid), dtype::float64);
         ZeroBuf(&WrkGrid.Buffer);
         Rel = Relative(WavGrids.WavGrid, WavGrids.WrkGrid);
-        printf("relative (%d %d), (%d %d), (%d %d)\n", From(Rel).X, From(Rel).Y, Dims(Rel).X, Dims(Rel).Y, Strd(Rel).X, Strd(Rel).Y);
         Copy(WavCrop, Wav, Rel, &WrkGrid);
         Resize(&WrkGridColor, Dims(WrkGrid), dtype::int32);
         Fill(Begin<i32>(WrkGridColor), End<i32>(WrkGridColor), Pack3i32(v3i(50, 50, 50)));
@@ -644,7 +646,7 @@ public:
       }
       /* render the work grid */
       if (WrkGrid.Buffer && WrkGridColor.Buffer) {
-        DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WrkGrid).XY * Spacing, Dims(WrkGrid).XY, Spacing * Strd(WavGrids.WrkGrid).XY, WrkGridColor, draw_mode::Fill);
+        DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WrkGrid).XY * Spacing, Dims(WrkGridColor).XY, Spacing * Strd(WavGrids.WrkGrid).XY, WrkGridColor, draw_mode::Fill);
       }
 
 			imguiEndFrame();

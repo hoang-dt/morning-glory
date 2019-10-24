@@ -1098,13 +1098,9 @@ __m256i get_mask3(const uint32_t input) {
 #include <limits>
 
 int main(int Argc, const char** Argv) {
-  u64 V = Pack3i64(v3i(1, 2, 3));
-  v3i P = Unpack3i64(V);
+  u64 V = Pack3i32(v3i(1, 2, 3));
+  v3i P = Unpack3i32(V);
   printf(mg_PrStrV3i "\n", mg_PrV3i(P));
-  printf(mg_BinPattern64"\n", mg_BinaryByte64(i64(-1)));
-  printf(mg_BinPattern64"\n", mg_BinaryByte64(i64(-2)));
-  printf(mg_BinPattern64"\n", mg_BinaryByte64(i64(-3)));
-  printf(mg_BinPattern64"\n", mg_BinaryByte64(V));
   //for (int I = 0; I < 8; ++I) {
   //  v2i L = SubbandToLevel2(I);
   //  printf("Subband to level %d: %d %d\n", I, L.X, L.Y);

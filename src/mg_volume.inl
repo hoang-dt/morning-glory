@@ -113,11 +113,14 @@ subvol_grid(const grid& GridIn, const volume& VolIn)
 
 mg_Ti(t) t& volume::
 At(const v3i& P) const {
-  return (const_cast<t*>((const t*)Buffer.Data))[Row(Unpack3i64(Dims), P)];
+  v3i D3 = mg::Dims(*this);
+  mg_Assert(P < D3);
+  return (const_cast<t*>((const t*)Buffer.Data))[Row(D3, P)];
 }
 
 mg_Ti(t) t& volume::
 At(i64 Idx) const {
+  // TODO: add a bound check in here
   return (const_cast<t*>((const t*)Buffer.Data))[Idx];
 }
 
@@ -404,7 +407,7 @@ mg_TT(t1, t2) bool
 IsSubGrid(const t1& Grid1, const t2& Grid2) {
   if (!(From(Grid1) >= From(Grid2)))
     return false;
-  if (!(To(Grid1) <= To(Grid2)))
+  if (!(Last(Grid1) <= Last(Grid2)))
     return false;
   if ((Strd(Grid1) % Strd(Grid2)) != 0)
     return false;
@@ -420,6 +423,7 @@ SubGrid(const t1& Grid1, const t2& Grid2) {
 
 mg_TT(t1, t2) t1
 Relative(const t1& Grid1, const t2& Grid2) {
+  //printf("");
   mg_Assert(IsSubGrid(Grid1, Grid2));
   v3i From3 = (From(Grid1) - From(Grid2)) / Strd(Grid2);
   return grid(From3, Dims(Grid1), Strd(Grid1) / Strd(Grid2));
