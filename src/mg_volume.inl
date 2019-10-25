@@ -432,14 +432,14 @@ Relative(const t1& Grid1, const t2& Grid2) {
 mg_TT(t1, t2) t1
 Crop(const t1& Grid1, const t2& Grid2) {
   v3i Strd3 = Strd(Grid1);
-  v3i Frst3 = ((Frst(Grid2) - 1) / Strd3 + 1) * Strd3;
-  v3i Last3 = (Last(Grid2) / Strd3) * Strd3;
+  v3i Grid1Frst3 = Frst(Grid1);
+  v3i Frst3 = Max(Grid1Frst3, Frst(Grid2));
+  v3i Last3 = Min(Last(Grid1), Last(Grid2));
+  Frst3 = ((Frst3 - Grid1Frst3 + Strd3 - 1) / Strd3) * Strd3 + Grid1Frst3;
+  Last3 = ((Last3 - Grid1Frst3) / Strd3) * Strd3 + Grid1Frst3;
   t1 OutGrid = Grid1;
-  Frst3 = Max(Frst3, Frst(Grid1));
-  Last3 = Min(Last3, Last(Grid1));
-  v3i Dims3 = Frst3 <= Last3 ? (Last3 - Frst3) / Strd3 + 1 : v3i::Zero;
-  OutGrid.From = Pack3i64(Frst3);
-  OutGrid.Dims = Pack3i64(Dims3);
+  SetFrom(&OutGrid, Frst3);
+  SetDims(&OutGrid, Frst3 <= Last3 ? (Last3 - Frst3) / Strd3 + 1 : v3i::Zero);
   return OutGrid;
 }
 

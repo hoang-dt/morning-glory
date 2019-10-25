@@ -446,21 +446,21 @@ InitBlocks(
 {
   v2i NBlocks = (N + BlockSize - 1) / BlockSize;
   Resize(Blocks, Prod(NBlocks));
-  v3i D3 = InitialStride ? v3i(v2i(BlockSize / InitialStride), 1) : v3i::Zero;
+  v3i D3 = InitialStride ? v3i(v2i((BlockSize  + (InitialStride - 1)) / InitialStride), 1) : v3i::Zero;
   for (int Y = 0; Y < NBlocks.Y; ++Y) {
     for (int X = 0; X < NBlocks.X; ++X) {
       int I = Y * NBlocks.X + X;
       block& Blk = (*Blocks)[I];
-      Blk.Grid = grid(v3i(v2i(X, Y) * BlockSize, 0), D3, v3i(InitialStride));
+      Blk.Grid = grid(v3i(v2i(X, Y) * BlockSize, 0), D3, v3i(v2i(InitialStride), 1));
       if (InitialStride) {
         // TODO: the copy is faulty for edge blocks. need to crop against the whole domain (N)
-        extent Ext(v3i(v2i(X, Y) * BlockSize, 0), D3);
-        Ext = Crop(Ext, extent(v3i(N, 1)));
+        //grid Ext(v3i(v2i(X, Y) * BlockSize, 0), D3, v3i(v2i(InitialStride), 1));
+        Blk.Grid = Crop(Blk.Grid, extent(v3i(N, 1)));
         Resize(&(Blk.Vol), D3, dtype::float64);
         Resize(&(Blk.VolColor), D3, dtype::int32);
         Fill(Begin<i32>(Blk.VolColor), End<i32>(Blk.VolColor), Pack3i32(v3i(255)));
-        Copy(Ext, Data, extent(Dims(Ext)), &(Blk.Vol));
-        Copy(Ext, DataColor, extent(Dims(Ext)), &(Blk.VolColor));
+        Copy(Blk.Grid, Data, extent(Dims(Blk.Grid)), &(Blk.Vol));
+        Copy(Blk.Grid, DataColor, extent(Dims(Blk.Grid)), &(Blk.VolColor));
       }
     }
   }
