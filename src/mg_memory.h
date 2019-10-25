@@ -130,6 +130,7 @@ mg_T(t) void AllocTypedBuf0 (buffer_t<t>* Buf, i64 Size, allocator* Alloc = &Mal
 mg_T(t) void DeallocTypedBuf(buffer_t<t>* Buf);
 
 /* Zero out a buffer */
+// TODO: replace with the call to Fill, or Memset
 void ZeroBuf(buffer* Buf);
 mg_T(t) void ZeroTypedBuf(buffer_t<t>* Buf);
 /* Copy one buffer to another. Here the order of arguments are the reverse of memcpy. */

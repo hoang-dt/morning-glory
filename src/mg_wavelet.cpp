@@ -715,7 +715,9 @@ wav_grids ComputeWavGrids(
   v3i WavLast3 = Min(Last3, Last(WavGrid));
   wav_grids Output;
   if (WavLast3 >= WavFrst3) {
-    v3i NewStrd3 = Min(WavStrd3 / (1 << Lvl3), ValStrd);
+    v3i NewStrd3 = WavStrd3 / (1 << Lvl3);
+    if (!(ValStrd == 0))
+      NewStrd3 = Min(NewStrd3, ValStrd);
     v3i NewFrst3, NewLast3;
     NewFrst3 = ((ValFrst3 + NewStrd3 - 1) / NewStrd3) * NewStrd3;
     NewLast3 = (ValLast3 / NewStrd3) * NewStrd3;

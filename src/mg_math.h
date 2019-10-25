@@ -56,6 +56,7 @@ mg_T(t) bool  operator<=(const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) bool  operator< (const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) bool  operator> (const v3<t>& Lhs, const v3<t>& Rhs);
 mg_T(t) bool  operator>=(const v3<t>& Lhs, const v3<t>& Rhs);
+mg_T(t) bool  operator==(const v3<t>& Lhs, t Val);
 mg_T(t) bool  operator!=(const v3<t>& Lhs, t Val);
 mg_TT(t, u) v3<t> operator>>(const v3<t>& Lhs, const v3<u>& Rhs);
 mg_TT(t, u) v3<t> operator>>(const v3<t>& Lhs, u Val);
