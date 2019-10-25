@@ -71,6 +71,9 @@ mg_T(t) v3<t> Max(const v3<t>& Lhs, const v3<t>& Rhs);
 i8 Log2Floor(i64 Val);
 i8 Log8Floor(i64 Val);
 
+mg_T(t) v3<t> Ceil(const v3<t>& Vec);
+mg_T(t) v2<t> Ceil(const v2<t>& Vec);
+
 i64 Pow(i64 Base, int Exp);
 i64 NextPow2(i64 Val);
 

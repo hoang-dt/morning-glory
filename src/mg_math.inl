@@ -220,6 +220,16 @@ Max(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>(Max(Lhs.X, Rhs.X), Max(Lhs.Y, Rhs.Y), Max(Lhs.Z, Rhs.Z));
 }
 
+mg_Ti(t) v3<t>
+Ceil(const v3<t>& Vec) {
+  return v3<t>(ceil(Vec.X), ceil(Vec.Y), ceil(Vec.Z));
+}
+
+mg_Ti(t) v2<t>
+Ceil(const v2<t>& Vec) {
+  return v2<t>(ceil(Vec.X), ceil(Vec.Y));
+}
+
 mg_Inline i8
 Log2Floor(i64 Val) {
   mg_Assert(Val > 0);
