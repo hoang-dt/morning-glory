@@ -724,8 +724,10 @@ wav_grids ComputeWavGrids(
     Output.WavGrid = grid(WavFrst3, Dims(WavFrst3, WavLast3, WavStrd3), WavStrd3);
     Output.ValGrid = grid(NewFrst3, Dims(NewFrst3, NewLast3, NewStrd3), NewStrd3);
     /* for the work grid, first sample has to be even, and the dims have to be odd */
-    v3i WrkFrst3 = WavFrst3 - IsOdd(WavFrst3 / NewStrd3) * NewStrd3;
-    v3i WrkDims3 = Dims(WrkFrst3, WavLast3, NewStrd3);
+    v3i WrkFrst3 = Max(WavFrst3 - S3, v3i::Zero);
+    WrkFrst3 = WrkFrst3 - IsOdd(WrkFrst3 / NewStrd3) * NewStrd3;
+    v3i WrkLast3 = WavLast3 + S3;
+    v3i WrkDims3 = Dims(WrkFrst3, WrkLast3, NewStrd3);
     WrkDims3 = WrkDims3 + IsEven(WrkDims3);
     Output.WrkGrid = grid(WrkFrst3, WrkDims3, NewStrd3);
   } else {

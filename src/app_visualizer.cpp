@@ -666,6 +666,8 @@ public:
       DrawBlockSep(m_nvg, ValDomainTopLeft, N, v2i(BlockSize), Spacing);
       DrawBlockSep(m_nvg, WavGDomainTopLeft, N, v2i(BlockSize), Spacing);
       grid Rel; 
+      v2i NBlocks = (N + BlockSize - 1) / BlockSize;
+      WavFp = WavFootprint(2, Sb, WavGrids.WavGrid);
       if (ImGui::Button("Copy wavelets")) {
         // prepare the work grid
         Resize(&WrkVol, Dims(WavGrids.WrkGrid), dtype::float64);
@@ -677,41 +679,43 @@ public:
         Fill(Begin<i32>(WrkVolColor), End<i32>(WrkVolColor), Pack3i32(v3i(50, 50, 50)));
         Copy(WavCrop, WavColor, Rel, &WrkVolColor);
         /* (optionally) copy the data from the affected blocks */
-        WavFp = WavFootprint(2, Sb, WavGrids.WavGrid);
-        BegBlock = (From(WavFp)  / BlockSize).XY;
-        EndBlock = ((Last(WavFp) ) / BlockSize).XY;
+        FrstBlock = (From(WavFp)  / BlockSize).XY;
+        LastBlock = (Last(WavFp)  / BlockSize).XY;
         // copy data to the work grid
-        for (int I = 0; I < Size(Blocks); ++I) {
-          block& Blk = Blocks[I];
-          if (!Blk.Grid) { // starting out
-            SetStrd(&Blk.Grid, Strd(WavGrids.ValGrid));
-            Resize(&Blk.Vol, Dims(Blk.Grid));
-            Fill(Begin<f64>(Blk.Vol), End<f64>(Blk.Vol), 0.0);
-            Resize(&Blk.VolColor, Dims(Blk.Grid));
-            Fill(Begin<i32>(Blk.VolColor), End<i32>(Blk.VolColor), 0);
-          } else if (Blk.Grid && Strd(Blk.Grid) <= Strd(WavGrids.ValGrid)) { // increasing resolution
-            grid Part = Crop(WavGrids.WrkGrid, Blk.Grid);
-            mg_Assert(Part); // should be valid
-            //Copy(Relative(Part, Blocks[I].Grid), Blocks[I].Vol, Relative(Part, WavGrids.WrkGrid), &WrkGrid);
-            Copy(Relative(Part, Blk.Grid), Blk.Vol, Relative(Part, WavGrids.WrkGrid), &WrkVol);
-            Copy(Relative(Part, Blk.Grid), Blk.VolColor, Relative(Part, WavGrids.WrkGrid), &WrkVolColor);
-          } else { // not increasing resolution
-            // do nothing
+        for (int BY = FrstBlock.Y; BY <= LastBlock.Y; ++BY) {
+          for (int BX = FrstBlock.X; BX <= LastBlock.X; ++BX) {
+            int I = BY * NBlocks.X + BX;
+            block& Blk = Blocks[I];
+            if (!Blk.Grid) { // starting out
+              SetStrd(&Blk.Grid, Strd(WavGrids.ValGrid));
+              Resize(&Blk.Vol, Dims(Blk.Grid));
+              Fill(Begin<f64>(Blk.Vol), End<f64>(Blk.Vol), 0.0);
+              Resize(&Blk.VolColor, Dims(Blk.Grid));
+              Fill(Begin<i32>(Blk.VolColor), End<i32>(Blk.VolColor), 0);
+            } else if (Blk.Grid && Strd(Blk.Grid) <= Strd(WavGrids.ValGrid)) { // increasing resolution
+              grid Part = Crop(WavGrids.WrkGrid, Blk.Grid);
+              mg_Assert(Part); // should be valid
+              //Copy(Relative(Part, Blocks[I].Grid), Blocks[I].Vol, Relative(Part, WavGrids.WrkGrid), &WrkGrid);
+              Copy(Relative(Part, Blk.Grid), Blk.Vol, Relative(Part, WavGrids.WrkGrid), &WrkVol);
+              Copy(Relative(Part, Blk.Grid), Blk.VolColor, Relative(Part, WavGrids.WrkGrid), &WrkVolColor);
+            } else { // not increasing resolution
+              // do nothing
+            }
+            // copy data from the work grid back
+            // TODO
           }
-          // copy data from the work grid back
-          // TODO
         }
       }
       /* render the work grid */
       if (WrkVol.Buffer && WrkVolColor.Buffer) {
         DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WrkGrid).XY * Spacing, Dims(WrkVolColor).XY, RectSize, Spacing * Strd(WavGrids.WrkGrid).XY, WrkVolColor, draw_mode::Fill);
-        DrawBox(m_nvg, WavGDomainTopLeft + BegBlock * BlockSize * Spacing - Spacing / 2, WavGDomainTopLeft + (EndBlock + 1) * BlockSize * Spacing - Spacing / 2, nvgRGBA(0, 230, 0, 20));
-        //DrawBox(m_nvg, WavGDomainTopLeft + From(WavFp).XY * Spacing - Spacing / 2, WavGDomainTopLeft + Last(WavFp).XY * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
+        DrawBox(m_nvg, WavGDomainTopLeft + FrstBlock * BlockSize * Spacing - Spacing / 2, WavGDomainTopLeft + (LastBlock + 1) * BlockSize * Spacing - Spacing / 2, nvgRGBA(0, 230, 0, 20));
       }
+      // Draw the wavelet footprint
+      DrawBox(m_nvg, WavGDomainTopLeft + From(WavFp).XY * Spacing - Spacing / 2, WavGDomainTopLeft + Last(WavFp).XY * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
       /* render the blocks */
       DrawGrid(m_nvg, BlockDomainTopLeft, N, RectSize, Spacing, nvgRGBA(0, 130, 0, 100), draw_mode::Stroke);
       DrawBlockSep(m_nvg, BlockDomainTopLeft, N, v2i(BlockSize), Spacing);
-      v2i NBlocks = (N + BlockSize - 1) / BlockSize;
       for (int Y = 0; Y < NBlocks.Y; ++Y) {
         for (int X = 0; X < NBlocks.X; ++X) {
           block& Blk = Blocks[Y * NBlocks.X + X];          
@@ -756,8 +760,8 @@ public:
   volume WavColor;
   int BlockSize = 8;
   int WavBlockSize = 4;
-  v2i BegBlock = v2i::Zero;
-  v2i EndBlock = v2i::Zero;
+  v2i FrstBlock = v2i::Zero;
+  v2i LastBlock = v2i::Zero;
   extent WavFp;
 
 	int64_t m_timeOffset;
