@@ -1098,9 +1098,31 @@ __m256i get_mask3(const uint32_t input) {
 #include <limits>
 
 int main(int Argc, const char** Argv) {
-  u64 V = Pack3i32(v3i(1, 2, 3));
-  v3i P = Unpack3i32(V);
-  printf(mg_PrStrV3i "\n", mg_PrV3i(P));
+  // test the wavelet and inverse transform
+  v3i N(32, 32, 1);
+  int NLevels = 2;
+  volume Vol;
+  ReadVolume("D:/Datasets/3D/Small/MIRANDA-PRESSURE-[32-32-1]-Float64.raw", N, dtype::float64, &Vol);
+  volume BackupVol; Clone(Vol, &BackupVol);
+  for (int I = 0; I < NLevels; ++I) {
+    FLiftCdf53OldX((f64*)Vol.Buffer.Data, N, v3i(I));
+    FLiftCdf53OldY((f64*)Vol.Buffer.Data, N, v3i(I));
+  }
+  volume WavBackup; Clone(Vol, &WavBackup);
+  Fill(Begin<f64>(Vol), End<f64>(Vol), 0.0);
+  array<extent> Subbands;
+  BuildSubbands(N, NLevels, &Subbands);
+  Copy(Subbands[0], WavBackup, Subbands[0], &Vol);
+  printf(mg_PrStrGrid"\n", mg_PrGrid(Subbands[0]));
+  for (int I = NLevels - 1; I >= 0; --I) {
+    ILiftCdf53OldY((f64*)Vol.Buffer.Data, N, v3i(I));
+    ILiftCdf53OldX((f64*)Vol.Buffer.Data, N, v3i(I));
+  }
+  f64 Ps = PSNR(BackupVol, Vol);
+  printf("psnr = %f\n", Ps);
+  WriteBuffer("vol.raw", Vol.Buffer);
+  WriteBuffer("wav.raw", WavBackup.Buffer);
+  Dealloc(&Subbands);
   //for (int I = 0; I < 8; ++I) {
   //  v2i L = SubbandToLevel2(I);
   //  printf("Subband to level %d: %d %d\n", I, L.X, L.Y);

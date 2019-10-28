@@ -466,6 +466,55 @@ InitBlocks(
   }
 }
 
+/* Reduce a block in resolution as much as possible, until the PSNR is smaller
+than some threshold */
+void
+Reduce(block* Block, int BlockSize, int NLevels, const v2i& N, f64 PsnrThreshold) {
+  // Make a copy of the original volume
+  v3i D3 = Dims(Block->Vol);
+  volume WavVol; Clone(Block->Vol, &WavVol);
+  int Stride = 1;
+  for (int I = 0; I < NLevels; ++I) {
+    FLiftCdf53OldX((f64*)WavVol.Buffer.Data, D3, v3i(I));
+    FLiftCdf53OldY((f64*)WavVol.Buffer.Data, D3, v3i(I));
+    Stride *= 2;
+  }
+  array<extent> Subbands;
+  BuildSubbands(D3, NLevels, &Subbands);
+  // enable only the coarsest subband
+  volume BackupWavVol; Clone(WavVol, &BackupWavVol);
+  Fill(Begin<f64>(WavVol), End<f64>(WavVol), 0.0);
+  Copy(Subbands[0], BackupWavVol, Subbands[0], &WavVol);
+  for (int J = NLevels - 1; J >= 0; --J) {
+    ILiftCdf53OldY((f64*)WavVol.Buffer.Data, D3, v3i(J));
+    ILiftCdf53OldX((f64*)WavVol.Buffer.Data, D3, v3i(J));
+  }
+  Stride /= 2;
+  f64 Psnr = PSNR(Block->Vol, WavVol);
+  int K = 0;
+  for (int I = NLevels - 1; I >= 0 && Psnr < PsnrThreshold; --I) {
+    K += 3;
+    Fill(Begin<f64>(WavVol), End<f64>(WavVol), 0.0);
+    for (int J = 0; J <= K; ++J) {
+      Copy(Subbands[J], BackupWavVol, Subbands[J], &WavVol);
+    }
+    for (int J = NLevels - 1; J >= 0; --J) {
+      ILiftCdf53OldZ((f64*)WavVol.Buffer.Data, D3, v3i(J));
+      ILiftCdf53OldY((f64*)WavVol.Buffer.Data, D3, v3i(J));
+      ILiftCdf53OldX((f64*)WavVol.Buffer.Data, D3, v3i(J));
+    }
+    Stride /= 2;
+    Psnr = PSNR(Block->Vol, WavVol);
+  }
+  //Block->Grid = grid(v3i::Zero, v3i(v2i((BlockSize + Stride - 1) / Stride), 1), v3i(v2i(Stride), 1));
+  SetStrd(&Block->Grid, v3i(v2i(Stride), 1));
+  SetDims(&Block->Grid, v3i(v2i((BlockSize + Stride - 1)/ Stride), 1));
+  Block->Grid = Crop(Block->Grid, extent(v3i(N, 1)));
+  Dealloc(&BackupWavVol);
+  Dealloc(&WavVol);
+  Dealloc(&Subbands);
+}
+
 class ExampleNanoVG : public entry::AppI
 {
 public:
@@ -525,7 +574,7 @@ public:
     if (!Result || !Result2) {
       printf("Error: %s\n", ToString(Result));
     } else {
-      cstr DataFile = "D:/Datasets/3D/Small/MIRANDA-PRESSURE-[33-33-1]-Float64.raw";
+      cstr DataFile = "D:/Datasets/3D/Small/MIRANDA-PRESSURE-[32-32-1]-Float64.raw";
       //Dealloc(&Vol);
       Result = ReadVolume(DataFile, v3i(N, 1), dtype::float64, &Vol);
       if (!Result) {
@@ -577,8 +626,8 @@ public:
         printf("left alt pressed\n");
 
 			//showExampleDialog(this);
-			static char buf1[8] = "33"; ImGui::InputText("Nx", buf1, 8, ImGuiInputTextFlags_CharsDecimal);
-			static char buf2[8] = "33"; ImGui::InputText("Ny", buf2, 8, ImGuiInputTextFlags_CharsDecimal);
+			static char buf1[8] = "32"; ImGui::InputText("Nx", buf1, 8, ImGuiInputTextFlags_CharsDecimal);
+			static char buf2[8] = "32"; ImGui::InputText("Ny", buf2, 8, ImGuiInputTextFlags_CharsDecimal);
 			if (ImGui::Button("Draw grid")) {
 				ToInt(buf1, &N.X);
 				ToInt(buf2, &N.Y);
@@ -628,7 +677,6 @@ public:
 			DrawGrid(m_nvg, ValDomainTopLeft, N, RectSize, Spacing, VolColor, draw_mode::Fill);
 			DrawGrid(m_nvg, WavDomainTopLeft, N, RectSize, Spacing, WavColor, draw_mode::Fill);
       DrawSubbandSep(m_nvg, WavDomainTopLeft, N, Spacing, NLevels);
-      char Temp[128];
 
       /* Wav domain */
       v2i WavFrom = v2i(Ceil(v2f(WavMouseDown - WavDomainTopLeft) / v2f(Spacing)));
@@ -639,8 +687,6 @@ public:
           break;
         }
       }
-      sprintf(Temp, "topleft: (%d %d), mouse: (%d %d), wavfrom: (%d %d), Sb: %d\n", WavDomainTopLeft.X, WavDomainTopLeft.Y, WavMouseDown.X, WavMouseDown.Y, WavFrom.X, WavFrom.Y, Sb);
-      DrawText(m_nvg, v2i(50, 500), Temp, 20);
       extent WavCrop(v3i(((WavFrom - From(Subbands[Sb]).XY) / WavBlockSize) * WavBlockSize, 0) + From(Subbands[Sb]), v3i(WavBlockSize, WavBlockSize, 1));
       WavCrop = Crop(WavCrop, Subbands[Sb]);
       DrawGrid(m_nvg, WavDomainTopLeft + From(WavCrop).XY * Spacing, (To(WavCrop) - From(WavCrop)).XY, RectSize, Spacing, nvgRGBA(30, 0, 0, 200), draw_mode::Stroke, 2);
@@ -650,7 +696,6 @@ public:
       extent WavCropLocal = WavCrop;
       SetFrom(&WavCropLocal, From(WavCrop) - From(Subbands[Sb]));
       grid WavGGrid = SubGrid(SubbandsG[Sb], WavCropLocal);
-      sprintf(Temp, "from (%d %d) dims (%d %d) stride (%d %d)", From(WavGGrid).X, From(WavGGrid).Y, Dims(WavGGrid).X, Dims(WavGGrid).Y, Strd(WavGGrid).X, Strd(WavGGrid).Y);
 			DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGGrid).XY * Spacing, Dims(WavGGrid).XY, RectSize, Spacing * Strd(WavGGrid).XY, nvgRGBA(0, 130, 0, 200), draw_mode::Stroke);
       extent Footprint = WavFootprint(2, Sb, WavGGrid);
       extent ValExt(v3i(N, 1));
@@ -668,44 +713,6 @@ public:
       grid Rel; 
       v2i NBlocks = (N + BlockSize - 1) / BlockSize;
       WavFp = WavFootprint(2, Sb, WavGrids.WavGrid);
-      if (ImGui::Button("Copy wavelets")) {
-        // prepare the work grid
-        Resize(&WrkVol, Dims(WavGrids.WrkGrid), dtype::float64);
-        ZeroBuf(&WrkVol.Buffer);
-        // copy the wavelet coefficients to the work grid
-        Rel = Relative(WavGrids.WavGrid, WavGrids.WrkGrid);
-        Copy(WavCrop, Wav, Rel, &WrkVol);
-        Resize(&WrkVolColor, Dims(WrkVol), dtype::int32);
-        Fill(Begin<i32>(WrkVolColor), End<i32>(WrkVolColor), Pack3i32(v3i(50, 50, 50)));
-        Copy(WavCrop, WavColor, Rel, &WrkVolColor);
-        /* (optionally) copy the data from the affected blocks */
-        FrstBlock = (From(WavFp)  / BlockSize).XY;
-        LastBlock = (Last(WavFp)  / BlockSize).XY;
-        // copy data to the work grid
-        for (int BY = FrstBlock.Y; BY <= LastBlock.Y; ++BY) {
-          for (int BX = FrstBlock.X; BX <= LastBlock.X; ++BX) {
-            int I = BY * NBlocks.X + BX;
-            block& Blk = Blocks[I];
-            if (!Blk.Grid) { // starting out
-              SetStrd(&Blk.Grid, Strd(WavGrids.ValGrid));
-              Resize(&Blk.Vol, Dims(Blk.Grid));
-              Fill(Begin<f64>(Blk.Vol), End<f64>(Blk.Vol), 0.0);
-              Resize(&Blk.VolColor, Dims(Blk.Grid));
-              Fill(Begin<i32>(Blk.VolColor), End<i32>(Blk.VolColor), 0);
-            } else if (Blk.Grid && Strd(Blk.Grid) <= Strd(WavGrids.ValGrid)) { // increasing resolution
-              grid Part = Crop(WavGrids.WrkGrid, Blk.Grid);
-              mg_Assert(Part); // should be valid
-              //Copy(Relative(Part, Blocks[I].Grid), Blocks[I].Vol, Relative(Part, WavGrids.WrkGrid), &WrkGrid);
-              Copy(Relative(Part, Blk.Grid), Blk.Vol, Relative(Part, WavGrids.WrkGrid), &WrkVol);
-              Copy(Relative(Part, Blk.Grid), Blk.VolColor, Relative(Part, WavGrids.WrkGrid), &WrkVolColor);
-            } else { // not increasing resolution
-              // do nothing
-            }
-            // copy data from the work grid back
-            // TODO
-          }
-        }
-      }
       /* render the work grid */
       if (WrkVol.Buffer && WrkVolColor.Buffer) {
         DrawGrid(m_nvg, WavGDomainTopLeft + From(WavGrids.WrkGrid).XY * Spacing, Dims(WrkVolColor).XY, RectSize, Spacing * Strd(WavGrids.WrkGrid).XY, WrkVolColor, draw_mode::Fill);
@@ -713,6 +720,15 @@ public:
       }
       // Draw the wavelet footprint
       DrawBox(m_nvg, WavGDomainTopLeft + From(WavFp).XY * Spacing - Spacing / 2, WavGDomainTopLeft + Last(WavFp).XY * Spacing + Spacing / 2, nvgRGBA(230, 0, 0, 50));
+      if (ImGui::SliderInt("PSNR", &Psnr, 10, 120)) {
+        for (int BY = 0; BY < NBlocks.Y; ++BY) {
+          for (int BX = 0; BX < NBlocks.X; ++BX) {
+            int I = BY * NBlocks.X + BX;
+            Reduce(&Blocks[I], BlockSize, NLevels, N, Psnr);
+          }
+        }
+        //InitBlocks(N, BlockSize, )
+      }
       /* render the blocks */
       DrawGrid(m_nvg, BlockDomainTopLeft, N, RectSize, Spacing, nvgRGBA(0, 130, 0, 100), draw_mode::Stroke);
       DrawBlockSep(m_nvg, BlockDomainTopLeft, N, v2i(BlockSize), Spacing);
@@ -758,7 +774,7 @@ public:
   f64 MinWav, MaxWav;
   volume VolColor;
   volume WavColor;
-  int BlockSize = 8;
+  int BlockSize = 32;
   int WavBlockSize = 4;
   v2i FrstBlock = v2i::Zero;
   v2i LastBlock = v2i::Zero;
@@ -772,15 +788,16 @@ public:
   v2i WavDomainTopLeft = v2i(50, 500);
   v2i WavGDomainTopLeft = v2i(500, 50);
   v2i BlockDomainTopLeft = v2i(500, 500);
-	v2i N = v2i(33, 33); // total dimensions
+	v2i N = v2i(32, 32); // total dimensions
   v2i Spacing = v2i(12, 12);
 	int NLevels = 2;
   array<extent> Subbands;
   array<grid> SubbandsG;
   array<block> Blocks;
-  int InitialStride = 2;
+  int InitialStride = 1;
   array<extent> WavBlocks;
   int RectSize = 4;
+  int Psnr = 30;
 };
 
 } // namespace
