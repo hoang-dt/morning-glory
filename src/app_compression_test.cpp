@@ -1102,73 +1102,84 @@ int main(int Argc, const char** Argv) {
   // TODO: use memmap to read file
   // TODO: Write a adaptor for volume using memmap
   v3i N3(512, 512, 512);
-  int NLevels = 8;
+  int NLevels = 4;
   int BlockSize = 32;
   f64 PsnrThreshold = 16;
+  f64 NormThreshold = 0.4;
   wav_basis_norms Wn = GetCdf53Norms(NLevels);
-  printer Pr(stdout);
-  mg_Print(&Pr, "Norms-------\n");
-  Print(&Pr, Wn.ScalNorms);
-  mg_Print(&Pr, "\n");
-  Print(&Pr, Wn.WaveNorms);
-  return 0;
   volume Vol;
   ReadVolume("D:/Datasets/3D/MAGNETIC-RECONNECTION-[512-512-512]-Float32.raw", N3, dtype::float32, &Vol);
+  mg_CleanUp(4, Dealloc(&Vol));
+  volume VolOut; Resize(&VolOut, Dims(Vol), dtype::int16);
+  volume DataOut; Resize(&DataOut, Dims(Vol), Vol.Type);
   v3i NBlocks = (N3 + BlockSize - 1) / BlockSize;
   array<extent> Subbands;
   BuildSubbands(v3i(BlockSize), NLevels, &Subbands);
   mg_CleanUp(0, Dealloc(&Subbands));
+  volume BlockVol; Resize(&BlockVol, v3i(BlockSize), Vol.Type);
+  mg_CleanUp(1, Dealloc(&BlockVol));
+  volume BackupVol; Resize(&BackupVol, Dims(BlockVol), BlockVol.Type);
+  mg_CleanUp(2, Dealloc(&BackupVol));
+  volume WavBackupVol; Resize(&WavBackupVol, Dims(BlockVol), BlockVol.Type);
+  mg_CleanUp(3, Dealloc(&WavBackupVol));
+  i64 CoeffCount = 0;
   for (int BZ = 0; BZ < NBlocks.Z; ++BZ) {
     for (int BY = 0; BY < NBlocks.Y; ++BY) {
       for (int BX = 0; BX < NBlocks.X; ++BX) {
-        volume BlockVol; Resize(&BlockVol, v3i(BlockSize), Vol.Type);
-        //mg_CleanUp(1, Dealloc(&BlockVol));
         Fill(Begin<f32>(BlockVol), End<f32>(BlockVol), 0.0f);
         extent BlockExt(v3i(BX, BY, BZ) * BlockSize, v3i(BlockSize));
         extent BlockExtCrop = Crop(BlockExt, extent(N3));
         Copy(BlockExtCrop, Vol, Relative(BlockExtCrop, BlockExt), &BlockVol);
-        volume BackupVol; Resize(&BackupVol, Dims(BlockVol), BlockVol.Type);
-        //mg_CleanUp(2, Dealloc(&BackupVol));
         Clone(BlockVol, &BackupVol);
-        int Stride = 1;
         for (int I = 0; I < NLevels; ++I) {
           FLiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
           FLiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
           FLiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
-          Stride *= 2;
         }
-        volume WavBackupVol; Resize(&WavBackupVol, Dims(BlockVol), BlockVol.Type);
-        //mg_CleanUp(3, Dealloc(&WavBackupVol));
         Clone(BlockVol, &WavBackupVol);
         Fill(Begin<f32>(BlockVol), End<f32>(BlockVol), 0.0);
-        Copy(Subbands[0], WavBackupVol, Subbands[0], &BlockVol);
-        //Stride /= 2;
+        /* go through each subband, compute the norm of wavelet coefficients x basis norm */
+        int LastSb = 0;
+        for (int I = 0; I < Size(Subbands); ++I) {
+          extent Ext = Subbands[I];
+          v3i Lvl3 = SubbandToLevel(3, I);
+          f64 Score = 0;
+          if (I == 0) {
+            Score = Wn.ScalNorms[NLevels - 1];
+            Score = Score * Score * Score;
+          } else {
+            int LMax = Max(Max(Lvl3.X, Lvl3.Y), Lvl3.Z);
+            f64 Sx = (Lvl3.X == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
+            f64 Sy = (Lvl3.Y == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
+            f64 Sz = (Lvl3.Z == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
+            Score = Sx * Sy * Sz;
+          }
+          for (auto It = Begin<f32>(Ext, WavBackupVol), It2 = Begin<f32>(Ext, BlockVol); 
+                    It != End<f32>(Ext, WavBackupVol); ++It, ++It2) 
+          {
+            f64 FinalScore = Score * fabs(*It);
+            if (FinalScore >= NormThreshold) {
+              *It2 = *It;
+              LastSb = I;
+              ++CoeffCount;
+            }
+          }
+        }
+        Fill(Begin<i16>(BlockExtCrop, VolOut), End<i16>(BlockExtCrop, VolOut), i16(LastSb));
+        //printf("Last sb = %d\n", LastSb);
         for (int I = NLevels - 1; I >= 0; --I) {
           ILiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
           ILiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
           ILiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
         }
-        f64 Ps = PSNR(BackupVol, BlockVol);
-        /* iteratively try finer and finer resolutions until we get over the threshold */
-        int K = 0;
-        for (int I = NLevels - 1; I >= 0 && Ps < PsnrThreshold; --I) {
-          K += 7;
-          Fill(Begin<f32>(BlockVol), End<f32>(BlockVol), 0.0);
-          for (int J = 0; J <= K; ++J) {
-            Copy(Subbands[J], WavBackupVol, Subbands[J], &BlockVol);
-          }
-          for (int J = NLevels - 1; J >= 0; --J) {
-            ILiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(J));
-            ILiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(J));
-            ILiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(J));
-          }
-          Stride /= 2;
-          Ps = PSNR(BackupVol, BlockVol);
-        }
-        printf("%d %f\n", Stride, Ps);
+        Copy(Relative(BlockExtCrop, BlockExt), BlockVol, BlockExtCrop, &DataOut);
+        //f64 Ps = PSNR(BackupVol, BlockVol);
       }
     }
   }
+  WriteBuffer("out.raw", VolOut.Buffer);
+  WriteBuffer("dataout.raw", DataOut.Buffer);
+  printf("Coeff count = %lld\n", CoeffCount);
   //printf("psnr = %f\n", Ps);
   //WriteBuffer("vol.raw", Vol.Buffer);
   //WriteBuffer("wav.raw", WavBackupVol.Buffer);

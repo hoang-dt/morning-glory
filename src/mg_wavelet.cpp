@@ -54,7 +54,6 @@ GetCdf53Norms(int NLevels) {
 
   Resize(&WaveNorms, NLevels + 1);
   Resize(&ScalNorms, NLevels + 1);
-  printer Pr(stdout);
   for (int L = 0; L < NLevels + 1; ++L) {
     ScalNorms[L] = Norm(Begin(ScalFunc), End(ScalFunc));
     WaveNorms[L] = Norm(Begin(WaveFunc), End(WaveFunc));
