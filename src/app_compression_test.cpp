@@ -1098,31 +1098,81 @@ __m256i get_mask3(const uint32_t input) {
 #include <limits>
 
 int main(int Argc, const char** Argv) {
-  // test the wavelet and inverse transform
-  v3i N(32, 32, 1);
-  int NLevels = 2;
+  // TODO: move this into a standalone app
+  // TODO: use memmap to read file
+  // TODO: Write a adaptor for volume using memmap
+  v3i N3(512, 512, 512);
+  int NLevels = 8;
+  int BlockSize = 32;
+  f64 PsnrThreshold = 16;
+  wav_basis_norms Wn = GetCdf53Norms(NLevels);
+  printer Pr(stdout);
+  mg_Print(&Pr, "Norms-------\n");
+  Print(&Pr, Wn.ScalNorms);
+  mg_Print(&Pr, "\n");
+  Print(&Pr, Wn.WaveNorms);
+  return 0;
   volume Vol;
-  ReadVolume("D:/Datasets/3D/Small/MIRANDA-PRESSURE-[32-32-1]-Float64.raw", N, dtype::float64, &Vol);
-  volume BackupVol; Clone(Vol, &BackupVol);
-  for (int I = 0; I < NLevels; ++I) {
-    FLiftCdf53OldX((f64*)Vol.Buffer.Data, N, v3i(I));
-    FLiftCdf53OldY((f64*)Vol.Buffer.Data, N, v3i(I));
-  }
-  volume WavBackup; Clone(Vol, &WavBackup);
-  Fill(Begin<f64>(Vol), End<f64>(Vol), 0.0);
+  ReadVolume("D:/Datasets/3D/MAGNETIC-RECONNECTION-[512-512-512]-Float32.raw", N3, dtype::float32, &Vol);
+  v3i NBlocks = (N3 + BlockSize - 1) / BlockSize;
   array<extent> Subbands;
-  BuildSubbands(N, NLevels, &Subbands);
-  Copy(Subbands[0], WavBackup, Subbands[0], &Vol);
-  printf(mg_PrStrGrid"\n", mg_PrGrid(Subbands[0]));
-  for (int I = NLevels - 1; I >= 0; --I) {
-    ILiftCdf53OldY((f64*)Vol.Buffer.Data, N, v3i(I));
-    ILiftCdf53OldX((f64*)Vol.Buffer.Data, N, v3i(I));
+  BuildSubbands(v3i(BlockSize), NLevels, &Subbands);
+  mg_CleanUp(0, Dealloc(&Subbands));
+  for (int BZ = 0; BZ < NBlocks.Z; ++BZ) {
+    for (int BY = 0; BY < NBlocks.Y; ++BY) {
+      for (int BX = 0; BX < NBlocks.X; ++BX) {
+        volume BlockVol; Resize(&BlockVol, v3i(BlockSize), Vol.Type);
+        //mg_CleanUp(1, Dealloc(&BlockVol));
+        Fill(Begin<f32>(BlockVol), End<f32>(BlockVol), 0.0f);
+        extent BlockExt(v3i(BX, BY, BZ) * BlockSize, v3i(BlockSize));
+        extent BlockExtCrop = Crop(BlockExt, extent(N3));
+        Copy(BlockExtCrop, Vol, Relative(BlockExtCrop, BlockExt), &BlockVol);
+        volume BackupVol; Resize(&BackupVol, Dims(BlockVol), BlockVol.Type);
+        //mg_CleanUp(2, Dealloc(&BackupVol));
+        Clone(BlockVol, &BackupVol);
+        int Stride = 1;
+        for (int I = 0; I < NLevels; ++I) {
+          FLiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
+          FLiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
+          FLiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
+          Stride *= 2;
+        }
+        volume WavBackupVol; Resize(&WavBackupVol, Dims(BlockVol), BlockVol.Type);
+        //mg_CleanUp(3, Dealloc(&WavBackupVol));
+        Clone(BlockVol, &WavBackupVol);
+        Fill(Begin<f32>(BlockVol), End<f32>(BlockVol), 0.0);
+        Copy(Subbands[0], WavBackupVol, Subbands[0], &BlockVol);
+        //Stride /= 2;
+        for (int I = NLevels - 1; I >= 0; --I) {
+          ILiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
+          ILiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
+          ILiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
+        }
+        f64 Ps = PSNR(BackupVol, BlockVol);
+        /* iteratively try finer and finer resolutions until we get over the threshold */
+        int K = 0;
+        for (int I = NLevels - 1; I >= 0 && Ps < PsnrThreshold; --I) {
+          K += 7;
+          Fill(Begin<f32>(BlockVol), End<f32>(BlockVol), 0.0);
+          for (int J = 0; J <= K; ++J) {
+            Copy(Subbands[J], WavBackupVol, Subbands[J], &BlockVol);
+          }
+          for (int J = NLevels - 1; J >= 0; --J) {
+            ILiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(J));
+            ILiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(J));
+            ILiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(J));
+          }
+          Stride /= 2;
+          Ps = PSNR(BackupVol, BlockVol);
+        }
+        printf("%d %f\n", Stride, Ps);
+      }
+    }
   }
-  f64 Ps = PSNR(BackupVol, Vol);
-  printf("psnr = %f\n", Ps);
-  WriteBuffer("vol.raw", Vol.Buffer);
-  WriteBuffer("wav.raw", WavBackup.Buffer);
-  Dealloc(&Subbands);
+  //printf("psnr = %f\n", Ps);
+  //WriteBuffer("vol.raw", Vol.Buffer);
+  //WriteBuffer("wav.raw", WavBackupVol.Buffer);
+  //Dealloc(&Subbands);
   //for (int I = 0; I < 8; ++I) {
   //  v2i L = SubbandToLevel2(I);
   //  printf("Subband to level %d: %d %d\n", I, L.X, L.Y);

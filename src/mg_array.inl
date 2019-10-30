@@ -7,8 +7,17 @@ namespace mg {
 
 mg_Ti(t) array<t>::
 array(allocator* Alloc) :
-  Buffer(), Size(0), Capacity(0), Alloc(Alloc) {
+  Buffer(), Size(0), Capacity(0), Alloc(Alloc) { mg_Assert(Alloc); }
+
+mg_Ti(t) array<t>::
+array(const std::initializer_list<t>& List, allocator* Alloc) :
+  array(Alloc) 
+{
   mg_Assert(Alloc);
+  Init(this, List.size());
+  int Count = 0;
+  for (const auto& Elem : List)
+    (*this)[Count++] = Elem;
 }
 
 mg_Ti(t) t& array<t>::
@@ -105,6 +114,13 @@ Clone(const array<t>& Src, array<t>* Dst) {
   Resize(Dst, Size(Src));
   for (int I = 0; I < Size(Src); ++I)
     (*Dst)[I] = Src[I];
+}
+
+mg_T(t) void Print(printer* Pr, const array<t>& Array) {
+  mg_Print(Pr, "[");
+  for (i64 I = 0; I < Size(Array); ++I) 
+    mg_Print(Pr, "%f, ", Array[I]); // TODO
+  mg_Print(Pr, "]");
 }
 
 mg_Ti(t) void

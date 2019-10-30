@@ -39,6 +39,43 @@ static inline free_list_allocator& FreeListAllocator(i64 Bytes) {
   return Instance;
 }
 
+/* Compute the norms of the CDF5/3 scaling and wavelet functions
+
+nlevels is the number of times the wavelet transform is done (it is the number of levels minus one).
+The first two elements are the scaling norms and wavelet norms, the last two are the lengths of the
+scaling and wavelet functions. */
+wav_basis_norms
+GetCdf53Norms(int NLevels) {
+  array<f64> ScalNorms, WaveNorms;
+  array<f64> ScalWeights = { 0.5, 1.0, 0.5 };
+  array<f64> ScalFunc; Clone(ScalWeights, &ScalFunc);
+  array<f64> WaveWeights = { -0.125, -0.25, 0.75, -0.25, -0.125 };
+  array<f64> WaveFunc; Clone(WaveWeights, &WaveFunc);
+
+  Resize(&WaveNorms, NLevels + 1);
+  Resize(&ScalNorms, NLevels + 1);
+  printer Pr(stdout);
+  for (int L = 0; L < NLevels + 1; ++L) {
+    ScalNorms[L] = Norm(Begin(ScalFunc), End(ScalFunc));
+    WaveNorms[L] = Norm(Begin(WaveFunc), End(WaveFunc));
+    Upsample(WaveWeights, &WaveWeights);
+    array<f64> NewWavFunc;
+    Convolve(WaveWeights, ScalFunc, &NewWavFunc);
+    Dealloc(&WaveFunc);
+    WaveFunc = NewWavFunc;
+    Upsample(ScalWeights, &ScalWeights);
+    array<f64> NewScalFunc;
+    Convolve(ScalWeights, ScalFunc, &NewScalFunc);
+    Dealloc(&ScalFunc);
+    ScalFunc = NewScalFunc;
+  }
+  Dealloc(&ScalFunc);
+  Dealloc(&WaveFunc);
+  Dealloc(&ScalWeights);
+  Dealloc(&WaveWeights);
+  return { ScalNorms, WaveNorms };
+}
+
 // TODO: this won't work for a general (sub)volume
 void
 ForwardCdf53Old(volume* Vol, int NLevels) {

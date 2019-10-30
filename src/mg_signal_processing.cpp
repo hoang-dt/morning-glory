@@ -8,6 +8,9 @@
 
 namespace mg {
 
+// TODO: move the templated functions into an .inl file
+// TODO: think of a way that does not require writing a function three times
+
 mg_TT(t1, t2) f64
 SqError(const buffer_t<t1>& FBuf, const buffer_t<t2>& GBuf) {
   mg_Assert(FBuf.Size == GBuf.Size);
@@ -296,6 +299,45 @@ ConvertType(const volume& SVol, volume* DVol) {
   if (!DVol->Buffer)
     *DVol = volume(Dims(SVol), DVol->Type);
   return ConvertType(extent(SVol), SVol, extent(*DVol), DVol);
+}
+
+// TODO: receive one container
+mg_T(t) f64
+Norm(const t& Begin, const t& End) {
+  f64 Result = 0;
+  for (auto It = Begin; It != End; ++It) 
+    Result += (*It) * (*It);
+  return sqrt(Result);
+}
+
+// TODO: use concept to constraint Input and Output
+mg_T(c) void
+Upsample(const c& In, c* Out) {
+  i64 N = Size(In);
+  i64 M = N * 2 - 1;
+  Resize(Out, M);
+  (*Out)[M - 1] = In[(M - 1) >> 1];
+  for (i64 I = M - 3; I >= 0; I -= 2) {
+    (*Out)[I    ] = In[I >> 1];
+    (*Out)[I + 1] = 0;
+  }
+}
+
+/* Compute H = F * G */
+mg_T(c) void
+Convolve(const c& F, const c& G, c* H) {
+  i64 N = Size(F), M = Size(G);
+  i64 P = N + M - 1;
+  Resize(H, P);
+  for (i64 I = 0; I < P; ++I) {
+    using type = remove_cv_ref<decltype(F[0])>::type;
+    type Acc = 0;
+    i64 K = Min(N - 1, I);
+    i64 L = Max(i64(0), I - M + 1);
+    for (i64 J = L; J <= K; ++J)
+      Acc += F[J] * G[I - J];
+    (*H)[I] = Acc;
+  }
 }
 
 } // namespace mg

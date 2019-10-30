@@ -66,5 +66,11 @@ ConvertType(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);
 void
 ConvertType(const volume& SVol, volume* DVol);
 
+mg_T(t) f64 Norm(const t& Begin, const t& End);
+
+mg_T(c) void Upsample(const c& In, c* Out);
+
+mg_T(c) void Convolve(const c& F, const c& G, c* H);
 
 } // namespace mg
+

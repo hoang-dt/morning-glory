@@ -12,6 +12,12 @@ struct wavelet_block {
   bool IsPacked = false; // if the Volume stores data just for this block
 };
 
+struct wav_basis_norms {
+  array<f64> ScalNorms; // scaling function norms
+  array<f64> WaveNorms; // wavelet function norms
+};
+wav_basis_norms GetCdf53Norms(int NLevels);
+
 /* Normal lifting which uses mirroring at the boundary */
 mg_T(t) void FLiftCdf53OldX(t* F, const v3i& N, const v3i& L);
 mg_T(t) void FLiftCdf53OldY(t* F, const v3i& N, const v3i& L);

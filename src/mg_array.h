@@ -1,8 +1,10 @@
 #pragma once
 
 #include "mg_common.h"
+#include "mg_io.h"
 #include "mg_macros.h"
 #include "mg_memory.h"
+#include <initializer_list>
 
 namespace mg {
 
@@ -20,6 +22,7 @@ struct array {
   i64 Capacity = 0;
   allocator* Alloc = nullptr;
   array(allocator* Alloc = &Mallocator());
+  array(const std::initializer_list<t>& List, allocator* Alloc = &Mallocator());
   t& operator[](i64 Idx) const;
 };
 
@@ -42,6 +45,8 @@ mg_T(t) void Reserve(array<t>* Array, i64 Capacity);
 mg_T(t) void Clear(array<t>* Array);
 
 mg_T(t) void PushBack(array<t>* Array, const t& Item);
+
+mg_T(t) void Print(printer* Pr, const array<t>& Array);
 
 mg_T(t) void Dealloc(array<t>* Array);
 
