@@ -41,7 +41,7 @@ v3i InputDims_(384, 384, 256);
 dtype InputType_(dtype::float32);
 int NBitplanesDecode_[] = { 4, 8, 16, 32 };
 i64 TotalDecompressionTimeTzcntAvx2_[4] = {}; // tzcnt + avx2
-i64 TotalDecompressionTimeZfp_[4] = {}; 
+i64 TotalDecompressionTimeZfp_[4] = {};
 i64 TotalDecompressionTimeTzcnt_[4] = {}; // tzcnt
 i64 TotalDecompressionTimeAvx2_[4] = {}; // tzcnt
 
@@ -162,7 +162,7 @@ void TestZfpNewDecoderNew() {
   volume TileVolN(BufN, TileDims3, IntType(UnsignedType(TileVolQ.Type))); // negabinary
   buffer BufO; /*AllocBuf(&BufO, SizeOf(TileVolN.Type) * Prod(TileDims3));*/
   BufO.Data = (byte*)_mm_malloc(SizeOf(TileVolN.Type) * Prod(TileDims3), 32);
-  BufO.Bytes = SizeOf(TileVolN.Type) * Prod(TileDims3); 
+  BufO.Bytes = SizeOf(TileVolN.Type) * Prod(TileDims3);
   volume TileVolO(BufO, TileDims3, TileVolN.Type); // decompression output
   buffer BsBuf; AllocBuf(&BsBuf, Vol.Buffer.Bytes);
   bitstream Bs; InitWrite(&Bs, BsBuf);
@@ -336,7 +336,7 @@ void TestZfpNewDecoder() {
   volume TileVolN(BufN, TileDims3, IntType(UnsignedType(TileVolQ.Type))); // negabinary
   buffer BufO; /*AllocBuf(&BufO, SizeOf(TileVolN.Type) * Prod(TileDims3));*/
   BufO.Data = (byte*)_mm_malloc(SizeOf(TileVolN.Type) * Prod(TileDims3), 32);
-  BufO.Bytes = SizeOf(TileVolN.Type) * Prod(TileDims3); 
+  BufO.Bytes = SizeOf(TileVolN.Type) * Prod(TileDims3);
   volume TileVolO(BufO, TileDims3, TileVolN.Type); // decompression output
   buffer BsBuf; AllocBuf(&BsBuf, Vol.Buffer.Bytes);
   bitstream Bs; InitWrite(&Bs, BsBuf);
@@ -500,7 +500,7 @@ void TestZfpNewDecoder() {
 //  opj_end_compress(Compressor, Stream);
 //  opj_image_destroy(Image);
 //  opj_destroy_codec(Compressor);
-//  opj_stream_destroy(Stream);  
+//  opj_stream_destroy(Stream);
 //
 //  /* decode */
 //  opj_dparameters_t DParams;
@@ -1114,8 +1114,11 @@ int main(int Argc, const char** Argv) {
   volume DataOut; Resize(&DataOut, Dims(Vol), Vol.Type);
   v3i NBlocks = (N3 + BlockSize - 1) / BlockSize;
   array<extent> Subbands;
+  array<grid> SubbandsG;
   BuildSubbands(v3i(BlockSize), NLevels, &Subbands);
+  BuildSubbands(v3i(BlockSize), NLevels, &SubbandsG);
   mg_CleanUp(0, Dealloc(&Subbands));
+  mg_CleanUp(5, Dealloc(&SubbandsG));
   volume BlockVol; Resize(&BlockVol, v3i(BlockSize), Vol.Type);
   mg_CleanUp(1, Dealloc(&BlockVol));
   volume BackupVol; Resize(&BackupVol, Dims(BlockVol), BlockVol.Type);
@@ -1123,6 +1126,16 @@ int main(int Argc, const char** Argv) {
   volume WavBackupVol; Resize(&WavBackupVol, Dims(BlockVol), BlockVol.Type);
   mg_CleanUp(3, Dealloc(&WavBackupVol));
   i64 CoeffCount = 0;
+  // Write the block headers
+  FILE* Fp = fopen("blocks.raw", "wb");
+  //fwrite(&Vol.Type, sizeof(Vol.Type), 1, Fp); // TODO: here we assume the data type is always float
+  fwrite(&NBlocks.X, sizeof(NBlocks.X), 1, Fp); // number of blocks in each dimension
+  fwrite(&NBlocks.Y, sizeof(NBlocks.Y), 1, Fp);
+  fwrite(&NBlocks.Z, sizeof(NBlocks.Z), 1, Fp);
+  fwrite(&BlockSize, sizeof(BlockSize), 1, Fp);
+  auto BeginHeader = ftell(Fp);
+  array<u64> Headers; Init(&Headers, Prod(NBlocks));
+  fwrite(&Headers[0], Size(Headers) * sizeof(u64), 1, Fp);
   for (int BZ = 0; BZ < NBlocks.Z; ++BZ) {
     for (int BY = 0; BY < NBlocks.Y; ++BY) {
       for (int BX = 0; BX < NBlocks.X; ++BX) {
@@ -1154,8 +1167,8 @@ int main(int Argc, const char** Argv) {
             f64 Sz = (Lvl3.Z == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
             Score = Sx * Sy * Sz;
           }
-          for (auto It = Begin<f32>(Ext, WavBackupVol), It2 = Begin<f32>(Ext, BlockVol); 
-                    It != End<f32>(Ext, WavBackupVol); ++It, ++It2) 
+          for (auto It = Begin<f32>(Ext, WavBackupVol), It2 = Begin<f32>(Ext, BlockVol);
+                    It != End<f32>(Ext, WavBackupVol); ++It, ++It2)
           {
             f64 FinalScore = Score * fabs(*It);
             if (FinalScore >= NormThreshold) {
@@ -1165,20 +1178,52 @@ int main(int Argc, const char** Argv) {
             }
           }
         }
+        v3i Strd3O = Strd(SubbandsG[LastSb]);
+        v3i SbLvl3 = SubbandToLevel(3, LastSb, true);
+        v3i Denom3 = (1 << SbLvl3);
+        v3i Strd3 = Strd3O / Denom3;
+        v3i Dims3 = (Dims(BlockVol) + Strd3 - 1) / Strd3;
         Fill(Begin<i16>(BlockExtCrop, VolOut), End<i16>(BlockExtCrop, VolOut), i16(LastSb));
         //printf("Last sb = %d\n", LastSb);
+        // TODO: inverse to LastSb only
         for (int I = NLevels - 1; I >= 0; --I) {
           ILiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
           ILiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
           ILiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
         }
         Copy(Relative(BlockExtCrop, BlockExt), BlockVol, BlockExtCrop, &DataOut);
+        // file format:
+        // header for block 1
+        // header for block 2
+        // ...
+        // header for block n
+        // dx, dy, dz, data for block 1
+        // dx, dy, dz, data for block 2
+        // ...
+        // dx, dy, dz, data for block n
+        auto Where = ftell(Fp);
+        i64 BlockId = Row(NBlocks, v3i(BX, BY, BZ));
+        fseek(Fp, BeginHeader + BlockId * sizeof(u64), SEEK_SET);
+        fwrite(&Where, sizeof(Where), 1, Fp);
+        fseek(Fp, Where, SEEK_SET);
+        // TODO: don't need 32 bit for the dims
+        fwrite(&Dims3.X, sizeof(Dims3.X), 1, Fp);
+        fwrite(&Dims3.Y, sizeof(Dims3.Y), 1, Fp);
+        fwrite(&Dims3.Z, sizeof(Dims3.Z), 1, Fp);
+        for (int Z = 0; Z < Dims3.Z; ++Z) {
+        for (int Y = 0; Y < Dims3.Y; ++Y) {
+        for (int X = 0; X < Dims3.X; ++X) {
+          fwrite(&BlockVol.At<f32>(v3i(X, Y, Z) * Strd3), sizeof(f32), 1, Fp);
+          //fwrite(&BlockVol.At<f32>(v3i(X, Y, Z) * Strd3), sizeof(f32), 1, Fp2);
+        }}}
         //f64 Ps = PSNR(BackupVol, BlockVol);
       }
     }
   }
-  WriteBuffer("out.raw", VolOut.Buffer);
-  WriteBuffer("dataout.raw", DataOut.Buffer);
+  fclose(Fp);
+  //fclose(Fp2);
+  //WriteBuffer("out.raw", VolOut.Buffer);
+  //WriteBuffer("dataout.raw", DataOut.Buffer);
   printf("Coeff count = %lld\n", CoeffCount);
   //printf("psnr = %f\n", Ps);
   //WriteBuffer("vol.raw", Vol.Buffer);
