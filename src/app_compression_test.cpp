@@ -1097,6 +1097,39 @@ __m256i get_mask3(const uint32_t input) {
 #include <random>
 #include <limits>
 
+// TODO: use 64-bit integer for NBlocks
+void
+TestFileFormatWrite() {
+  v3i N3(384, 384, 256);
+  v3i BlockSize3(7);
+  v3i NBlocks3 = (N3 + BlockSize3 - 1) / BlockSize3;
+  int NLevels = 4;
+  /* perform wavelet transform per block, in Z order */
+  int NBlocks = Prod<i32>(NBlocks3);
+  u32 LastMorton = EncodeMorton3(NBlocks3.X - 1, NBlocks3.Y - 1, NBlocks3.Z - 1);
+  FILE* Fp = fopen("fast.txt", "w");
+  FILE* Fp2 = fopen("slow.txt", "w");
+  for (u32 BMorton = 0; BMorton <= LastMorton; ++BMorton) {
+    v3i B3(DecodeMorton3X(BMorton), DecodeMorton3Y(BMorton), DecodeMorton3Z(BMorton));
+    if (!(B3 < NBlocks3)) { // if block is outside the domain, skip to the next block
+      int B = Lsb(BMorton);
+      mg_Assert(B >= 0);
+      BMorton = (((BMorton >> (B + 1)) + 1) << (B + 1)) - 1;
+    } else {
+      fprintf(Fp, "%u\n", BMorton);
+      // printf("%u\n", BMorton);
+    }
+  }
+  for (u32 BMorton = 0; BMorton <= LastMorton; ++BMorton) {
+    v3i B3(DecodeMorton3X(BMorton), DecodeMorton3Y(BMorton), DecodeMorton3Z(BMorton));
+    if ((B3 < NBlocks3)) { // if block is outside the domain, skip to the next block
+      fprintf(Fp2, "%u\n", BMorton);
+    }
+  }
+  fclose(Fp);
+  fclose(Fp2);
+}
+
 void
 TestWaveletBlock() {
   int N = 256;
@@ -1167,7 +1200,8 @@ TestWaveletBlock() {
 }
 
 int main(int Argc, const char** Argv) {
-  TestWaveletBlock();
+  //TestWaveletBlock();
+  TestFileFormatWrite();
   return 0;
   /*  */
   // TODO: move this into a standalone app
