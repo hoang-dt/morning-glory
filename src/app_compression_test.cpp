@@ -1097,18 +1097,90 @@ __m256i get_mask3(const uint32_t input) {
 #include <random>
 #include <limits>
 
+void
+TestWaveletBlock() {
+  int N = 256;
+  FILE* Fp = fopen("func.txt", "w");
+  FILE* Fp2 = fopen("recon.txt", "w");
+  FILE* Fp3 = fopen("smooth.txt", "w");
+  array<f64> Arr; Init(&Arr, N);
+  for (int I = 0; I < Size(Arr); ++I) {
+    Arr[I] = cos(f64(I) / 4);
+    fprintf(Fp, "%f\n", Arr[I]);
+  }
+  int NLevels = 1;
+  int BlockSize = 32;
+  int NBlocks= (N + BlockSize - 1) / BlockSize;
+  /* Copy Arr to another array and extrapolate the last position */
+  array<f64> Arr2; Init(&Arr2, N + NBlocks);
+  for (int B = 0; B < NBlocks; ++B) {
+    for (int I = 0; I < BlockSize; ++I) {
+      Arr2[B * (BlockSize + 1) + I] = Arr[B * BlockSize + I];
+    }
+    Arr2[B * (BlockSize + 1) + (BlockSize)] = 2 * Arr[B * BlockSize + BlockSize - 1] - Arr[B * BlockSize + BlockSize - 2];
+  }
+  for (int B = 0; B < NBlocks; ++B) {
+    for (int I = 0; I < NLevels; ++I) {
+      FLiftCdf53OldX(&Arr[B * BlockSize], v3i(BlockSize, 1, 1), v3i(I));
+    }
+  }
+  array<extent> Subbands; BuildSubbands(v3i(BlockSize, 1, 1), NLevels, &Subbands);
+  extent Ext = Back(Subbands);
+  for (int B = 0; B < NBlocks; ++B) {
+    for (int X = From(Ext).X; X < To(Ext).X; ++X) {
+      Arr[B * BlockSize + X] = 0;
+    }
+  }
+  for (int B = 0; B < NBlocks; ++B) {
+    for (int I = NLevels - 1; I >= 0; --I) {
+      ILiftCdf53OldX(&Arr[B * BlockSize], v3i(BlockSize, 1, 1), v3i(I));
+    }
+  }
+  for (int I = 0; I < Size(Arr); ++I) {
+    fprintf(Fp2, "%f\n", Arr[I]);
+  }
+  for (int B = 0; B < NBlocks; ++B) {
+    for (int I = 0; I < NLevels; ++I) {
+      FLiftCdf53OldX(&Arr2[B * (BlockSize + 1)], v3i(BlockSize + 1, 1, 1), v3i(I));
+    }
+  }
+  array<extent> Subbands2; BuildSubbands(v3i(BlockSize + 1, 1, 1), NLevels, &Subbands2);
+  Ext = Back(Subbands2);
+  for (int B = 0; B < NBlocks; ++B) {
+    for (int X = From(Ext).X; X < To(Ext).X; ++X) {
+      Arr2[B * (BlockSize + 1) + X] = 0;
+    }
+  }
+  for (int B = 0; B < NBlocks; ++B) {
+    for (int I = NLevels - 1; I >= 0; --I) {
+      ILiftCdf53OldX(&Arr2[B * (BlockSize + 1)], v3i(BlockSize + 1, 1, 1), v3i(I));
+    }
+    for (int I = 0; I < BlockSize; ++I) {
+      fprintf(Fp3, "%f\n", Arr2[B * (BlockSize + 1) + I]);
+    }
+  }
+  Dealloc(&Arr);
+  Dealloc(&Arr2);
+  fclose(Fp);
+  fclose(Fp2);
+  fclose(Fp3);
+}
+
 int main(int Argc, const char** Argv) {
+  TestWaveletBlock();
+  return 0;
+  /*  */
   // TODO: move this into a standalone app
   // TODO: use memmap to read file
   // TODO: Write a adaptor for volume using memmap
-  v3i N3(512, 512, 512);
+  v3i N3(384, 384, 256);
   int NLevels = 4;
   int BlockSize = 32;
   f64 PsnrThreshold = 16;
-  f64 NormThreshold = 0.4;
+  f64 NormThreshold = 0.2;
   wav_basis_norms Wn = GetCdf53Norms(NLevels);
   volume Vol;
-  ReadVolume("D:/Datasets/3D/MAGNETIC-RECONNECTION-[512-512-512]-Float32.raw", N3, dtype::float32, &Vol);
+  ReadVolume("D:/Datasets/3D/Miranda/MIRANDA-DENSITY-[384-384-256]-Float32.raw", N3, dtype::float32, &Vol);
   mg_CleanUp(4, Dealloc(&Vol));
   volume VolOut; Resize(&VolOut, Dims(Vol), dtype::int16);
   volume DataOut; Resize(&DataOut, Dims(Vol), Vol.Type);
@@ -1133,9 +1205,6 @@ int main(int Argc, const char** Argv) {
   fwrite(&NBlocks.Y, sizeof(NBlocks.Y), 1, Fp);
   fwrite(&NBlocks.Z, sizeof(NBlocks.Z), 1, Fp);
   fwrite(&BlockSize, sizeof(BlockSize), 1, Fp);
-  auto BeginHeader = ftell(Fp);
-  array<u64> Headers; Init(&Headers, Prod(NBlocks));
-  fwrite(&Headers[0], Size(Headers) * sizeof(u64), 1, Fp);
   for (int BZ = 0; BZ < NBlocks.Z; ++BZ) {
     for (int BY = 0; BY < NBlocks.Y; ++BY) {
       for (int BX = 0; BX < NBlocks.X; ++BX) {
@@ -1178,11 +1247,17 @@ int main(int Argc, const char** Argv) {
             }
           }
         }
+        //LastSb = Size(Subbands) - 8;
         v3i Strd3O = Strd(SubbandsG[LastSb]);
         v3i SbLvl3 = SubbandToLevel(3, LastSb, true);
         v3i Denom3 = (1 << SbLvl3);
+        if (Denom3.X == 1)
+          Denom3.Y = Denom3.Z = 1;
+        if (Denom3.Y = 1)
+          Denom3.Z = 1;
         v3i Strd3 = Strd3O / Denom3;
         v3i Dims3 = (Dims(BlockVol) + Strd3 - 1) / Strd3;
+        printf("dims = %d %d %d\n", Dims3.X, Dims3.Y, Dims3.Z);
         Fill(Begin<i16>(BlockExtCrop, VolOut), End<i16>(BlockExtCrop, VolOut), i16(LastSb));
         //printf("Last sb = %d\n", LastSb);
         // TODO: inverse to LastSb only
@@ -1193,19 +1268,10 @@ int main(int Argc, const char** Argv) {
         }
         Copy(Relative(BlockExtCrop, BlockExt), BlockVol, BlockExtCrop, &DataOut);
         // file format:
-        // header for block 1
-        // header for block 2
-        // ...
-        // header for block n
         // dx, dy, dz, data for block 1
         // dx, dy, dz, data for block 2
         // ...
         // dx, dy, dz, data for block n
-        auto Where = ftell(Fp);
-        i64 BlockId = Row(NBlocks, v3i(BX, BY, BZ));
-        fseek(Fp, BeginHeader + BlockId * sizeof(u64), SEEK_SET);
-        fwrite(&Where, sizeof(Where), 1, Fp);
-        fseek(Fp, Where, SEEK_SET);
         // TODO: don't need 32 bit for the dims
         fwrite(&Dims3.X, sizeof(Dims3.X), 1, Fp);
         fwrite(&Dims3.Y, sizeof(Dims3.Y), 1, Fp);
@@ -1222,8 +1288,8 @@ int main(int Argc, const char** Argv) {
   }
   fclose(Fp);
   //fclose(Fp2);
-  //WriteBuffer("out.raw", VolOut.Buffer);
-  //WriteBuffer("dataout.raw", DataOut.Buffer);
+  WriteBuffer("out.raw", VolOut.Buffer);
+  WriteBuffer("dataout.raw", DataOut.Buffer);
   printf("Coeff count = %lld\n", CoeffCount);
   //printf("psnr = %f\n", Ps);
   //WriteBuffer("vol.raw", Vol.Buffer);
