@@ -1101,33 +1101,56 @@ __m256i get_mask3(const uint32_t input) {
 void
 TestFileFormatWrite() {
   v3i N3(384, 384, 256);
-  v3i BlockSize3(7);
+  v3i BlockSize3(32);
+  v3i BlockSizePlusOne3(BlockSize3 + 1);
   v3i NBlocks3 = (N3 + BlockSize3 - 1) / BlockSize3;
-  int NLevels = 4;
+  int NLevels = 4; // TODO: set this based on the block size
+  // TODO: check that the block size is a power of 2
+  volume Vol; // TODO: initialize this from a file or take a parameter
+  mg_CleanUp(Dealloc(&Vol)); // TODO: fix this macro to remove the first parameter
   /* perform wavelet transform per block, in Z order */
   int NBlocks = Prod<i32>(NBlocks3);
   u32 LastMorton = EncodeMorton3(NBlocks3.X - 1, NBlocks3.Y - 1, NBlocks3.Z - 1);
-  FILE* Fp = fopen("fast.txt", "w");
-  FILE* Fp2 = fopen("slow.txt", "w");
+  volume VolBlock; Resize(&VolBlock, BlockSizePlusOne3, Vol.Type);
+  mg_CleanUp(Dealloc(&VolBlock));
   for (u32 BMorton = 0; BMorton <= LastMorton; ++BMorton) {
     v3i B3(DecodeMorton3X(BMorton), DecodeMorton3Y(BMorton), DecodeMorton3Z(BMorton));
     if (!(B3 < NBlocks3)) { // if block is outside the domain, skip to the next block
       int B = Lsb(BMorton);
       mg_Assert(B >= 0);
       BMorton = (((BMorton >> (B + 1)) + 1) << (B + 1)) - 1;
-    } else {
-      fprintf(Fp, "%u\n", BMorton);
-      // printf("%u\n", BMorton);
+      continue;
+    }
+    /* copy data over to a local buffer and perform wavelet transform */
+    extent BlockExt(B3 * BlockSize3, BlockSize3);
+    extent BlockExtCrop = Crop(BlockExt, extent(N3));
+    extent BlockExtLocal = Relative(BlockExtCrop, BlockExt);
+    Copy(BlockExtCrop, Vol, BlockExtLocal, &VolBlock);
+    v3i D3 = Dims(BlockExtLocal); // Dims
+    v3i R3 = D3 + IsEven(D3);
+    v3i S3(1); // Strides
+    for (int L = 0; L < NLevels; ++L) {
+      // TODO: replace f64 with a template param
+      FLiftCdf53X<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
+      FLiftCdf53Y<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
+      FLiftCdf53Z<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
+      D3 = R3 / 2;
+      R3 = D3 + IsEven(D3);
+      S3 = S3 * 2;
+    }
+    for (int L = NLevels - 1; L >= 0; --L) {
+      ILiftCdf53Z<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
+      ILiftCdf53Y<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
+      ILiftCdf53X<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
+      D3 = D3 * 2 - IsOdd(D3);
+      R3 = D3 + IsEven(D3);
+      S3 = S3 / 2;
     }
   }
-  for (u32 BMorton = 0; BMorton <= LastMorton; ++BMorton) {
-    v3i B3(DecodeMorton3X(BMorton), DecodeMorton3Y(BMorton), DecodeMorton3Z(BMorton));
-    if ((B3 < NBlocks3)) { // if block is outside the domain, skip to the next block
-      fprintf(Fp2, "%u\n", BMorton);
-    }
-  }
-  fclose(Fp);
-  fclose(Fp2);
+  // TODO: first test that the inverse wavelet transform works
+  // TODO: then test that we can group coefficients across blocks, write to file, and read them back
+  // TODO: we should test that we can inverse transform to exactly the same data
+  // TODO: we should test that this works for all dims not multiples of 32
 }
 
 void

@@ -9,6 +9,19 @@
 /* Return the number of comma-separated arguments */
 #define mg_NumArgs(...) (mg::Count(#__VA_ARGS__, ',') + 1)
 
+#define mg_Expand(...) __VA_ARGS__
+/* Macro overloading feature support */
+#define mg_NumArgsUpTo6(...) mg_NumArgsHelper(0, ## __VA_ARGS__, 5,4,3,2,1,0)
+#define mg_NumArgsHelper(_0,_1,_2,_3,_4,_5,N,...) N
+#define mg_OverloadSelect(Name, Num) mg_Cat(Name ## _, Num)
+#define mg_MacroOverload(Name, ...) mg_OverloadSelect(Name, mg_NumArgsUpTo6(__VA_ARGS__))(__VA_ARGS__)
+// Examples:
+// #define FOO(...)       mg_MacroOverload(FOO, __VA_ARGS__)
+// #define FOO_0()        "Zero"
+// #define FOO_1(X)       "One"
+// #define FOO_2(X, Y)    "Two"
+// #define FOO_3(X, Y, Z) "Three"
+
 /* 2-level stringify */
 #define mg_Str(...) mg_StrHelper(__VA_ARGS__)
 #define mg_StrHelper(...) #__VA_ARGS__
@@ -55,7 +68,7 @@
   (Byte & 0x08 ? '1' : '0'),\
   (Byte & 0x04 ? '1' : '0'),\
   (Byte & 0x02 ? '1' : '0'),\
-  (Byte & 0x01 ? '1' : '0') 
+  (Byte & 0x01 ? '1' : '0')
 #define mg_BinaryByte64(Val)\
   mg_BinaryByte((Val) >> 56), mg_BinaryByte((Val) >> 48),\
   mg_BinaryByte((Val) >> 40), mg_BinaryByte((Val) >> 32), mg_BinaryByte((Val) >> 24),\

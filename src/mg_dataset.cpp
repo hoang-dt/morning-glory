@@ -24,7 +24,7 @@ ToString(const metadata& Meta) {
 }
 
 /* MIRANDA-DENSITY-[96-96-96]-Float64.raw */
-error<> 
+error<>
 ParseMeta(stref FilePath, metadata* Meta) {
   stref FileName = GetFileName(FilePath);
   char Type[8];
@@ -40,17 +40,17 @@ ParseMeta(stref FilePath, metadata* Meta) {
   return mg_Error(err_code::ParseFailed);
 }
 
-/* 
+/*
 file = MIRANDA-DENSITY-[96-96-96]-Float64.raw
 name = MIRANDA
 field = DATA
 dimensions = 96 96 96
 type = float64 */
-error<> 
+error<>
 ReadMeta(cstr FileName, metadata* Meta) {
   buffer Buf;
   error Ok = ReadFile(FileName, &Buf);
-  if (Ok.Code != err_code::NoError) 
+  if (Ok.Code != err_code::NoError)
     return Ok;
   mg_CleanUp(0, DeallocBuf(&Buf));
   stref Str((cstr)Buf.Data, (int)Buf.Bytes);
