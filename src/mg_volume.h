@@ -145,6 +145,8 @@ void Resize(volume* Vol, const v3i& Dims3);
 void Resize(volume* Vol, const v3i& Dims3, dtype Type);
 void Dealloc(volume* Vol);
 
+mg_T(t) error<> WriteVolume(FILE* Fp, const volume& Vol, const t& Grid);
+
 /* Copy a region of the first volume to a region of the second volume */
 mg_T(t) void Copy(const t& SGrid, const volume& SVol, volume* DVol);
 mg_TT(t1, t2) void Copy(const t1& SGrid, const volume& SVol, const t2& DGrid, volume* DVol);

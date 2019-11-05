@@ -18,6 +18,19 @@ ReadVolume(cstr FileName, const v3i& Dims3, dtype Type, volume* Volume) {
   return mg_Error(err_code::NoError);
 }
 
+mg_T(t) error<>
+WriteVolume(FILE* Fp, const volume& Vol, const t& Grid) {
+#define Body(type)\
+  for (auto It = Begin<type>(Grid, Vol); It != End<type>(Grid, Vol); ++It) {\
+    if (fwrite(&(*It), sizeof(*It), 1, Fp) != 1)\
+      return mg_Error(err_code::FileWriteFailed);\
+  }
+
+  mg_DispatchOnType(Vol.Type)
+  return mg_Error(err_code::NoError);
+#undef Body
+}
+
 void
 Resize(volume* Vol, const v3i& Dims3) {
   mg_Assert(Vol->Type != dtype::__Invalid__);
@@ -27,7 +40,7 @@ Resize(volume* Vol, const v3i& Dims3) {
   SetDims(Vol, Dims3);
 }
 
-void 
+void
 Resize(volume* Vol, const v3i& Dims3, dtype Type) {
   auto OldType = Vol->Type;
   Vol->Type = Type;

@@ -1104,7 +1104,7 @@ TestFileFormatWrite() {
   v3i BlockSize3(32);
   v3i BlockSizePlusOne3(BlockSize3 + 1);
   v3i NBlocks3 = (N3 + BlockSize3 - 1) / BlockSize3;
-  int NLevels = 1; // TODO: set this based on the block size
+  int NLevels = 4; // TODO: set this based on the block size
   // TODO: check that the block size is a power of 2
   volume Vol; // TODO: initialize this from a file or take a parameter
   ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[96-96-96]-Float64.raw", N3, dtype::float64, &Vol);
@@ -1116,6 +1116,15 @@ TestFileFormatWrite() {
   mg_CleanUp(Dealloc(&VolBlock));
   volume VolBlockBackup; Resize(&VolBlockBackup, Dims(VolBlock), VolBlock.Type);
   mg_CleanUp(Dealloc(&VolBlockBackup));
+  /* loop through the blocks in morton order */
+  FILE* Fp = fopen("file.wz0", "wb"); // version 0, everything in one file, no interleaving of bit planes
+  mg_CleanUp(if (Fp) fclose(Fp));
+  fwrite(&N3, sizeof(N3), 1, Fp); // overall dimensions
+  fwrite(&Vol.Type, sizeof(Vol.Type), 1, Fp); // data type
+  fwrite(&BlockSize3, sizeof(BlockSize3), 1, Fp); // block size
+  fwrite(&NLevels, sizeof(NLevels), 1, Fp); // number of levels
+  bool DoExtrapolation = true;
+  fwrite(&DoExtrapolation, sizeof(DoExtrapolation), 1, Fp); // whether the wavelet transform is done with extrapolation
   for (u32 BMorton = 0; BMorton <= LastMorton; ++BMorton) {
     v3i B3(DecodeMorton3X(BMorton), DecodeMorton3Y(BMorton), DecodeMorton3Z(BMorton));
     if (!(B3 < NBlocks3)) { // if block is outside the domain, skip to the next block
@@ -1144,18 +1153,23 @@ TestFileFormatWrite() {
       R3 = D3 + IsEven(D3);
       S3 = S3 * 2;
     }
-    for (int L = NLevels - 1; L >= 0; --L) {
-      S3 = S3 / 2;
-      ILiftCdf53Z<f64>(grid(v3i(0), Dims3Stack[L].Z, S3), BlockSize3, lift_option::Normal, &VolBlock);
-      ILiftCdf53Y<f64>(grid(v3i(0), Dims3Stack[L].Y, S3), BlockSize3, lift_option::Normal, &VolBlock);
-      ILiftCdf53X<f64>(grid(v3i(0), Dims3Stack[L].X, S3), BlockSize3, lift_option::Normal, &VolBlock);
-    }
-    f64 Ps = PSNR(BlockExtLocal, VolBlockBackup, BlockExtLocal, VolBlock);
-    printf("psnr = %f\n", Ps);
-  }
+    /* uncomment the below to test the inverse transform */
+    // for (int L = NLevels - 1; L >= 0; --L) {
+    //   S3 = S3 / 2;
+    //   ILiftCdf53Z<f64>(grid(v3i(0), Dims3Stack[L].Z, S3), BlockSize3, lift_option::Normal, &VolBlock);
+    //   ILiftCdf53Y<f64>(grid(v3i(0), Dims3Stack[L].Y, S3), BlockSize3, lift_option::Normal, &VolBlock);
+    //   ILiftCdf53X<f64>(grid(v3i(0), Dims3Stack[L].X, S3), BlockSize3, lift_option::Normal, &VolBlock);
+    // }
+    // f64 Ps = PSNR(BlockExtLocal, VolBlockBackup, BlockExtLocal, VolBlock);
+    // printf("psnr = %f\n", Ps);
+    // write all the coefficients out
+    WriteVolume(Fp, VolBlock, extent(VolBlock));
+  } // end block loop
+  fclose(Fp);
   // TODO: then test that we can group coefficients across blocks, write to file, and read them back
   // TODO: we should test that we can inverse transform to exactly the same data
   // TODO: we should test that this works for all dims not multiples of 32
+  // TODO: test the zfp compression to see how much more data we are saving compared to no extrapolation
 }
 
 void
@@ -1315,7 +1329,7 @@ int main(int Argc, const char** Argv) {
         v3i Denom3 = (1 << SbLvl3);
         if (Denom3.X == 1)
           Denom3.Y = Denom3.Z = 1;
-        if (Denom3.Y = 1)
+        if (Denom3.Y == 1)
           Denom3.Z = 1;
         v3i Strd3 = Strd3O / Denom3;
         v3i Dims3 = (Dims(BlockVol) + Strd3 - 1) / Strd3;
