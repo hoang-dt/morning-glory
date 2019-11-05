@@ -777,7 +777,7 @@ wav_grids ComputeWavGrids(
 // copy the existing values
 // TODO: visualize to test this function
 //void CopyWavs(
-//  const grid& WavGrid, const volume& WavVol, const grid& WrkGrid, volume* WrkVol) 
+//  const grid& WavGrid, const volume& WavVol, const grid& WrkGrid, volume* WrkVol)
 //{
 //
 //}

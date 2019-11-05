@@ -5,6 +5,7 @@
 #include "mg_bitops.h"
 #include "mg_math.h"
 #include "mg_memory.h"
+#include "mg_volume.h"
 //#include <stlab/concurrency/future.hpp>
 
 #define mg_RowX(x, y, z, N) i64(z) * N.X * N.Y + i64(y) * N.X + (x)
@@ -32,6 +33,7 @@ FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
       int yy = Min(y, M.y);\
       bool Ext = IsEven(D.x);\
       if (Ext) {\
+        mg_Assert(M.x < N.x);\
         t A = F[mg_Row##x(x2, yy, zz, N)]; /* 2nd last (even) */\
         t B = F[mg_Row##x(x1, yy, zz, N)]; /* last (odd) */\
         /* store the extrapolated value at the boundary position */\
@@ -66,6 +68,61 @@ FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
       }\
     }\
   }\
+}
+
+namespace mg {
+mg_T(t) void FLiftCdf53Z(const grid &Grid, const v3i &M, lift_option Opt,
+                         volume *Vol) {
+  v3i P = From(Grid), D = Dims(Grid), S = Strd(Grid), N = Dims(*Vol);
+  if (D.Z == 1)
+    return;
+  mg_Assert(M.Z <= N.Z);
+  mg_Assert(IsPow2(S.X) && IsPow2(S.Y) && IsPow2(S.Z));
+  mg_Assert(D.Z >= 2);
+  mg_Assert(IsEven(P.Z));
+  mg_Assert(P.Z + S.Z * (D.Z - 2) < M.Z);
+  buffer_t<t> F(Vol->Buffer);
+  int x1 = Min(P.Z + S.Z * (D.Z - 1), M.Z);
+  int x2 = P.Z + S.Z * (D.Z - 2);
+  int x3 = P.Z + S.Z * (D.Z - 3);
+  for (int Y = P.Y; Y < P.Y + S.Y * D.Y; Y += S.Y) {
+    int zz = Min(Y, M.Y);
+    for (int X = P.X; X < P.X + S.X * D.X; X += S.X) {
+      int yy = Min(X, M.X);
+      bool Ext = IsEven(D.Z);
+      if (Ext) {
+        t A = F[mg_RowZ(x2, yy, zz, N)];
+        t B = F[mg_RowZ(x1, yy, zz, N)];
+        F[mg_RowZ(M.Z, yy, zz, N)] = 2 * B - A;
+      }
+      for (int Z = P.Z + S.Z; Z < P.Z + S.Z * (D.Z - 2); Z += 2 * S.Z) {
+        t &Val = F[mg_RowZ(Z, yy, zz, N)];
+        Val -= F[mg_RowZ(Z - S.Z, yy, zz, N)] / 2;
+        Val -= F[mg_RowZ(Z + S.Z, yy, zz, N)] / 2;
+      }
+      if (!Ext) {
+        t &Val = F[mg_RowZ(x2, yy, zz, N)];
+        Val -= F[mg_RowZ(x1, yy, zz, N)] / 2;
+        Val -= F[mg_RowZ(x3, yy, zz, N)] / 2;
+      }
+      if (Opt != lift_option::NoUpdate) {
+        for (int Z = P.Z + S.Z; Z < P.Z + S.Z * (D.Z - 2); Z += 2 * S.Z) {
+          t Val = F[mg_RowZ(Z, yy, zz, N)];
+          F[mg_RowZ(Z - S.Z, yy, zz, N)] += Val / 4;
+          F[mg_RowZ(Z + S.Z, yy, zz, N)] += Val / 4;
+        }
+        if (!Ext) {
+          t Val = F[mg_RowZ(x2, yy, zz, N)];
+          F[mg_RowZ(x3, yy, zz, N)] += Val / 4;
+          if (Opt == lift_option::Normal)
+            F[mg_RowZ(x1, yy, zz, N)] += Val / 4;
+          else if (Opt == lift_option::PartialUpdateLast)
+            F[mg_RowZ(x1, yy, zz, N)] = Val / 4;
+        }
+      }
+    }
+  }
+}
 }
 
 // TODO: this function does not make use of PartialUpdateLast
@@ -280,7 +337,7 @@ DimsAtLevel(v3i N, int L) {
 
 mg_FLiftCdf53(Z, Y, X) // X forward lifting
 mg_FLiftCdf53(Z, X, Y) // Y forward lifting
-mg_FLiftCdf53(Y, X, Z) // Z forward lifting
+//mg_FLiftCdf53(Y, X, Z) // Z forward lifting
 
 mg_ILiftCdf53(Z, Y, X) // X inverse lifting
 mg_ILiftCdf53(Z, X, Y) // Y inverse lifting

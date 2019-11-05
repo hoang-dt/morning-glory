@@ -1100,19 +1100,22 @@ __m256i get_mask3(const uint32_t input) {
 // TODO: use 64-bit integer for NBlocks
 void
 TestFileFormatWrite() {
-  v3i N3(384, 384, 256);
+  v3i N3(96, 96, 96);
   v3i BlockSize3(32);
   v3i BlockSizePlusOne3(BlockSize3 + 1);
   v3i NBlocks3 = (N3 + BlockSize3 - 1) / BlockSize3;
-  int NLevels = 4; // TODO: set this based on the block size
+  int NLevels = 1; // TODO: set this based on the block size
   // TODO: check that the block size is a power of 2
   volume Vol; // TODO: initialize this from a file or take a parameter
+  ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[96-96-96]-Float64.raw", N3, dtype::float64, &Vol);
   mg_CleanUp(Dealloc(&Vol)); // TODO: fix this macro to remove the first parameter
   /* perform wavelet transform per block, in Z order */
   int NBlocks = Prod<i32>(NBlocks3);
   u32 LastMorton = EncodeMorton3(NBlocks3.X - 1, NBlocks3.Y - 1, NBlocks3.Z - 1);
   volume VolBlock; Resize(&VolBlock, BlockSizePlusOne3, Vol.Type);
   mg_CleanUp(Dealloc(&VolBlock));
+  volume VolBlockBackup; Resize(&VolBlockBackup, Dims(VolBlock), VolBlock.Type);
+  mg_CleanUp(Dealloc(&VolBlockBackup));
   for (u32 BMorton = 0; BMorton <= LastMorton; ++BMorton) {
     v3i B3(DecodeMorton3X(BMorton), DecodeMorton3Y(BMorton), DecodeMorton3Z(BMorton));
     if (!(B3 < NBlocks3)) { // if block is outside the domain, skip to the next block
@@ -1126,28 +1129,30 @@ TestFileFormatWrite() {
     extent BlockExtCrop = Crop(BlockExt, extent(N3));
     extent BlockExtLocal = Relative(BlockExtCrop, BlockExt);
     Copy(BlockExtCrop, Vol, BlockExtLocal, &VolBlock);
+    Clone(VolBlock, &VolBlockBackup);
     v3i D3 = Dims(BlockExtLocal); // Dims
     v3i R3 = D3 + IsEven(D3);
     v3i S3(1); // Strides
+    stack_array<v3<v3i>, 10> Dims3Stack; mg_Assert(NLevels < Size(Dims3Stack));
     for (int L = 0; L < NLevels; ++L) {
       // TODO: replace f64 with a template param
-      FLiftCdf53X<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
-      FLiftCdf53Y<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
-      FLiftCdf53Z<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
-      D3 = R3 / 2;
+      FLiftCdf53X<f64>(grid(v3i(0), v3i(D3.X, D3.Y, D3.Z), S3), BlockSize3, lift_option::Normal, &VolBlock);
+      FLiftCdf53Y<f64>(grid(v3i(0), v3i(R3.X, D3.Y, D3.Z), S3), BlockSize3, lift_option::Normal, &VolBlock);
+      FLiftCdf53Z<f64>(grid(v3i(0), v3i(R3.X, R3.Y, D3.Z), S3), BlockSize3, lift_option::Normal, &VolBlock);
+      Dims3Stack[L] = v3(v3i(D3.X, D3.Y, D3.Z), v3i(R3.X, D3.Y, D3.Z), v3i(R3.X, R3.Y, D3.Z));
+      D3 = (R3 + 1) / 2;
       R3 = D3 + IsEven(D3);
       S3 = S3 * 2;
     }
     for (int L = NLevels - 1; L >= 0; --L) {
-      ILiftCdf53Z<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
-      ILiftCdf53Y<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
-      ILiftCdf53X<f64>(grid(v3i(0), R3, S3), BlockSizePlusOne3, lift_option::Normal, &VolBlock);
-      D3 = D3 * 2 - IsOdd(D3);
-      R3 = D3 + IsEven(D3);
       S3 = S3 / 2;
+      ILiftCdf53Z<f64>(grid(v3i(0), Dims3Stack[L].Z, S3), BlockSize3, lift_option::Normal, &VolBlock);
+      ILiftCdf53Y<f64>(grid(v3i(0), Dims3Stack[L].Y, S3), BlockSize3, lift_option::Normal, &VolBlock);
+      ILiftCdf53X<f64>(grid(v3i(0), Dims3Stack[L].X, S3), BlockSize3, lift_option::Normal, &VolBlock);
     }
+    f64 Ps = PSNR(BlockExtLocal, VolBlockBackup, BlockExtLocal, VolBlock);
+    printf("psnr = %f\n", Ps);
   }
-  // TODO: first test that the inverse wavelet transform works
   // TODO: then test that we can group coefficients across blocks, write to file, and read them back
   // TODO: we should test that we can inverse transform to exactly the same data
   // TODO: we should test that this works for all dims not multiples of 32
