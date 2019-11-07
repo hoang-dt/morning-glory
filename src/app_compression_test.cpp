@@ -10,6 +10,7 @@
 #include "mg_bitops.h"
 #include "mg_bitstream.h"
 #include "mg_common.h"
+#include "mg_file_io_tracker.h"
 #include "mg_io.h"
 #include "mg_signal_processing.h"
 #include "mg_timer.h"
@@ -1162,7 +1163,7 @@ TestFileFormatWrite() {
     // }
     // f64 Ps = PSNR(BlockExtLocal, VolBlockBackup, BlockExtLocal, VolBlock);
     // printf("psnr = %f\n", Ps);
-    // write all the coefficients out
+    /* quantize the coefficients, and write a common exponent for all  */
     WriteVolume(Fp, VolBlock, extent(VolBlock));
   } // end block loop
   fclose(Fp);
@@ -1170,80 +1171,106 @@ TestFileFormatWrite() {
   // TODO: we should test that we can inverse transform to exactly the same data
   // TODO: we should test that this works for all dims not multiples of 32
   // TODO: test the zfp compression to see how much more data we are saving compared to no extrapolation
+  // TODO: measure the seek time and read time on my hard drives
+  // TODO: fit a curve between the read times and the number of bytes read (to extrapolate)
+  // TODO: write a point sampling routine for the mixed-resolution grid and compare extrapolation vs non-extrapolation
+  //       basically we want to show that extrapolation creates a "smooth" field
 }
 
 void
 TestWaveletBlock() {
-  int N = 256;
+  int N = 384;
   FILE* Fp = fopen("func.txt", "w");
   FILE* Fp2 = fopen("recon.txt", "w");
   FILE* Fp3 = fopen("smooth.txt", "w");
+  FILE* Fp4 = fopen("full.txt", "w");
   array<f64> Arr; Init(&Arr, N);
+  ReadFile("D:/Datasets/1D/MIRANDA-PRESSURE-[384]-Float64.raw", &Arr.Buffer);
   for (int I = 0; I < Size(Arr); ++I) {
-    Arr[I] = cos(f64(I) / 4);
+    // Arr[I] = cos(f64(I) / 4);
     fprintf(Fp, "%f\n", Arr[I]);
   }
-  int NLevels = 1;
+  int NLevels = 4;
   int BlockSize = 32;
+  int K = 3;
   int NBlocks= (N + BlockSize - 1) / BlockSize;
   /* Copy Arr to another array and extrapolate the last position */
   array<f64> Arr2; Init(&Arr2, N + NBlocks);
+  /* copy Arr to another array */
+  array<f64> Arr3; Clone(Arr, &Arr3);
   for (int B = 0; B < NBlocks; ++B) {
-    for (int I = 0; I < BlockSize; ++I) {
+    for (int I = 0; I < BlockSize; ++I)
       Arr2[B * (BlockSize + 1) + I] = Arr[B * BlockSize + I];
-    }
     Arr2[B * (BlockSize + 1) + (BlockSize)] = 2 * Arr[B * BlockSize + BlockSize - 1] - Arr[B * BlockSize + BlockSize - 2];
   }
-  for (int B = 0; B < NBlocks; ++B) {
-    for (int I = 0; I < NLevels; ++I) {
-      FLiftCdf53OldX(&Arr[B * BlockSize], v3i(BlockSize, 1, 1), v3i(I));
-    }
-  }
   array<extent> Subbands; BuildSubbands(v3i(BlockSize, 1, 1), NLevels, &Subbands);
-  extent Ext = Back(Subbands);
+  /* for each block */
   for (int B = 0; B < NBlocks; ++B) {
-    for (int X = From(Ext).X; X < To(Ext).X; ++X) {
-      Arr[B * BlockSize + X] = 0;
+    /* do forward transform */
+    v3i M(BlockSize, 1, 1);
+    for (int I = 0; I < NLevels; ++I)
+      FLiftCdf53OldX(&Arr[B * BlockSize], M, v3i(I));
+    /* set the last K subbands to 0 */
+    for (int J = 0; J < K; ++J) {
+      const extent& Ext = Subbands[Size(Subbands) - J - 1];
+      for (int X = From(Ext).X; X < To(Ext).X; ++X)
+        Arr[B * BlockSize + X] = 0;
     }
+    /* inverse transform to the finest level */
+    for (int I = NLevels - 1; I >= 0; --I)
+      ILiftCdf53OldX(&Arr[B * BlockSize], M, v3i(I));
+    for (int I = 0; I < BlockSize; ++I)
+      fprintf(Fp2, "%f\n", Arr[B * (BlockSize) + I]);
   }
+
+  /* do the same, but with extrapolation */
+  array<extent> SubbandsExt; BuildSubbands(v3i(BlockSize + 1, 1, 1), NLevels, &SubbandsExt);
   for (int B = 0; B < NBlocks; ++B) {
-    for (int I = NLevels - 1; I >= 0; --I) {
-      ILiftCdf53OldX(&Arr[B * BlockSize], v3i(BlockSize, 1, 1), v3i(I));
+    /* do forward transform */
+    v3i M(BlockSize + 1, 1, 1);
+    for (int I = 0; I < NLevels; ++I)
+      FLiftCdf53OldX(&Arr2[B * (BlockSize + 1)], M, v3i(I));
+    /* set the last K subbands to 0 */
+    for (int J = 0; J < K; ++J) {
+      const extent& Ext = SubbandsExt[Size(SubbandsExt) - J - 1];
+      for (int X = From(Ext).X; X < To(Ext).X; ++X)
+        Arr2[B * (BlockSize + 1) + X] = 0;
     }
-  }
-  for (int I = 0; I < Size(Arr); ++I) {
-    fprintf(Fp2, "%f\n", Arr[I]);
-  }
-  for (int B = 0; B < NBlocks; ++B) {
-    for (int I = 0; I < NLevels; ++I) {
-      FLiftCdf53OldX(&Arr2[B * (BlockSize + 1)], v3i(BlockSize + 1, 1, 1), v3i(I));
-    }
-  }
-  array<extent> Subbands2; BuildSubbands(v3i(BlockSize + 1, 1, 1), NLevels, &Subbands2);
-  Ext = Back(Subbands2);
-  for (int B = 0; B < NBlocks; ++B) {
-    for (int X = From(Ext).X; X < To(Ext).X; ++X) {
-      Arr2[B * (BlockSize + 1) + X] = 0;
-    }
-  }
-  for (int B = 0; B < NBlocks; ++B) {
-    for (int I = NLevels - 1; I >= 0; --I) {
-      ILiftCdf53OldX(&Arr2[B * (BlockSize + 1)], v3i(BlockSize + 1, 1, 1), v3i(I));
-    }
-    for (int I = 0; I < BlockSize; ++I) {
+    for (int I = NLevels - 1; I >= 0; --I)
+      ILiftCdf53OldX(&Arr2[B * (BlockSize + 1)], M, v3i(I));
+    for (int I = 0; I < BlockSize; ++I)
       fprintf(Fp3, "%f\n", Arr2[B * (BlockSize + 1) + I]);
-    }
   }
+
+  /* do the same but globally */
+  /* do forward transform */
+  for (int I = 0; I < NLevels; ++I)
+    FLiftCdf53OldX(&Arr3[0], v3i(N, 1, 1), v3i(I));
+  array<extent> SubbandsFull; BuildSubbands(v3i(N, 1, 1), NLevels, &SubbandsFull);
+  /* set the last K subbands to 0 */
+  for (int J = 0; J < K; ++J) {
+    const extent& Ext = SubbandsFull[Size(SubbandsFull) - J - 1];
+    for (int X = From(Ext).X; X < To(Ext).X; ++X)
+      Arr3[X] = 0;
+  }
+  for (int I = NLevels - 1; I >= 0; --I)
+    ILiftCdf53OldX(&Arr3[0], v3i(N, 1, 1), v3i(I));
+  for (int I = 0; I < N; ++I)
+    fprintf(Fp4, "%f\n", Arr3[I]);
+
+  /* clean up */
   Dealloc(&Arr);
   Dealloc(&Arr2);
+  Dealloc(&Arr3);
   fclose(Fp);
   fclose(Fp2);
   fclose(Fp3);
+  fclose(Fp4);
 }
 
 int main(int Argc, const char** Argv) {
-  //TestWaveletBlock();
-  TestFileFormatWrite();
+  TestWaveletBlock();
+  // TestFileFormatWrite();
   return 0;
   /*  */
   // TODO: move this into a standalone app
