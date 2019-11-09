@@ -12,9 +12,11 @@
 #include "mg_common.h"
 #include "mg_file_io_tracker.h"
 #include "mg_io.h"
+#include "mg_scopeguard.h"
 #include "mg_signal_processing.h"
 #include "mg_timer.h"
 #include "mg_volume.h"
+#include "mg_random.h"
 #include "mg_zfp.h"
 #include "mg_wavelet.h"
 #include "mg_all.cpp"
@@ -1177,8 +1179,12 @@ TestFileFormatWrite() {
   //       basically we want to show that extrapolation creates a "smooth" field
 }
 
+/* Downsample a 1D signal in three different ways: globally, by block, and by
+block with extrapolation. The signal is then upsampled (using wavelets) to the
+finest resolution to be compared with the original signal. The original signal
+can be either a cosine wave, or real data read from a file. */
 void
-TestWaveletBlock() {
+TestBlockBasedUpsampling() {
   int N = 384;
   FILE* Fp = fopen("func.txt", "w");
   FILE* Fp2 = fopen("recon.txt", "w");
@@ -1268,132 +1274,168 @@ TestWaveletBlock() {
   fclose(Fp4);
 }
 
-int main(int Argc, const char** Argv) {
-  TestWaveletBlock();
-  // TestFileFormatWrite();
-  return 0;
-  /*  */
+mg_T(t)
+struct MultiGridCompressed {
+  array<i64> Indices;
+  array<v3i> BlockRes3; // block resolutions
+  array<t> Samples;
+  v3i BlockSize3; // logical block size
+  v3i N3; // global dimensions
+};
+
+// mg_T(t) void
+// ReadMultiGrid(cstr* FileName, MultiGridCompressed<t>* Grid) {
+//   FILE* Fp = fopen(FileName, "rb");
+//   fread(&numBricks.x, sizeof(numBricks.x), 1, Fp);
+//   fread(&numBricks.y, sizeof(numBricks.y), 1, Fp);
+//   fread(&numBricks.z, sizeof(numBricks.z), 1, Fp);
+//   fread(&brickSize.x, sizeof(brickSize.x), 1, Fp);
+//   brickSize.z = brickSize.y = brickSize.x;
+//   indices.resize(numBricks.x * numBricks.y * numBricks.z);
+//   brickRes.resize(indices.size());
+//   for (size_t i = 0; i < indices.size(); ++i) {
+//     fread(&brickRes[i].x, sizeof(brickRes[i].x), 1, Fp);
+//     fread(&brickRes[i].y, sizeof(brickRes[i].y), 1, Fp);
+//     fread(&brickRes[i].z, sizeof(brickRes[i].z), 1, Fp);
+//     // printf("brick size %d %d %d\n", brickRes[i].x, brickRes[i].y, brickRes[i].z);
+//     indices[i] = samples.size();
+//     for (int j = 0; j < brickRes[i].x * brickRes[i].y * brickRes[i].z; ++j) {
+//       size_t k = indices[i] + j;
+//       float s;
+//       fread(&s, sizeof(s), 1, Fp);
+//       samples.push_back(s);
+//     }
+//   }
+//   fclose(Fp);
+// }
+
+void
+TestBlockBasedInterpolation() {
+
+}
+
+/* Generate the blocks at different resolutions (the set of wavelet coefficients
+is determined by the absolute values and their levels). The blocks are then
+written to a file to be read later. */
+mg_T(t) void
+TestBlockGeneration(cstr RawFile, dtype DType) {
+  if constexpr(is_same_type<t, f64>::Value)
+    mg_Assert(DType == dtype::float64);
+  if constexpr(is_same_type<t, f32>::Value)
+    mg_Assert(DType == dtype::float32);
   // TODO: move this into a standalone app
   // TODO: use memmap to read file
   // TODO: Write a adaptor for volume using memmap
   v3i N3(384, 384, 256);
   int NLevels = 4;
-  int BlockSize = 32;
-  f64 PsnrThreshold = 16;
+  v3i BlockSize3(32);
   f64 NormThreshold = 0.2;
   wav_basis_norms Wn = GetCdf53Norms(NLevels);
-  volume Vol;
-  ReadVolume("D:/Datasets/3D/Miranda/MIRANDA-DENSITY-[384-384-256]-Float32.raw", N3, dtype::float32, &Vol);
-  mg_CleanUp(4, Dealloc(&Vol));
-  volume VolOut; Resize(&VolOut, Dims(Vol), dtype::int16);
-  volume DataOut; Resize(&DataOut, Dims(Vol), Vol.Type);
-  v3i NBlocks = (N3 + BlockSize - 1) / BlockSize;
-  array<extent> Subbands;
-  array<grid> SubbandsG;
-  BuildSubbands(v3i(BlockSize), NLevels, &Subbands);
-  BuildSubbands(v3i(BlockSize), NLevels, &SubbandsG);
-  mg_CleanUp(0, Dealloc(&Subbands));
-  mg_CleanUp(5, Dealloc(&SubbandsG));
-  volume BlockVol; Resize(&BlockVol, v3i(BlockSize), Vol.Type);
-  mg_CleanUp(1, Dealloc(&BlockVol));
-  volume BackupVol; Resize(&BackupVol, Dims(BlockVol), BlockVol.Type);
-  mg_CleanUp(2, Dealloc(&BackupVol));
-  volume WavBackupVol; Resize(&WavBackupVol, Dims(BlockVol), BlockVol.Type);
-  mg_CleanUp(3, Dealloc(&WavBackupVol));
+  mg_RAII(volume, Vol, ReadVolume(RawFile, N3, DType, &Vol));
+  mg_RAII(volume, VolRefinement, Resize(&VolRefinement, Dims(Vol), dtype::int8));
+  mg_RAII(volume, DataOut, Resize(&DataOut, Dims(Vol), Vol.Type));
+  v3i NBlocks = (N3 + BlockSize3 - 1) / BlockSize3;
+  mg_RAII(array<extent>, Subbands, BuildSubbands(BlockSize3, NLevels, &Subbands));
+  mg_RAII(array<grid>, SubbandsG, BuildSubbands(BlockSize3, NLevels, &SubbandsG));
+  mg_RAII(volume, BlockVol, Resize(&BlockVol, BlockSize3, Vol.Type));
+  mg_RAII(volume, BackupVol, Resize(&BackupVol, Dims(BlockVol), BlockVol.Type));
+  mg_RAII(volume, WavBackupVol, Resize(&WavBackupVol, Dims(BlockVol), BlockVol.Type));
   i64 CoeffCount = 0;
   // Write the block headers
-  FILE* Fp = fopen("blocks.raw", "wb");
-  //fwrite(&Vol.Type, sizeof(Vol.Type), 1, Fp); // TODO: here we assume the data type is always float
-  fwrite(&NBlocks.X, sizeof(NBlocks.X), 1, Fp); // number of blocks in each dimension
-  fwrite(&NBlocks.Y, sizeof(NBlocks.Y), 1, Fp);
-  fwrite(&NBlocks.Z, sizeof(NBlocks.Z), 1, Fp);
-  fwrite(&BlockSize, sizeof(BlockSize), 1, Fp);
-  for (int BZ = 0; BZ < NBlocks.Z; ++BZ) {
-    for (int BY = 0; BY < NBlocks.Y; ++BY) {
-      for (int BX = 0; BX < NBlocks.X; ++BX) {
-        Fill(Begin<f32>(BlockVol), End<f32>(BlockVol), 0.0f);
-        extent BlockExt(v3i(BX, BY, BZ) * BlockSize, v3i(BlockSize));
-        extent BlockExtCrop = Crop(BlockExt, extent(N3));
-        Copy(BlockExtCrop, Vol, Relative(BlockExtCrop, BlockExt), &BlockVol);
-        Clone(BlockVol, &BackupVol);
-        for (int I = 0; I < NLevels; ++I) {
-          FLiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
-          FLiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
-          FLiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
+  mg_RAII(FILE*, Fp, Fp = fopen("blocks.raw", "wb"), if (Fp) fclose(Fp));
+  fwrite(&N3, sizeof(N3), 1, Fp); // write the global dimensions
+  fwrite(&Vol.Type, sizeof(Vol.Type), 1, Fp); // write data type
+  fwrite(&BlockSize3, sizeof(BlockSize3), 1, Fp); // write block size
+  v3i B3;
+  mg_BeginFor3(B3, v3i::Zero, NBlocks, v3i::One) {
+    Fill(Begin<t>(BlockVol), End<t>(BlockVol), t(0));
+    extent BlockExt(B3 * BlockSize3, BlockSize3);
+    extent BlockExtCrop = Crop(BlockExt, extent(N3));
+    Copy(BlockExtCrop, Vol, Relative(BlockExtCrop, BlockExt), &BlockVol);
+    Clone(BlockVol, &BackupVol);
+    // TODO: use the extrapolation version
+    for (int I = 0; I < NLevels; ++I) {
+      FLiftCdf53OldX((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+      FLiftCdf53OldY((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+      FLiftCdf53OldZ((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+    }
+    Clone(BlockVol, &WavBackupVol);
+    Fill(Begin<t>(BlockVol), End<t>(BlockVol), t(0));
+    /* go through each subband, compute the norm of wavelet coefficients x basis norm */
+    int LastSb = 0;
+    for (int I = 0; I < Size(Subbands); ++I) {
+      extent Ext = Subbands[I];
+      v3i Lvl3 = SubbandToLevel(3, I);
+      f64 Score = 0;
+      if (I == 0) {
+        Score = Wn.ScalNorms[NLevels - 1];
+        Score = Score * Score * Score;
+      } else {
+        int LMax = Max(Max(Lvl3.X, Lvl3.Y), Lvl3.Z);
+        f64 Sx = (Lvl3.X == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
+        f64 Sy = (Lvl3.Y == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
+        f64 Sz = (Lvl3.Z == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
+        Score = Sx * Sy * Sz;
+      }
+      for (auto It  = Begin<t>(Ext, WavBackupVol), It2 = Begin<t>(Ext, BlockVol);
+                It !=   End<t>(Ext, WavBackupVol); ++It, ++It2)
+      {
+        f64 FinalScore = Score * fabs(*It);
+        if (FinalScore >= NormThreshold) {
+          *It2 = *It;
+          LastSb = I;
+          ++CoeffCount;
         }
-        Clone(BlockVol, &WavBackupVol);
-        Fill(Begin<f32>(BlockVol), End<f32>(BlockVol), 0.0);
-        /* go through each subband, compute the norm of wavelet coefficients x basis norm */
-        int LastSb = 0;
-        for (int I = 0; I < Size(Subbands); ++I) {
-          extent Ext = Subbands[I];
-          v3i Lvl3 = SubbandToLevel(3, I);
-          f64 Score = 0;
-          if (I == 0) {
-            Score = Wn.ScalNorms[NLevels - 1];
-            Score = Score * Score * Score;
-          } else {
-            int LMax = Max(Max(Lvl3.X, Lvl3.Y), Lvl3.Z);
-            f64 Sx = (Lvl3.X == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
-            f64 Sy = (Lvl3.Y == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
-            f64 Sz = (Lvl3.Z == LMax) ? Wn.WaveNorms[NLevels - LMax] : Wn.ScalNorms[NLevels - LMax];
-            Score = Sx * Sy * Sz;
-          }
-          for (auto It = Begin<f32>(Ext, WavBackupVol), It2 = Begin<f32>(Ext, BlockVol);
-                    It != End<f32>(Ext, WavBackupVol); ++It, ++It2)
-          {
-            f64 FinalScore = Score * fabs(*It);
-            if (FinalScore >= NormThreshold) {
-              *It2 = *It;
-              LastSb = I;
-              ++CoeffCount;
-            }
-          }
-        }
-        //LastSb = Size(Subbands) - 8;
-        v3i Strd3O = Strd(SubbandsG[LastSb]);
-        v3i SbLvl3 = SubbandToLevel(3, LastSb, true);
-        v3i Denom3 = (1 << SbLvl3);
-        if (Denom3.X == 1)
-          Denom3.Y = Denom3.Z = 1;
-        if (Denom3.Y == 1)
-          Denom3.Z = 1;
-        v3i Strd3 = Strd3O / Denom3;
-        v3i Dims3 = (Dims(BlockVol) + Strd3 - 1) / Strd3;
-        printf("dims = %d %d %d\n", Dims3.X, Dims3.Y, Dims3.Z);
-        Fill(Begin<i16>(BlockExtCrop, VolOut), End<i16>(BlockExtCrop, VolOut), i16(LastSb));
-        //printf("Last sb = %d\n", LastSb);
-        // TODO: inverse to LastSb only
-        for (int I = NLevels - 1; I >= 0; --I) {
-          ILiftCdf53OldZ((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
-          ILiftCdf53OldY((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
-          ILiftCdf53OldX((f32*)BlockVol.Buffer.Data, v3i(BlockSize), v3i(I));
-        }
-        Copy(Relative(BlockExtCrop, BlockExt), BlockVol, BlockExtCrop, &DataOut);
-        // file format:
-        // dx, dy, dz, data for block 1
-        // dx, dy, dz, data for block 2
-        // ...
-        // dx, dy, dz, data for block n
-        // TODO: don't need 32 bit for the dims
-        fwrite(&Dims3.X, sizeof(Dims3.X), 1, Fp);
-        fwrite(&Dims3.Y, sizeof(Dims3.Y), 1, Fp);
-        fwrite(&Dims3.Z, sizeof(Dims3.Z), 1, Fp);
-        for (int Z = 0; Z < Dims3.Z; ++Z) {
-        for (int Y = 0; Y < Dims3.Y; ++Y) {
-        for (int X = 0; X < Dims3.X; ++X) {
-          fwrite(&BlockVol.At<f32>(v3i(X, Y, Z) * Strd3), sizeof(f32), 1, Fp);
-          //fwrite(&BlockVol.At<f32>(v3i(X, Y, Z) * Strd3), sizeof(f32), 1, Fp2);
-        }}}
-        //f64 Ps = PSNR(BackupVol, BlockVol);
       }
     }
-  }
-  fclose(Fp);
+    v3i Strd3O = Strd(SubbandsG[LastSb]);
+    v3i SbLvl3 = SubbandToLevel(NumDims(N3), LastSb, true);
+    v3i Denom3 = (1 << SbLvl3);
+    if (Denom3.X == 1) Denom3.Y = 1;
+    if (Denom3.Y == 1) Denom3.Z = 1;
+    v3i Strd3 = Strd3O / Denom3;
+    v3i Dims3 = (Dims(BlockVol) + Strd3 - 1) / Strd3;
+    printf("dims = %d %d %d\n", Dims3.X, Dims3.Y, Dims3.Z);
+    Fill(Begin<i8>(BlockExtCrop, VolRefinement), End<i8>(BlockExtCrop, VolRefinement), i8(LastSb));
+    //printf("Last sb = %d\n", LastSb);
+    // TODO: inverse to LastSb only
+    for (int I = NLevels - 1; I >= 0; --I) {
+      ILiftCdf53OldZ((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+      ILiftCdf53OldY((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+      ILiftCdf53OldX((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+    }
+    Copy(Relative(BlockExtCrop, BlockExt), BlockVol, BlockExtCrop, &DataOut);
+    // file format:
+    // dx, dy, dz, data for block 1
+    // dx, dy, dz, data for block 2
+    // ...
+    // dx, dy, dz, data for block n
+    // TODO: don't need 32 bit for the dims
+    fwrite(&Dims3.X, sizeof(Dims3.X), 1, Fp);
+    fwrite(&Dims3.Y, sizeof(Dims3.Y), 1, Fp);
+    fwrite(&Dims3.Z, sizeof(Dims3.Z), 1, Fp);
+    for (int Z = 0; Z < Dims3.Z; ++Z) {
+    for (int Y = 0; Y < Dims3.Y; ++Y) {
+    for (int X = 0; X < Dims3.X; ++X) {
+      fwrite(&BlockVol.At<f32>(v3i(X, Y, Z) * Strd3), sizeof(f32), 1, Fp);
+      //fwrite(&BlockVol.At<f32>(v3i(X, Y, Z) * Strd3), sizeof(f32), 1, Fp2);
+    }}}
+    //f64 Ps = PSNR(BackupVol, BlockVol);
+  } mg_EndFor3
   //fclose(Fp2);
-  WriteBuffer("out.raw", VolOut.Buffer);
+  WriteBuffer("refinement.raw", VolRefinement.Buffer);
   WriteBuffer("dataout.raw", DataOut.Buffer);
   printf("Coeff count = %lld\n", CoeffCount);
+}
+
+int main(int Argc, const char** Argv) {
+  //TestBlockBasedUpsampling();
+  //TestBlockGeneration<f64>("a.raw", dtype::float64);
+  pcg32 Pcg;
+  printf("%u\n", NextUInt(&Pcg));
+  printf("%f\n", NextFloat(&Pcg));
+  // TestFileFormatWrite();
+  /*  */
   //printf("psnr = %f\n", Ps);
   //WriteBuffer("vol.raw", Vol.Buffer);
   //WriteBuffer("wav.raw", WavBackupVol.Buffer);

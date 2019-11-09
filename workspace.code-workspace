@@ -16,6 +16,17 @@
             "mask",
             "negabinary",
             "rmse"
-        ]
+        ],
+        "files.associations": {
+            "random": "cpp",
+            "algorithm": "cpp",
+            "forward_list": "cpp",
+            "list": "cpp",
+            "memory": "cpp",
+            "vector": "cpp",
+            "xlocmon": "cpp",
+            "xlocnum": "cpp",
+            "xutility": "cpp"
+        }
     }
 }

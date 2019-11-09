@@ -19,7 +19,8 @@ mg_TT(i, t) i FindLast(i RevBeg, i RevEnd, const t& Val);
 mg_TT(t1, t2) bool Contains(const t1& Collection, const t2& Elem);
 mg_TT(i, f) i FindIf(i Beg, i End, const f& Pred);
 
-mg_T(t) void Swap(t* A, t* B);
+mg_T(t) constexpr void Swap(t* A, t* B);
+mg_T(it) constexpr void IterSwap(it A, it B);
 
 mg_TT(i, t) void Fill(i Beg, i End, const t& Val);
 

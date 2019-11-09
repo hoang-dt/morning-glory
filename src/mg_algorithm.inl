@@ -83,11 +83,16 @@ FindIf(i Beg, i End, const f& Pred) {
   return End;
 }
 
-mg_Ti(t) void
+mg_Ti(t) constexpr void
 Swap(t* A, t* mg_Restrict B) {
   t T = *A;
   *A = *B;
   *B = T;
+}
+
+mg_Ti(it) constexpr void
+IterSwap(it A, it B) {
+  Swap(&(*A), &(*B));
 }
 
 mg_TT(i, t) void

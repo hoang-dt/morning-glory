@@ -15,6 +15,10 @@ namespace mg {
 /* General purpose buffer for string-related operations */
 inline thread_local char ScratchBuf[1024];
 
+#define mg_RAII(...) mg_MacroOverload(mg_RAII, __VA_ARGS__)
+#define mg_RAII_3(Type, Var, Init) Type Var; mg_CleanUp_1(Dealloc(&Var)); Init;
+#define mg_RAII_4(Type, Var, Init, Clean) Type Var; mg_CleanUp_1(Clean); Init;
+
 /*
 Quickly declare a heap-allocated array (typed_buffer) which deallocates itself
 at the end of scope. */
