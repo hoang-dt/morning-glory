@@ -384,10 +384,13 @@ TestBlockGeneration2D(
   mg_RAII(volume, Vol, ReadVolume(RawFile, N3, DType, &Vol));
   mg_RAII(volume, VolRefinement, Resize(&VolRefinement, Dims(Vol), dtype::int8));
   mg_RAII(volume, DataOut, Resize(&DataOut, Dims(Vol), Vol.Type));
-  v3i NBlocks = (N3 + BlockSize3 - 1) / BlockSize3;
+  v3i NBlocks3 = (N3 + BlockSize3 - 1) / BlockSize3;
+  // mg_RAII(array<extent>, Subbands, BuildSubbands(BlockSize3 + v3i(1, 1, 0), NLevels, &Subbands));
+  // mg_RAII(array<grid>, SubbandsG, BuildSubbands(BlockSize3 + v3i(1, 1, 0), NLevels, &SubbandsG));
   mg_RAII(array<extent>, Subbands, BuildSubbands(BlockSize3, NLevels, &Subbands));
   mg_RAII(array<grid>, SubbandsG, BuildSubbands(BlockSize3, NLevels, &SubbandsG));
-  mg_RAII(volume, BlockVol, Resize(&BlockVol, BlockSize3 + 1, Vol.Type));
+  mg_RAII(volume, BlockVol, Resize(&BlockVol, BlockSize3, Vol.Type));
+  // mg_RAII(volume, BlockVol, Resize(&BlockVol, BlockSize3 + v3i(1, 1, 0), Vol.Type));
   mg_RAII(volume, BackupVol, Resize(&BackupVol, Dims(BlockVol), BlockVol.Type));
   mg_RAII(volume, WavBackupVol, Resize(&WavBackupVol, Dims(BlockVol), BlockVol.Type));
   i64 CoeffCount = 0;
@@ -397,7 +400,7 @@ TestBlockGeneration2D(
   fwrite(&Vol.Type, sizeof(Vol.Type), 1, Fp); // write data type
   fwrite(&BlockSize3, sizeof(BlockSize3), 1, Fp); // write block size
   v3i B3;
-  mg_BeginFor3(B3, v3i::Zero, NBlocks, v3i::One) {
+  mg_BeginFor3(B3, v3i::Zero, NBlocks3, v3i::One) {
     Fill(Begin<t>(BlockVol), End<t>(BlockVol), t(0));
     extent BlockExt(B3 * BlockSize3, BlockSize3);
     extent BlockExtCrop = Crop(BlockExt, extent(N3));
@@ -410,8 +413,10 @@ TestBlockGeneration2D(
     v3i S3(1); // Strides
     stack_array<v3<v3i>, 10> Dims3Stack; mg_Assert(NLevels < Size(Dims3Stack));
     for (int I = 0; I < NLevels; ++I) {
-      FLiftCdf53X<f64>(grid(v3i(0), v3i(D3.X, D3.Y, 1), S3), BlockSize3, lift_option::Normal, &BlockVol);
-      FLiftCdf53Y<f64>(grid(v3i(0), v3i(R3.X, D3.Y, 1), S3), BlockSize3, lift_option::Normal, &BlockVol);
+      FLiftCdf53OldX((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+      FLiftCdf53OldY((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+      //FLiftCdf53X<f64>(grid(v3i(0), v3i(D3.X, D3.Y, 1), S3), BlockSize3, lift_option::Normal, &BlockVol);
+      //FLiftCdf53Y<f64>(grid(v3i(0), v3i(R3.X, D3.Y, 1), S3), BlockSize3, lift_option::Normal, &BlockVol);
       Dims3Stack[I] = v3(v3i(D3.X, D3.Y, 1), v3i(R3.X, D3.Y, 1), v3i(R3.X, R3.Y, 1));
       D3 = (R3 + 1) / 2;
       R3 = D3 + IsEven(D3);
@@ -421,8 +426,8 @@ TestBlockGeneration2D(
     Fill(Begin<t>(BlockVol), End<t>(BlockVol), t(0));
     /* go through each subband, compute the norm of wavelet coefficients x basis norm */
     int LastSb = 0;
-    for (int I = 0; I < Size(Subbands); ++I) {
-      extent Ext = Subbands[I];
+    for (int I = 0; I < Size(SubbandsG); ++I) {
+      auto Ext = SubbandsG[I];
       v3i Lvl3 = SubbandToLevel(2, I);
       f64 Score = 0;
       if (I == 0) {
@@ -461,8 +466,10 @@ TestBlockGeneration2D(
     /* inverse transform to reconstruct the block */
     for (int I = NLevels - 1; I >= 0; --I) {
       S3 = S3 / 2;
-      ILiftCdf53Y<f64>(grid(v3i(0), Dims3Stack[I].Y, S3), BlockSize3, lift_option::Normal, &BlockVol);
-      ILiftCdf53X<f64>(grid(v3i(0), Dims3Stack[I].X, S3), BlockSize3, lift_option::Normal, &BlockVol);
+      ILiftCdf53OldY((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+      ILiftCdf53OldX((t*)BlockVol.Buffer.Data, BlockSize3, v3i(I));
+      // ILiftCdf53Y<f64>(grid(v3i(0), Dims3Stack[I].Y, S3), BlockSize3, lift_option::Normal, &BlockVol);
+      // ILiftCdf53X<f64>(grid(v3i(0), Dims3Stack[I].X, S3), BlockSize3, lift_option::Normal, &BlockVol);
     }
     Copy(Relative(BlockExtCrop, BlockExt), BlockVol, BlockExtCrop, &DataOut);
     // file format:
@@ -490,7 +497,7 @@ int main() {
   v3i N3(384, 384, 1);
   int NLevels = 4;
   v3i BlockSize3(32, 32, 1);
-  f64 NormThreshold = 0.4;
+  f64 NormThreshold = 0.2;
   TestBlockGeneration2D<f64>(
     RawFile, N3, dtype::float64, BlockSize3, NLevels, NormThreshold);
   return 0;
