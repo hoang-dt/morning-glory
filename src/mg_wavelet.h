@@ -25,6 +25,13 @@ mg_T(t) void FLiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
 mg_T(t) void ILiftCdf53OldX(t* F, const v3i& N, const v3i& L);
 mg_T(t) void ILiftCdf53OldY(t* F, const v3i& N, const v3i& L);
 mg_T(t) void ILiftCdf53OldZ(t* F, const v3i& N, const v3i& L);
+/* Do constant extrapolation (the last value is extrapolated if the signal is odd-length) */
+mg_T(t) void FLiftCdf53ConstX(t* F, const v3i& N, const v3i& L);
+mg_T(t) void FLiftCdf53ConstY(t* F, const v3i& N, const v3i& L);
+mg_T(t) void FLiftCdf53ConstZ(t* F, const v3i& N, const v3i& L);
+mg_T(t) void ILiftCdf53ConstX(t* F, const v3i& N, const v3i& L);
+mg_T(t) void ILiftCdf53ConstY(t* F, const v3i& N, const v3i& L);
+mg_T(t) void ILiftCdf53ConstZ(t* F, const v3i& N, const v3i& L);
 
 /* New set of lifting functions. We assume the volume where we want to transform
 to happen (M) is contained within a bigger volume (Vol). When Dims(Grid) is even,

@@ -1215,6 +1215,7 @@ TestBlockBasedUpsampling() {
     /* do forward transform */
     v3i M(BlockSize, 1, 1);
     for (int I = 0; I < NLevels; ++I)
+      // FLiftCdf53ConstX(&Arr[B * BlockSize], M, v3i(I));
       FLiftCdf53OldX(&Arr[B * BlockSize], M, v3i(I));
     /* set the last K subbands to 0 */
     for (int J = 0; J < K; ++J) {
@@ -1224,6 +1225,7 @@ TestBlockBasedUpsampling() {
     }
     /* inverse transform to the finest level */
     for (int I = NLevels - 1; I >= 0; --I)
+      //ILiftCdf53ConstX(&Arr[B * BlockSize], M, v3i(I));
       ILiftCdf53OldX(&Arr[B * BlockSize], M, v3i(I));
     for (int I = 0; I < BlockSize; ++I)
       fprintf(Fp2, "%f\n", Arr[B * (BlockSize) + I]);
@@ -1275,39 +1277,44 @@ TestBlockBasedUpsampling() {
 }
 
 mg_T(t)
-struct MultiGridCompressed {
+struct MixedResGrids {
   array<i64> Indices;
   array<v3i> BlockRes3; // block resolutions
   array<t> Samples;
   v3i BlockSize3; // logical block size
   v3i N3; // global dimensions
+  dtype DType;
+
+  /* Evaluate the function at a point */
+  mg_T(t) t&
+  At(const v3d& Pos) const {
+    // TODO: find the primary block
+    // TODO: any neighbor can be missing (primary block is at the boundary)
+    // TODO: the point can be between 2 blocks (primary and a neighbor)
+    // TODO: the point can be between 3 blocks (primary and two neighbors)
+    // TODO: the point can be between 4 blocks (primary and three neighbors)
+  }
 };
 
-// mg_T(t) void
-// ReadMultiGrid(cstr* FileName, MultiGridCompressed<t>* Grid) {
-//   FILE* Fp = fopen(FileName, "rb");
-//   fread(&numBricks.x, sizeof(numBricks.x), 1, Fp);
-//   fread(&numBricks.y, sizeof(numBricks.y), 1, Fp);
-//   fread(&numBricks.z, sizeof(numBricks.z), 1, Fp);
-//   fread(&brickSize.x, sizeof(brickSize.x), 1, Fp);
-//   brickSize.z = brickSize.y = brickSize.x;
-//   indices.resize(numBricks.x * numBricks.y * numBricks.z);
-//   brickRes.resize(indices.size());
-//   for (size_t i = 0; i < indices.size(); ++i) {
-//     fread(&brickRes[i].x, sizeof(brickRes[i].x), 1, Fp);
-//     fread(&brickRes[i].y, sizeof(brickRes[i].y), 1, Fp);
-//     fread(&brickRes[i].z, sizeof(brickRes[i].z), 1, Fp);
-//     // printf("brick size %d %d %d\n", brickRes[i].x, brickRes[i].y, brickRes[i].z);
-//     indices[i] = samples.size();
-//     for (int j = 0; j < brickRes[i].x * brickRes[i].y * brickRes[i].z; ++j) {
-//       size_t k = indices[i] + j;
-//       float s;
-//       fread(&s, sizeof(s), 1, Fp);
-//       samples.push_back(s);
-//     }
-//   }
-//   fclose(Fp);
-// }
+mg_T(t) void
+ReadMultiGrid(cstr* FileName, MixedResGrids<t>* Grid) {
+  FILE* Fp = fopen(FileName, "rb");
+  fread(&Grid->N3, sizeof(Grid->N3), 1, Fp);
+  fread(&Grid->DType, sizeof(Grid->DType), 1, Fp);
+  fread(&Grid->BlockSize3, sizeof(Grid->BlockSize3), 1, Fp);
+  v3i NBlocks3 = (N3 + BlockSize3 - 1) / BlockSize3;
+  Resize(&Indices, Prod<i64>(NBlocks3));
+  Resize(&BlockRes3, Size(Indices));
+  for (i64 I = 0; I < Size(Indices); ++I) {
+    fread(&Grid->BlockRes[I], sizeof(Grid->BlockRes[I]), 1, Fp);
+    Indices[I] = Size(Grid->Samples);
+    for (int J = 0; J < Prod(Grid->BlockRes[I]); ++J) {
+      t S; fread(&S, sizeof(S), 1, Fp);
+      PushBack(&Samples, S);
+    }
+  }
+  fclose(Fp);
+}
 
 void
 TestBlockBasedInterpolation() {
@@ -1417,8 +1424,7 @@ TestBlockGeneration(cstr RawFile, dtype DType) {
     for (int Z = 0; Z < Dims3.Z; ++Z) {
     for (int Y = 0; Y < Dims3.Y; ++Y) {
     for (int X = 0; X < Dims3.X; ++X) {
-      fwrite(&BlockVol.At<f32>(v3i(X, Y, Z) * Strd3), sizeof(f32), 1, Fp);
-      //fwrite(&BlockVol.At<f32>(v3i(X, Y, Z) * Strd3), sizeof(f32), 1, Fp2);
+      fwrite(&BlockVol.At<t>(v3i(X, Y, Z) * Strd3), sizeof(t), 1, Fp);
     }}}
     //f64 Ps = PSNR(BackupVol, BlockVol);
   } mg_EndFor3
@@ -1429,8 +1435,8 @@ TestBlockGeneration(cstr RawFile, dtype DType) {
 }
 
 int main(int Argc, const char** Argv) {
-  //TestBlockBasedUpsampling();
-  //TestBlockGeneration<f64>("a.raw", dtype::float64);
+  TestBlockBasedUpsampling();
+  // TestBlockGeneration<f64>("a.raw", dtype::float64);
   pcg32 Pcg;
   printf("%u\n", NextUInt(&Pcg));
   printf("%f\n", NextFloat(&Pcg));
@@ -1473,4 +1479,3 @@ int main(int Argc, const char** Argv) {
   //TestZfp(Vol, NLevels, Meta, TileDims3, Tolerance);
   //TestLz4(VolCopy, NLevels, Meta, TileDims3, Tolerance);
 }
-

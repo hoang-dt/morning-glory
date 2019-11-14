@@ -70,61 +70,6 @@ FLiftCdf53##x(const grid& Grid, const v3i& M, lift_option Opt, volume* Vol) {\
   }\
 }
 
-namespace mg {
-mg_T(t) void FLiftCdf53Z(const grid &Grid, const v3i &M, lift_option Opt,
-                         volume *Vol) {
-  v3i P = From(Grid), D = Dims(Grid), S = Strd(Grid), N = Dims(*Vol);
-  if (D.Z == 1)
-    return;
-  mg_Assert(M.Z <= N.Z);
-  mg_Assert(IsPow2(S.X) && IsPow2(S.Y) && IsPow2(S.Z));
-  mg_Assert(D.Z >= 2);
-  mg_Assert(IsEven(P.Z));
-  mg_Assert(P.Z + S.Z * (D.Z - 2) < M.Z);
-  buffer_t<t> F(Vol->Buffer);
-  int x1 = Min(P.Z + S.Z * (D.Z - 1), M.Z);
-  int x2 = P.Z + S.Z * (D.Z - 2);
-  int x3 = P.Z + S.Z * (D.Z - 3);
-  for (int Y = P.Y; Y < P.Y + S.Y * D.Y; Y += S.Y) {
-    int zz = Min(Y, M.Y);
-    for (int X = P.X; X < P.X + S.X * D.X; X += S.X) {
-      int yy = Min(X, M.X);
-      bool Ext = IsEven(D.Z);
-      if (Ext) {
-        t A = F[mg_RowZ(x2, yy, zz, N)];
-        t B = F[mg_RowZ(x1, yy, zz, N)];
-        F[mg_RowZ(M.Z, yy, zz, N)] = 2 * B - A;
-      }
-      for (int Z = P.Z + S.Z; Z < P.Z + S.Z * (D.Z - 2); Z += 2 * S.Z) {
-        t &Val = F[mg_RowZ(Z, yy, zz, N)];
-        Val -= F[mg_RowZ(Z - S.Z, yy, zz, N)] / 2;
-        Val -= F[mg_RowZ(Z + S.Z, yy, zz, N)] / 2;
-      }
-      if (!Ext) {
-        t &Val = F[mg_RowZ(x2, yy, zz, N)];
-        Val -= F[mg_RowZ(x1, yy, zz, N)] / 2;
-        Val -= F[mg_RowZ(x3, yy, zz, N)] / 2;
-      }
-      if (Opt != lift_option::NoUpdate) {
-        for (int Z = P.Z + S.Z; Z < P.Z + S.Z * (D.Z - 2); Z += 2 * S.Z) {
-          t Val = F[mg_RowZ(Z, yy, zz, N)];
-          F[mg_RowZ(Z - S.Z, yy, zz, N)] += Val / 4;
-          F[mg_RowZ(Z + S.Z, yy, zz, N)] += Val / 4;
-        }
-        if (!Ext) {
-          t Val = F[mg_RowZ(x2, yy, zz, N)];
-          F[mg_RowZ(x3, yy, zz, N)] += Val / 4;
-          if (Opt == lift_option::Normal)
-            F[mg_RowZ(x1, yy, zz, N)] += Val / 4;
-          else if (Opt == lift_option::PartialUpdateLast)
-            F[mg_RowZ(x1, yy, zz, N)] = Val / 4;
-        }
-      }
-    }
-  }
-}
-}
-
 // TODO: this function does not make use of PartialUpdateLast
 #define mg_ILiftCdf53(z, y, x)\
 mg_T(t) void \
@@ -265,6 +210,94 @@ ILiftCdf53Old##x(t* F, const v3i& N, const v3i& L) {\
   }}}\
 }
 
+#define mg_FLiftCdf53Const(z, y, x)\
+mg_T(t) void \
+FLiftCdf53Const##x(t* F, const v3i& N, const v3i& L) {\
+  v3i P(1 << L.X, 1 << L.Y, 1 << L.Z);\
+  v3i M = (N + P - 1) / P;\
+  if (M.x <= 1)\
+    return;\
+  _Pragma("omp parallel for collapse(2)")\
+  for (int z = 0; z < M.z; ++z   ) {\
+  for (int y = 0; y < M.y; ++y   ) {\
+  for (int x = 1; x < M.x; x += 2) {\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x;\
+    t & Val = F[mg_Row##x(x, y, z, N)];\
+    Val -= (F[mg_Row##x(XLeft , y, z, N)] + F[mg_Row##x(XRight , y, z, N)]) / 2;\
+  }}}\
+  _Pragma("omp parallel for collapse(2)")\
+  for (int z = 0; z < M.z; ++z   ) {\
+  for (int y = 0; y < M.y; ++y   ) {\
+  for (int x = 1; x < M.x; x += 2) {\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
+    t Val = F[mg_Row##x(x, y, z, N)];\
+    F[mg_Row##x(XLeft, y, z, N)] += Val / 4;\
+    F[mg_Row##x(XRight, y, z, N)] += Val / 4;\
+  }}}\
+  mg_MallocArray(Temp, t, M.x / 2);\
+  int S##x = (M.x + 1) / 2;\
+  for (int z = 0; z < M.z; ++z) {\
+  for (int y = 0; y < M.y; ++y) {\
+    for (int x = 1; x < M.x; x += 2) {\
+      Temp[x / 2] = F[mg_Row##x(x    , y, z, N)];\
+      F[mg_Row##x(x / 2, y, z, N)] = F[mg_Row##x(x - 1, y, z, N)];\
+    }\
+    if (IsOdd(M.x))\
+      F[mg_Row##x(M.x / 2, y, z, N)] = F[mg_Row##x(M.x - 1, y, z, N)];\
+    for (int x = 0; x < (M.x / 2); ++x)\
+      F[mg_Row##x(S##x + x, y, z, N)] = Temp[x];\
+  }}\
+}
+
+// TODO: merge two loops
+#define mg_ILiftCdf53Const(z, y, x)\
+mg_T(t) void \
+ILiftCdf53Const##x(t* F, const v3i& N, const v3i& L) {\
+  v3i P(1 << L.X, 1 << L.Y, 1 << L.Z);\
+  v3i M = (N + P - 1) / P;\
+  if (M.x <= 1)\
+    return;\
+  mg_MallocArray(Temp, t, M.x / 2);\
+  int S##x = (M.x + 1) >> 1;\
+  for (int z = 0; z < M.z; ++z) {\
+  for (int y = 0; y < M.y; ++y) {\
+    for (int x = 0; x < (M.x / 2); ++x)\
+      Temp[x] = F[mg_Row##x(S##x + x, y, z, N)];\
+    if (IsOdd(M.x))\
+      F[mg_Row##x(M.x - 1, y, z, N)] = F[mg_Row##x(M.x >> 1, y, z, N)];\
+    for (int x = (M.x / 2) * 2 - 1; x >= 1; x -= 2) {\
+      F[mg_Row##x(x - 1, y, z, N)] = F[mg_Row##x(x >> 1, y, z, N)];\
+      F[mg_Row##x(x    , y, z, N)] = Temp[x / 2];\
+    }\
+  }}\
+  _Pragma("omp parallel for collapse(2)")\
+  for (int z = 0; z < M.z; ++z   ) {\
+  for (int y = 0; y < M.y; ++y   ) {\
+  for (int x = 1; x < M.x; x += 2) {\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x - 1;\
+    t Val = F[mg_Row##x(x, y, z, N)];\
+    F[mg_Row##x(XLeft , y, z, N)] -= Val / 4;\
+    F[mg_Row##x(XRight, y, z, N)] -= Val / 4;\
+  }}}\
+  _Pragma("omp parallel for collapse(2)")\
+  for (int z = 0; z < M.z; ++z   ) {\
+  for (int y = 0; y < M.y; ++y   ) {\
+  for (int x = 1; x < M.x; x += 2) {\
+    int XLeft = x - 1;\
+    int XRight = x < M.x - 1 ? x + 1 : x;\
+    t & Val = F[mg_Row##x(x, y, z, N)];\
+    if (x < M.x - 1) {\
+      Val += F[mg_Row##x(XLeft , y, z, N)] / 2;\
+      Val += F[mg_Row##x(XRight, y, z, N)] / 2;\
+    } else {\
+      Val += F[mg_Row##x(XLeft , y, z, N)] + F[mg_Row##x(XRight, y, z, N)];\
+    }\
+  }}}\
+}
+
 #define mg_FLiftExtCdf53(z, y, x)\
 mg_T(t) void \
 FLiftExtCdf53##x(t* F, const v3i& N, const v3i& NBig, const v3i& L) {\
@@ -337,8 +370,7 @@ DimsAtLevel(v3i N, int L) {
 
 mg_FLiftCdf53(Z, Y, X) // X forward lifting
 mg_FLiftCdf53(Z, X, Y) // Y forward lifting
-//mg_FLiftCdf53(Y, X, Z) // Z forward lifting
-
+mg_FLiftCdf53(Y, X, Z) // Z forward lifting
 mg_ILiftCdf53(Z, Y, X) // X inverse lifting
 mg_ILiftCdf53(Z, X, Y) // Y inverse lifting
 mg_ILiftCdf53(Y, X, Z) // Z inverse lifting
@@ -346,15 +378,20 @@ mg_ILiftCdf53(Y, X, Z) // Z inverse lifting
 mg_FLiftCdf53Old(Z, Y, X) // X forward lifting
 mg_FLiftCdf53Old(Z, X, Y) // Y forward lifting
 mg_FLiftCdf53Old(Y, X, Z) // Z forward lifting
-
 mg_ILiftCdf53Old(Z, Y, X) // X inverse lifting
 mg_ILiftCdf53Old(Z, X, Y) // Y inverse lifting
 mg_ILiftCdf53Old(Y, X, Z) // Z inverse lifting
 
+mg_FLiftCdf53Const(Z, Y, X) // X forward lifting
+mg_FLiftCdf53Const(Z, X, Y) // Y forward lifting
+mg_FLiftCdf53Const(Y, X, Z) // Z forward lifting
+mg_ILiftCdf53Const(Z, Y, X) // X inverse lifting
+mg_ILiftCdf53Const(Z, X, Y) // Y inverse lifting
+mg_ILiftCdf53Const(Y, X, Z) // Z inverse lifting
+
 mg_FLiftExtCdf53(Z, Y, X) // X forward lifting
 mg_FLiftExtCdf53(Z, X, Y) // Y forward lifting
 mg_FLiftExtCdf53(Y, X, Z) // Z forward lifting
-
 mg_ILiftExtCdf53(Z, Y, X) // X forward lifting
 mg_ILiftExtCdf53(Z, X, Y) // Y forward lifting
 mg_ILiftExtCdf53(Y, X, Z) // Z forward lifting
