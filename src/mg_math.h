@@ -79,7 +79,13 @@ i64 NextPow2(i64 Val);
 
 int GeometricSum(int Base, int N);
 
-mg_T(t) t Lerp(t V1, t V2, f64 T);
+mg_T(t) t Lerp(t V0, t V1, f64 T);
+// bilinear interpolation
+mg_T(t) t BiLerp(t V00, t V10, t V01, t V11, const v2d& T);
+// trilinear interpolation
+mg_T(t) t TriLerp(
+  t V000, t V100, t V010, t V110, t V001,
+  t V101, t V011, t V111, const v3d& T);
 
 } // namespace mg
 

@@ -147,11 +147,11 @@ mg_Ti(t) v3<t>
 operator&(const v3<t>& Lhs, t Val) {
   return v3<t>(Lhs.X & Val, Lhs.Y & Val, Lhs.Z & Val);
 }
-mg_Ti(t) v3<t> 
+mg_Ti(t) v3<t>
 operator%(const v3<t>& Lhs, const v3<t>& Rhs) {
   return v3<t>(Lhs.X % Rhs.X, Lhs.Y % Rhs.Y, Lhs.Z % Rhs.Z);
 }
-mg_Ti(t) v3<t> 
+mg_Ti(t) v3<t>
 operator%(const v3<t>& Lhs, t Val) {
   return v3<t>(Lhs.X % Val, Lhs.Y % Val, Lhs.Z % Val);
 }
@@ -267,9 +267,27 @@ Pow(i64 Base, int Exp) {
 }
 
 mg_Ti(t) t
-Lerp(t V1, t V2, f64 T) {
+Lerp(t V0, t V1, f64 T) {
   mg_Assert(0 <= T && T <= 1);
-  return V1 + (V2 - V1) * T;
+  return V0 + (V1 - V0) * T;
+}
+
+mg_Ti(t) t
+BiLerp(t V00, t V10, t V01, t V11, const v2d& T) {
+  mg_Assert(0.0 <= T && T <= 1.0);
+  t V0 = Lerp(V00.X, V10.X, T.X);
+  t V1 = Lerp(V01.X, V11.X, T.X);
+  return Lerp(V0, V1, T.Y);
+}
+
+mg_T(t) t TriLerp(
+  t V000, t V100, t V010, t V110,
+  t V001, t V101, t V011, t V111, const v3d& T)
+{
+  mg_Assert(0.0 <= T && T <= 1.0);
+  t V0 = BiLerp(V000, V100, V010, V110, T.XY);
+  t V1 = BiLerp(V001, V101, V011, V111, T.XY);
+  return Lerp(V0, V1, T.Z);
 }
 
 } // namespace mg
