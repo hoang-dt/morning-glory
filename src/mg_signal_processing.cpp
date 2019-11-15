@@ -305,7 +305,7 @@ ConvertType(const volume& SVol, volume* DVol) {
 mg_T(t) f64
 Norm(const t& Begin, const t& End) {
   f64 Result = 0;
-  for (auto It = Begin; It != End; ++It) 
+  for (auto It = Begin; It != End; ++It)
     Result += (*It) * (*It);
   return sqrt(Result);
 }
@@ -330,7 +330,7 @@ Convolve(const c& F, const c& G, c* H) {
   i64 P = N + M - 1;
   Resize(H, P);
   for (i64 I = 0; I < P; ++I) {
-    using type = remove_cv_ref<decltype(F[0])>::type;
+    using type = typename remove_cv_ref<decltype(F[0])>::type;
     type Acc = 0;
     i64 K = Min(N - 1, I);
     i64 L = Max(i64(0), I - M + 1);

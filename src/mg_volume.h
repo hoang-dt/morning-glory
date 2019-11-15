@@ -57,7 +57,7 @@ struct subvol_grid {
   subvol_grid(const grid& GridIn, const volume& VolIn);
 };
 
-#define mg_PrStrGrid "["mg_PrStrV3i mg_PrStrV3i mg_PrStrV3i"]"
+#define mg_PrStrGrid "[" mg_PrStrV3i mg_PrStrV3i mg_PrStrV3i "]"
 #define mg_PrGrid(G) mg_PrV3i(From(G)), mg_PrV3i(Dims(G)), mg_PrV3i(Strd(G))
 
 bool operator==(const volume& V1, const volume& V2);

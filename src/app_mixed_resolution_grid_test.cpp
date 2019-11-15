@@ -18,7 +18,6 @@ TestFileFormatWrite() {
   ReadVolume("D:/Datasets/3D/Small/MIRANDA-DENSITY-[96-96-96]-Float64.raw", N3, dtype::float64, &Vol);
   mg_CleanUp(Dealloc(&Vol)); // TODO: fix this macro to remove the first parameter
   /* perform wavelet transform per block, in Z order */
-  int NBlocks = Prod<i32>(NBlocks3);
   u32 LastMorton = EncodeMorton3(NBlocks3.X - 1, NBlocks3.Y - 1, NBlocks3.Z - 1);
   volume VolBlock; Resize(&VolBlock, BlockSizePlusOne3, Vol.Type);
   mg_CleanUp(Dealloc(&VolBlock));
@@ -385,12 +384,11 @@ TestBlockGeneration2D(
   mg_RAII(volume, VolRefinement, Resize(&VolRefinement, Dims(Vol), dtype::int8));
   mg_RAII(volume, DataOut, Resize(&DataOut, Dims(Vol), Vol.Type));
   v3i NBlocks3 = (N3 + BlockSize3 - 1) / BlockSize3;
-  // mg_RAII(array<extent>, Subbands, BuildSubbands(BlockSize3 + v3i(1, 1, 0), NLevels, &Subbands));
-  // mg_RAII(array<grid>, SubbandsG, BuildSubbands(BlockSize3 + v3i(1, 1, 0), NLevels, &SubbandsG));
-  mg_RAII(array<extent>, Subbands, BuildSubbands(BlockSize3, NLevels, &Subbands));
-  mg_RAII(array<grid>, SubbandsG, BuildSubbands(BlockSize3, NLevels, &SubbandsG));
-  mg_RAII(volume, BlockVol, Resize(&BlockVol, BlockSize3, Vol.Type));
-  // mg_RAII(volume, BlockVol, Resize(&BlockVol, BlockSize3 + v3i(1, 1, 0), Vol.Type));
+  v3i BlockDims3 = BlockSize3 + v3i(1, 1, 0);
+  // v3i BlockDims3 = BlockSize3;
+  mg_RAII(array<extent>, Subbands, BuildSubbands(BlockDims3, NLevels, &Subbands));
+  mg_RAII(array<grid>, SubbandsG, BuildSubbands(BlockDims3, NLevels, &SubbandsG));
+  mg_RAII(volume, BlockVol, Resize(&BlockVol, BlockDims3, Vol.Type));
   mg_RAII(volume, BackupVol, Resize(&BackupVol, Dims(BlockVol), BlockVol.Type));
   mg_RAII(volume, WavBackupVol, Resize(&WavBackupVol, Dims(BlockVol), BlockVol.Type));
   i64 CoeffCount = 0;
@@ -399,8 +397,10 @@ TestBlockGeneration2D(
   fwrite(&N3, sizeof(N3), 1, Fp); // write the global dimensions
   fwrite(&Vol.Type, sizeof(Vol.Type), 1, Fp); // write data type
   fwrite(&BlockSize3, sizeof(BlockSize3), 1, Fp); // write block size
+  mg_RAII(buffer, CompBuf, AllocBuf(&CompBuf, sizeof(t) * Prod<i64>(N3)), DeallocBuf(&CompBuf));
+  bitstream Bs; InitWrite(&Bs, CompBuf);
   v3i B3;
-  mg_BeginFor3(B3, v3i::Zero, NBlocks3, v3i::One) {
+  mg_BeginFor3(B3, v3i::Zero, NBlocks3, v3i::One) { // loop through the blocks
     Fill(Begin<t>(BlockVol), End<t>(BlockVol), t(0));
     extent BlockExt(B3 * BlockSize3, BlockSize3);
     extent BlockExtCrop = Crop(BlockExt, extent(N3));
@@ -423,8 +423,42 @@ TestBlockGeneration2D(
       S3 = S3 * 2;
     }
     Clone(BlockVol, &WavBackupVol);
-    Fill(Begin<t>(BlockVol), End<t>(BlockVol), t(0));
+    /* compress */
+    using itype = typename traits<t>::integral_t;
+    using utype = typename traits<itype>::unsigned_t;
+    v3i ZfpBlockDims3(4, 4, 1);
+    v3i NZfpBlocks3 = (BlockDims3 + ZfpBlockDims3 - 1) / ZfpBlockDims3;
+    v3i RealBlockDims3 = Min(N3 - B3 * BlockSize3, BlockDims3);
+    // TODO: there is a bug if the tile is less than 32^3
+    v3i Z3;
+    mg_BeginFor3(Z3, v3i::Zero, NZfpBlocks3, v3i::One) { // through zfp blocks
+      t     ZfpBlockFloats[4 * 4] = {}; buffer_t BufFloat(ZfpBlockFloats);
+      itype ZfpBlockInts  [4 * 4] = {}; buffer_t BufInts (ZfpBlockInts  );
+      utype ZfpBlockUInts [4 * 4] = {}; buffer_t BufUInts(ZfpBlockUInts );
+      v3i D3 = Z3 * ZfpBlockDims3;
+      v3i RealZfpBlockDims3 = Min(RealBlockDims3 - D3, ZfpBlockDims3);
+      v3i S3;
+      mg_BeginFor3(S3, v3i::Zero, RealZfpBlockDims3, v3i::One) { // through samples
+        ZfpBlockFloats[Row(BlockDims3, S3)] = BlockVol.At<t>(D3 + S3);
+      } mg_EndFor3 // end sample loop
+      PadBlock2D(ZfpBlockFloats, RealZfpBlockDims3.XY);
+      // TODO: quantize
+      int Prec = sizeof(t) * 8 - 1 - 2 /* 2 == NDims */;
+      int EMax = Quantize(Prec, BufFloat, &BufInts);
+      Write(&Bs, EMax + traits<t>::ExpBias, traits<t>::ExpBits);
+      //fwrite((i32*)TileVolQ.Buffer.Data + S, Prod(BlockDims3) * sizeof(i32), 1, Fp);
+      ForwardZfp2D<itype, 4>(ZfpBlockInts);
+      ForwardShuffle2D<itype, utype, 4>(ZfpBlockInts, ZfpBlockUInts);
+      int NBitplanes = Prec + 1 + 2 /* 2 == NDims */;
+      int Bp = NBitplanes - 1;
+      i8 N = 0;
+      while (Bp >= 0) { // through bit planes
+        Encode<utype, 2, 4>(ZfpBlockUInts, Bp, traits<i64>::Max, N, &Bs);
+        --Bp;
+      } // end bit plane loop
+    } mg_EndFor3 // end zfp block loop, DONE compression
     /* go through each subband, compute the norm of wavelet coefficients x basis norm */
+    Fill(Begin<t>(BlockVol), End<t>(BlockVol), t(0));
     int LastSb = 0;
     for (int I = 0; I < Size(SubbandsG); ++I) {
       auto Ext = SubbandsG[I];
@@ -485,7 +519,7 @@ TestBlockGeneration2D(
       fwrite(&BlockVol.At<t>(v3i(X, Y, 0) * Strd3), sizeof(t), 1, Fp);
     }}
     //f64 Ps = PSNR(BackupVol, BlockVol);
-  } mg_EndFor3
+  } mg_EndFor3 // end block loop
   //fclose(Fp2);
   WriteBuffer("refinement.raw", VolRefinement.Buffer);
   WriteBuffer("dataout.raw", DataOut.Buffer);

@@ -17,7 +17,7 @@ zfp lifting transform for 4 samples in 1D.
         (-4  4  4 -4) (Z)
         (-2  6 -6  2) (W) */
 // TODO: look into range expansion for this transform
-mg_T(t) void 
+mg_T(t) void
 FLift(t* P, int S) {
   mg_Assert(P);
   mg_Assert(S > 0);
@@ -129,14 +129,14 @@ inline static const stack_array<int, S * S> Table = []() {
     }
   }
   return Arr;
-}(); 
+}();
 };
 
 /*
 Use the following array to reorder transformed coefficients in a zfp block.
 The ordering is first by i + j + k, then by i^2 + j^2 + k^2. */
 #define mg_Index(i, j, k) ((i) + 4 * (j) + 16 * (k))
-constexpr i8 
+constexpr i8
 Perm3[64] = {
   mg_Index(0, 0, 0), /*  0 : 0 */
 
@@ -271,28 +271,28 @@ PadBlock1D(t* P, int N, int S) {
   }
 }
 
-template <typename t> void
-PadBlock(t* P, int Nx, int Ny, int Nz) {
+mg_T(t) void
+PadBlock3D(t* P, const v3i& N) {
   for (int Z = 0; Z < 4; ++Z)
     for (int Y = 0; Y < 4; ++Y)
-      PadBlock1D(P + Z * 16 + Y * 4, Nx, 1);
+      PadBlock1D(P + Z * 16 + Y * 4, N.X, 1);
 
   for (int Z = 0; Z < 4; ++Z)
     for (int X = 0; X < 4; ++X)
-      PadBlock1D(P + Z * 16 + X * 1, Ny, 4);
+      PadBlock1D(P + Z * 16 + X * 1, N.Y, 4);
 
   for (int Y = 0; Y < 4; ++Y)
     for (int X = 0; X < 4; ++X)
-      PadBlock1D(P + Y * 4 + X * 1, Nz, 16);
+      PadBlock1D(P + Y * 4 + X * 1, N.Z, 16);
 }
 
-template <typename t> void
-PadBlock2D(t* P, int Nx, int Ny) {
+mg_T(t) void
+PadBlock2D(t* P, const v2i& N) {
   for (int Y = 0; Y < 4; ++Y)
-    PadBlock1D(P + Y * 4, Nx, 1);
+    PadBlock1D(P + Y * 4, N.X, 1);
 
   for (int X = 0; X < 4; ++X)
-    PadBlock1D(P + X * 1, Ny, 4);
+    PadBlock1D(P + X * 1, N.Y, 4);
 }
 
 
@@ -322,7 +322,7 @@ Encode(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
           ++N;
         }
       }
-      if (BitSize(*Bs) >= S) 
+      if (BitSize(*Bs) >= S)
         break;
       X >>= 1;
       ++N;
@@ -548,7 +548,7 @@ TransposeNormal(u64 X, int B, t* mg_Restrict Block) {
   } while (0)
 
 /* compress sequence of 4^3 = 64 unsigned integers */
-mg_Ti(t) void 
+mg_Ti(t) void
 TransposeRecursive(const t* input, t* mg_Restrict data) {
   /* working space for 64 bit planes */
   uint64 a00 = input[0] , a01 = input[1] , a02 = input[2] , a03 = input[3] , a04 = input[4] ;
@@ -983,7 +983,7 @@ Decode2(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
     i8 BitCurr = -1 + !ExpectGroupTestBit; i8 BitPrev = BitCurr;
     if (ExpectGroupTestBit) {
       BitCurr = Lsb(Next, -1);
-      if (BitCurr != 0) { 
+      if (BitCurr != 0) {
         // there are no 1 bits, or the first bit is not 1 (the group is insignificant)
         Consume(Bs, 1);
         break;
@@ -1065,7 +1065,7 @@ Decode3(t* Block, int B, i64 S, i8& N, bitstream* Bs) {
     i8 BitCurr = -1 + !ExpectGroupTestBit; i8 BitPrev = BitCurr;
     if (ExpectGroupTestBit) {
       BitCurr = Lsb(Next, -1);
-      if (BitCurr != 0) { 
+      if (BitCurr != 0) {
         // there are no 1 bits, or the first bit is not 1 (the group is insignificant)
         Consume(Bs, 1);
         break;

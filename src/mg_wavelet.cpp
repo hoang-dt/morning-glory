@@ -704,7 +704,7 @@ void AggregateSubbands(const array<grid>& Subbands, array<grid>* AggSubbands) {
     const grid& AggS = (*AggSubbands)[I - 1];
     const grid& S = Subbands[I];
     v3i AggFrom3 = From(AggS), AggDims3 = Dims(AggS), AggStrd3 = Strd(AggS);
-    v3i From3 = From(S), Dims3 = Dims(S), Strd3 = Strd(S);
+    v3i From3 = From(S), Dims3 = Dims(S);
     v3i NewAggFrom3 = AggFrom3, NewAggStrd3 = AggStrd3, NewAggDims3 = AggDims3;
     for (int D = 0; D < 3; ++D) {
       bool B = (From3[D] - AggFrom3[D]) % AggStrd3[D] != 0;

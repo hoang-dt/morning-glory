@@ -45,9 +45,8 @@ Resize(volume* Vol, const v3i& Dims3, dtype Type) {
   auto OldType = Vol->Type;
   Vol->Type = Type;
   Resize(Vol, Dims3);
-  if (Size(Vol->Buffer) < Prod<u64>(Dims3) * SizeOf(Vol->Type)) {
+  if (Size(Vol->Buffer) < Prod<i64>(Dims3) * SizeOf(Vol->Type))
     Vol->Type = OldType;
-  }
 }
 
 void
