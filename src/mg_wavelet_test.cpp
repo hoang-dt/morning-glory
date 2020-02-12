@@ -251,65 +251,65 @@ void TestWaveletBlock() {
     }
   }
   { // 2D test
-    f64 A[] = Array9x9;
-    v3i M(9, 9, 1);
-    volume VolA(A, M);
-    volume VolB; Clone(VolA, &VolB);
-    Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
-    ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
-    ForwardCdf53Old(&VolA, 1);
-    for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB);
-         ItA != End<f64>(VolA); ++ItA, ++ItB) {
-      mg_Assert(*ItA == *ItB);
-    }
+    // f64 A[] = Array9x9;
+    // v3i M(9, 9, 1);
+    // volume VolA(A, M);
+    // volume VolB; Clone(VolA, &VolB);
+    // Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+    // ForwardCdf53Tile2D(1, v3i(4, 4, 1), VolA, &VolB);
+    // ForwardCdf53Old(&VolA, 1);
+    // for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB);
+    //      ItA != End<f64>(VolA); ++ItA, ++ItB) {
+    //   mg_Assert(*ItA == *ItB);
+    // }
   }
   { // bigger 2D test
-    v3i M(17, 17, 1);
-    f64 A[M.X * M.Y];
-    for (int Y = 0; Y < M.Y; ++Y) {
-      f64 YY = (Y - M.Y / 2.0) / 2.0;
-      f64 Vy = 3 / sqrt(2 * Pi) * exp(-0.5 * YY * YY);
-      for (int X = 0; X < M.X; ++X) {
-        f64 XX = (X - M.X / 2.0) / 2.0;
-        f64 Vx = 3 / sqrt(2 * Pi) * exp(-0.5 * XX * XX);
-        A[Y * 17 + X] = Vx * Vy;
-      }
-    }
-    volume VolA(A, M);
-    volume VolB; Clone(VolA, &VolB);
-    Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
-    int NLevels = 2;
-    v3i TDims3(4, 4, 1);
-    ForwardCdf53Tile2D(NLevels, TDims3, VolA, &VolB);
-    ForwardCdf53Old(&VolA, NLevels);
-    for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB);
-         ItA != End<f64>(VolA); ++ItA, ++ItB) {
-      mg_Assert(fabs(*ItA - *ItB) < 1e-15);
-    }
+    // v3i M(17, 17, 1);
+    // f64 A[M.X * M.Y];
+    // for (int Y = 0; Y < M.Y; ++Y) {
+    //   f64 YY = (Y - M.Y / 2.0) / 2.0;
+    //   f64 Vy = 3 / sqrt(2 * Pi) * exp(-0.5 * YY * YY);
+    //   for (int X = 0; X < M.X; ++X) {
+    //     f64 XX = (X - M.X / 2.0) / 2.0;
+    //     f64 Vx = 3 / sqrt(2 * Pi) * exp(-0.5 * XX * XX);
+    //     A[Y * 17 + X] = Vx * Vy;
+    //   }
+    // }
+    // volume VolA(A, M);
+    // volume VolB; Clone(VolA, &VolB);
+    // Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+    // int NLevels = 2;
+    // v3i TDims3(4, 4, 1);
+    // ForwardCdf53Tile2D(NLevels, TDims3, VolA, &VolB);
+    // ForwardCdf53Old(&VolA, NLevels);
+    // for (auto ItA = Begin<f64>(VolA), ItB = Begin<f64>(VolB);
+    //      ItA != End<f64>(VolA); ++ItA, ++ItB) {
+    //   mg_Assert(fabs(*ItA - *ItB) < 1e-15);
+    // }
   }
   { // small 3D test
-    f64 A[] = Array9x9x9;
-    v3i M(9);
-    volume VolA(A, M);
-    volume VolB; Clone(VolA, &VolB);
-    Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
-    ForwardCdf53Tile(1, v3i(4), VolA, &VolB);
-    ForwardCdf53Old(&VolA, 1);
-    array<extent> Sbands; BuildSubbands(M, 1, &Sbands);
-    for (int Sb = 0; Sb < Size(Sbands); ++Sb) {
-      v3i SbFrom3 = From(Sbands[Sb]);
-      v3i SbDims3 = Dims(Sbands[Sb]);
-      v3i T;
-      mg_BeginFor3(T, SbFrom3, SbFrom3 + SbDims3, v3i(4)) {
-        v3i P;
-        v3i D3 = Min(SbFrom3 + SbDims3 - P, v3i(4));
-        mg_BeginFor3(P, T, T + D3, v3i::One) {
-          f64 Va = VolA.At<f64>(P);
-          f64 Vb = VolB.At<f64>(P);
-          mg_Assert(fabs(Va - Vb) < 1e-9);
-        } mg_EndFor3
-      } mg_EndFor3
-    }
+    // f64 A[] = Array9x9x9;
+    // v3i M(9);
+    // volume VolA(A, M);
+    // volume VolB; Clone(VolA, &VolB);
+    // Fill(Begin<f64>(VolB), End<f64>(VolB), 0);
+    // ForwardCdf53Tile(1, v3i(4), VolA, &VolB);
+    // ForwardCdf53Old(&VolA, 1);
+    // array<extent> Sbands; BuildSubbands(M, 1, &Sbands);
+    // for (int Sb = 0; Sb < Size(Sbands); ++Sb) {
+    //   v3i SbFrom3 = From(Sbands[Sb]);
+    //   v3i SbDims3 = Dims(Sbands[Sb]);
+    //   v3i T;
+    //   mg_BeginFor3(T, SbFrom3, SbFrom3 + SbDims3, v3i(4)) {
+    //     v3i P;
+    //     v3i D3 = Min(SbFrom3 + SbDims3 - P, v3i(4));
+    //     mg_BeginFor3(P, T, T + D3, v3i::One) {
+    //       f64 Va = VolA.At<f64>(P);
+    //       f64 Vb = VolB.At<f64>(P);
+    //       mg_Assert(fabs(Va - Vb) < 1e-9);
+    //     } mg_EndFor3
+    //   } mg_EndFor3
+    // }
   }
   //{ // big 3D test
   //  v3i M(384, 384, 256);
@@ -336,7 +336,7 @@ void TestWavGrid() {
   BuildSubbands(N, NLevels, &Subbands);
   grid WavGrid = SubGrid(Subbands[Sb], WavBlock);
   wav_grids WGrids;
-  wav_grids WG = ComputeWavGrids(2, 0, extent(v3i(0), v3i(4)), WavGrid, v3i(1000));
+  ComputeWavGrids(2, 0, extent(v3i(0), v3i(4)), WavGrid, v3i(1000));
   //printf("ValGrid: " mg_PrStrGrid"\n", mg_PrGrid(WG.ValGrid));
   //printf("WavGrid: " mg_PrStrGrid"\n", mg_PrGrid(WG.WavGrid));
   //printf("WrkGrid: " mg_PrStrGrid"\n", mg_PrGrid(WG.WrkGrid));
